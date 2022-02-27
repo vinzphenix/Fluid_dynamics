@@ -1,3 +1,4 @@
+from urllib.parse import scheme_chars
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -10,7 +11,57 @@ plt.rcParams['font.family'] = 'monospace'
 filename = "./data/solution.txt"
 
 
-def plot_function():
+def plot_soluce():
+    fig, axs = plt.subplots(3, 2, figsize=(14, 10), constrained_layout=True, sharex='all', sharey='all')
+    scheme_list = ["E2", "E4", "I4"]
+    
+    # fig, axs = plt.subplots(2, 2, figsize=(14, 6.5), constrained_layout=True, sharex='all', sharey='all')
+    # scheme_list = ["E6", "I6"]
+    
+    N_list = [32, 64, 128]
+    for i, scheme in enumerate(scheme_list):
+        
+        for j, N in enumerate(N_list):
+            
+            with open(f"./data/solution_{scheme}_{N}.txt", 'r') as file:
+                scheme = file.readline().strip()
+                c, sigma, U_max, L, dt = [float(x) for x in file.readline().split()]
+                matrix = np.loadtxt(file)
+
+            t = matrix[:, 0]
+            u = matrix[:, 1:]
+            M, N = u.shape
+            h = L / N
+            x = np.linspace(-L/2., 3*L/2. - h, 2*N)
+            axs[i, 0].plot(x, np.r_[u[M//2], u[M//2]], ls='-', marker='.', color=f'C{j}', label=f'N = {N}')
+            axs[i, 1].plot(x, np.r_[u[-1], u[-1]], ls='-', marker='.', color=f'C{j}')
+
+        n_plot = 500
+        x_plot = np.linspace(-L / 2., 3 * L / 2., n_plot)
+        f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod(np.abs(x_ - c * t_ + L / 2), L) - L / 2) / sigma, 2))
+        axs[i, 0].plot(x_plot, f(x_plot, 0.5), color='grey', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
+        axs[i, 1].plot(x_plot, f(x_plot, 1.), color='grey', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
+
+    lines_labels = [axs[0, 0].get_legend_handles_labels()]
+    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
+                     ncol=4, facecolor='wheat', framealpha=0.25, fancybox=True, fontsize=ftSz2)
+
+    axs[0, 0].set_ylim(-0.1, 1.1)
+    for ax in axs.flatten():
+        ax.grid(ls=':')
+    for T, ax in zip([0.5, 1.], axs[0, :]):
+        ax.set_title(f"Time = {T}", fontsize=ftSz2)
+    for ax in axs[-1, :]:
+        ax.set_xlabel("x", fontsize=ftSz2)
+    for scheme, ax in zip(scheme_list, axs[:, 0]):
+        ax.set_ylabel(f"u(x,t) - {scheme}", fontsize=ftSz2)
+    
+    # fig.savefig("./figures/overview.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.show()    
+
+
+def animation_soluce():
     def init():
         exact.set_data(x_plot, f(x_plot, 0))
         time_text.set_text(time_template.format(0))
@@ -20,39 +71,13 @@ def plot_function():
 
     def animate(t_idx):
         exact.set_data(x_plot, f(x_plot, t_idx * dt))
-        time_text.set_text(time_template.format(t_idx * dt))
+        time_text.set_text(time_template.format(t[t_idx]))
         line.set_data(x, u[t_idx, :])
 
         return tuple([line, exact, time_text])
 
-    n_plot = 200
-    x_plot = np.linspace(-L / 2., L / 2., n_plot)
-    x = np.linspace(-L/2., L/2. - h, N)
-
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6), constrained_layout=True)
-    ax.grid(ls=':')
-    ax.set_xlabel("x", fontsize=ftSz2)
-    ax.set_ylabel("u(x,t)", fontsize=ftSz2)
-
-    time_template = r'$t = {:.2f} [s]$'
-    time_text = ax.text(0.03, 0.92, '', fontsize=17, transform=ax.transAxes)
-
-    line, = ax.plot([], [], ls='-', marker='.', color='C0', label='Numerical solution')
-    exact, = ax.plot(x_plot, f(x_plot, 0), color='C1', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
-    ax.legend(fontsize=ftSz2, loc='upper right')
-
-    # to animate
-    _ = FuncAnimation(fig, animate, M, interval=50, blit=True, init_func=init, repeat_delay=5000)
-
-    # to get only one frame at t = i
-    # i = M-1 ; init() ; animate(i)
-
-    plt.show()
-
-
-if __name__ == "__main__":
-
     with open(filename, 'r') as file:
+        scheme = file.readline().strip()
         c, sigma, U_max, L, dt = [float(x) for x in file.readline().split()]
         matrix = np.loadtxt(file)
 
@@ -63,4 +88,33 @@ if __name__ == "__main__":
 
     f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod(np.abs(x_ - c * t_ + L / 2), L) - L / 2) / sigma, 2))
 
-    plot_function()
+    n_plot = 200
+    x_plot = np.linspace(-L / 2., L / 2., n_plot)
+    x = np.linspace(-L/2., L/2. - h, N)
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6), constrained_layout=True, num='Animation of the solution')
+
+    time_template = r'$t = {:.2f} \;[s]$'
+    time_text = ax.text(0.03, 0.88, '', fontsize=17, transform=ax.transAxes)
+    ax.text(0.03, 0.94, 'FD scheme: {:s}'.format(scheme), fontsize=17, transform=ax.transAxes)
+
+    line, = ax.plot(x, u[0, :], ls='-', marker='.', color='C0', label='Numerical solution')
+    exact, = ax.plot(x_plot, f(x_plot, 0), color='C1', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
+    ax.legend(fontsize=ftSz2, loc='upper right')
+
+    ax.grid(ls=':')
+    ax.set_xlabel("x", fontsize=ftSz2)
+    ax.set_ylabel("u(x,t)", fontsize=ftSz2)
+
+    # to animate
+    _ = FuncAnimation(fig, animate, M, interval=50, blit=True, init_func=init, repeat_delay=5000)
+
+    # to get only one frame at t = i
+    # i = M-1 ; init() ; animate(i)
+    plt.show()
+
+
+if __name__ == "__main__":
+
+    # animation_soluce()
+    plot_soluce()

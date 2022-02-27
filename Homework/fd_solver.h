@@ -7,10 +7,13 @@
 #include <string.h>
 #include <time.h>
 
-#define SAVE = 1
+#define SAVE 1
 
-// char *filename = "./data/solution_E2_32.txt";
-char *filename = "./data/solution.txt";
+//char *filename = "./data/solution_E2_64.txt";
+//char *filename = "./data/solution.txt";
+char *path = "./data/solution";
+char filename[50];
+
 
 double ALPHA[4] = {0, 0.5, 0.5, 1.};
 double GAMMA[4] = {0.16666666666, 0.33333333333, 0.33333333333, 0.16666666666};

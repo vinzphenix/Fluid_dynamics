@@ -9,6 +9,13 @@ int init_data_sim(data_Sim *sim, int N, double T, double c, double L, double sig
     sim->U_max = U_max;
     sim->L = L;
     sim->h = L / N;
+    sim->scheme = scheme;
+
+#   if SAVE == 1
+        sprintf(filename, "%s.txt", path);
+#   elif SAVE == 2
+        sprintf(filename, "%s_%s_%d.txt", path, scheme, N);
+#   endif
 
     // CFL = (E2: 2.828) (E4: 2.061) (E6: 1.783) (I4: 1.632) (I6: 1.421)
     sim->CFL = 1.4;
@@ -51,6 +58,7 @@ void save_array(data_Sim *sim, int t) {
     FILE *ptr;
     if (t == 0) {
         ptr = fopen(filename, "w");
+        fprintf(ptr, "%s\n", sim->scheme);
         fprintf(ptr, "%lf %lf %lf %lf %lf\n", sim->c, sim->sigma, sim->U_max, sim->L, sim->dt);
     } else {
         ptr = fopen(filename, "a");
@@ -72,7 +80,7 @@ void set_u_gaussian(data_Sim *sim) {
         sim->u[i] = sim->U_max * exp(-x * x / (sim->sigma * sim->sigma));
     }
 
-#   ifdef SAVE
+#   if SAVE
         save_array(sim, 0);
 #   endif
 }
@@ -122,7 +130,7 @@ void RK4C(data_Sim *sim) {
 
         // display_diagnostic(sim, t);
 
-#       ifdef SAVE
+#       if SAVE
             save_array(sim, t + 1);
 #       endif
         

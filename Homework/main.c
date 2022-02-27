@@ -89,16 +89,25 @@ void display_diagnostic(data_Sim *sim, int t_idx) {
     double I = 0.;
     double E = 0.;
     double R = 0.;
-    double x, u_exact;
+    double x, u_exact, arg;
     double t = sim->dt * t_idx;
+    // int k;
 
     for (int i = 0; i < sim->N; i++) {
-        x = i * sim->h;
-        u_exact = sim->U_max * exp(-pow(x - sim->c * t, 2.) / pow(sim->sigma, 2.));
+        x = -sim->L / 2. + i * sim->h;
+        arg = fmod(x - sim->c * t - sim->L / 2., sim->L) + sim->L / 2.;
+        u_exact = sim->U_max * exp(-pow(arg / sim->sigma, 2.));
+
+        /*for (k = 0; k < u_exact * 20; k++) printf("-");
+        for (; k < 30; k++) printf(" ");
+        for (k = 0; k < sim->u[i] * 20; k++) printf("-");
+        printf("\n");*/
+
         I += sim->u[i];
         E += pow(sim->u[i], 2.);
         R += pow(sim->u[i] - u_exact, 2.);
     }
+    // printf("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
 
     I *= sim->h / (sim->sigma * sim->U_max);
     E *= sim->h / (sim->sigma * pow(sim->U_max, 2.));
@@ -115,7 +124,7 @@ void RK4C(data_Sim *sim) {
 
     int i, k, t;
 
-    for (t = 0; t < sim->M; t++) {
+    for (t = 1; t <= sim->M; t++) {
 
         memcpy(us, u, N * sizeof(double));
         for (k = 0; k < 4; k++) {
@@ -128,10 +137,10 @@ void RK4C(data_Sim *sim) {
             }
         }
 
-        // display_diagnostic(sim, t);
+        display_diagnostic(sim, t);
 
 #       if SAVE
-            save_array(sim, t + 1);
+            save_array(sim, t);
 #       endif
         
     }
@@ -142,7 +151,7 @@ void RK4C(data_Sim *sim) {
 int main(int argc, char *argv[]) {
 
     data_Sim *simulation = (data_Sim *)malloc(sizeof(data_Sim));
-    init_data_sim(simulation, 128, 1., 1., 1., 1. / 16., 1., "I6"); // N, Tend, c, L, sigma, Umax
+    init_data_sim(simulation, 32, 1., 1., 1., 1. / 16., 1., "E4"); // N, Tend, c, L, sigma, Umax
     set_u_gaussian(simulation);
 
     clock_t start = clock();

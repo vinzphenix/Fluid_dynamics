@@ -7,7 +7,7 @@
 #include <string.h>
 #include <time.h>
 
-#define SAVE 1
+#define SAVE 0
 
 //char *filename = "./data/solution_E2_64.txt";
 //char *filename = "./data/solution.txt";

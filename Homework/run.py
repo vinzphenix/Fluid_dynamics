@@ -18,6 +18,7 @@ def plot_soluce():
     # scheme_list = ["E6", "I6"]
     
     N_list = [32, 64, 128]
+    T_list = [0.525, 1.006]
     for i, scheme in enumerate(scheme_list):
         
         for j, N in enumerate(N_list):
@@ -32,16 +33,18 @@ def plot_soluce():
             M, N = u.shape
             h = L / N
             x = np.linspace(-L/2., 3*L/2. - h, 2*N)
-            axs[i, 0].plot(x, np.r_[u[M//2], u[M//2]], ls='-', marker='.', color=f'C{j}', label=f'N = {N}')
-            axs[i, 1].plot(x, np.r_[u[-1], u[-1]], ls='-', marker='.', color=f'C{j}')
 
-            print(f"{scheme:2s} - N = {N:3d}  -->  0.5 =? {(M//2) * dt:.3f}  1. =? {(M-1) * dt:.3f}")
+            T_idx = [np.argmin(np.abs(t - t_wanted)) for t_wanted in T_list]
+            axs[i, 0].plot(x, np.r_[u[T_idx[0]], u[T_idx[0]]], ls='-', marker='.', color=f'C{j}', label=f'N = {N}')
+            axs[i, 1].plot(x, np.r_[u[T_idx[1]], u[T_idx[1]]], ls='-', marker='.', color=f'C{j}')
+
+            print(f"{scheme:2s} - N = {N:3d}  -->  0.5 =? {T_idx[0] * dt:.3f}  1. =? {T_idx[1] * dt:.3f}")
 
         n_plot = 500
         x_plot = np.linspace(-L / 2., 3 * L / 2., n_plot)
         f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod(np.abs(x_ - c * t_ + L / 2), L) - L / 2) / sigma, 2))
-        axs[i, 0].plot(x_plot, f(x_plot, 0.503), color='grey', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
-        axs[i, 1].plot(x_plot, f(x_plot, 1.006), color='grey', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
+        axs[i, 0].plot(x_plot, f(x_plot, T_list[0]), color='grey', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
+        axs[i, 1].plot(x_plot, f(x_plot, T_list[1]), color='grey', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
 
     lines_labels = [axs[0, 0].get_legend_handles_labels()]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
@@ -51,8 +54,8 @@ def plot_soluce():
     axs[0, 0].set_ylim(-0.1, 1.1)
     for ax in axs.flatten():
         ax.grid(ls=':')
-    for T, ax in zip([0.5, 1.], axs[0, :]):
-        ax.set_title(r"$ct/L \; \approx \;{:.1f}$".format(T), fontsize=ftSz2)
+    for T, ax in zip(T_list, axs[0, :]):
+        ax.set_title(r"$ct/L \; = \;{:.3f}$".format(T), fontsize=ftSz2)
     for ax in axs[-1, :]:
         ax.set_xlabel("$x/L$", fontsize=ftSz2)
     for scheme, ax in zip(scheme_list, axs[:, 0]):
@@ -119,6 +122,7 @@ def order_convergence():
     fig, ax = plt.subplots(1, 1, figsize=(10., 6.), constrained_layout=True)
     scheme_list = ["E2", "E4", "I4"]  # , "E6", "I6"]
     N_list = [32, 64, 128]
+    t_wanted = 0.525
 
     for i, scheme in enumerate(scheme_list):
         
@@ -139,8 +143,9 @@ def order_convergence():
             
             f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod(np.abs(x_ - c * t_ + L / 2), L) - L / 2) / sigma, 2))
             
+            T_idx = np.argmin(np.abs(t - t_wanted))
             h_list[j] = h / sigma
-            R_list[j] = h / (sigma * U_max * U_max) * np.sum(np.power((u[M//2] - f(x, t[M//2])), 2))
+            R_list[j] = h / (sigma * U_max * U_max) * np.sum(np.power((u[T_idx] - f(x, t[T_idx])), 2))
 
         ax.loglog(h_list, R_list, ls='-', marker='o', color=f'C{i}', label=f'{scheme}')
     
@@ -149,7 +154,7 @@ def order_convergence():
 
     ax.grid(ls=':', which="both")
     ax.set_xlabel(r"$h/\sigma$", fontsize=ftSz2)
-    ax.set_ylabel(r"Global error at $ct/L \,\approx\, 0.5$", fontsize=ftSz2)
+    ax.set_ylabel(r"Global error at $ct/L \,=\, {:.3f}$".format(t_wanted), fontsize=ftSz2)
     ax.legend(fontsize=ftSz3)
     
     # fig.savefig("./figures/order.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
@@ -202,7 +207,7 @@ def animation_soluce():
     ax.set_ylabel("u(x,t)", fontsize=ftSz2)
 
     # to animate
-    _ = FuncAnimation(fig, animate, M, interval=50, blit=True, init_func=init, repeat_delay=5000)
+    _ = FuncAnimation(fig, animate, M, interval=50, blit=True, init_func=init, repeat_delay=3000)
 
     # to get only one frame at t = i
     # i = M-1 ; init() ; animate(i)
@@ -213,7 +218,7 @@ if __name__ == "__main__":
     
     # plt.rcParams["text.usetex"] = True
 
-    # animation_soluce()
+    animation_soluce()
     # plot_soluce()
     # plot_diagnostic()
-    order_convergence()
+    # order_convergence()

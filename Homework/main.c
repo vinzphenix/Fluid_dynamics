@@ -1,15 +1,15 @@
 #include "thomas.h"
-#include "fd_solver.h"
+#include "fd_solver.c"
 
 
-int init_data_sim(data_Sim *sim, int N, double T, double c, double L, double sigma, double U_max, char *scheme) {
-    sim->N = N;
-    sim->c = c;
-    sim->sigma = sigma;
-    sim->U_max = U_max;
-    sim->L = L;
-    sim->h = L / N;
-    sim->scheme = scheme;
+//int init_data_sim(data_Sim *sim, int N, double T, double c, double L, double sigma, double U_max, char *scheme) {
+int init_data_sim(data_Sim *sim) {
+    //sim->N = N;
+    //sim->c = c;
+    //sim->sigma = sigma;
+    //sim->U_max = U_max;
+    //sim->L = L;
+    //sim->scheme = scheme;
 
 #   if SAVE == 1
         sprintf(filename, "%s.txt", path);
@@ -17,21 +17,24 @@ int init_data_sim(data_Sim *sim, int N, double T, double c, double L, double sig
         sprintf(filename, "%s_%s_%d.txt", path, scheme, N);
 #   endif
 
-    // CFL = (E2: 2.828) (E4: 2.061) (E6: 1.783) (I4: 1.632) (I6: 1.421)
-    sim->CFL = 1.4;
-    sim->dt = sim->CFL * sim->h / c;
-    sim->M = ceil(T / sim->dt);
+    
+    //sim->CFL = 1.4;
+    sim->h = L / N;
+    sim->dt = CFL * sim->h / C;
+    sim->M = ceil(TEND / sim->dt);
 
-    int nb = 4;
-    if ((strcmp(scheme, "I4") == 0) || (strcmp(scheme, "I6") == 0))
-        nb = 5;
+#   if (SCHEME_A == 'I')
+    sim->u = (double *)calloc(5 * N, sizeof(double));
+    sim->q = sim->u + 4 * N;
+#   else
+    sim->u = (double *)calloc(4 * N, sizeof(double));
+#   endif
 
-    sim->u = (double *)calloc(nb * N, sizeof(double));
     sim->ul = sim->u + N;
     sim->us = sim->u + 2 * N;
     sim->du = sim->u + 3 * N;
 
-    if (strcmp(scheme, "E2") == 0) {
+    /*if (strcmp(scheme, "E2") == 0) {
         sim->f_eval = &f_E2;
     } else if (strcmp(scheme, "E4") == 0) {
         sim->f_eval = &f_E4;
@@ -45,7 +48,7 @@ int init_data_sim(data_Sim *sim, int N, double T, double c, double L, double sig
         sim->q = sim->u + 4 * N;
     } else {
         return -1;
-    }
+    }*/
     return 0;
 }
 
@@ -58,14 +61,14 @@ void save_array(data_Sim *sim, int t) {
     FILE *ptr;
     if (t == 0) {
         ptr = fopen(filename, "w");
-        fprintf(ptr, "%s\n", sim->scheme);
-        fprintf(ptr, "%lf %lf %lf %lf %lf\n", sim->c, sim->sigma, sim->U_max, sim->L, sim->dt);
+        fprintf(ptr, "%c%c\n", SCHEME_A, SCHEME_B);
+        fprintf(ptr, "%lf %lf %lf %lf %lf\n", C, SIGMA, UMAX, L, sim->dt);
     } else {
         ptr = fopen(filename, "a");
     }
 
     fprintf(ptr, "%.5lf ", t * sim->dt);
-    for (int i = 0; i < sim->N; i++) {
+    for (int i = 0; i < N; i++) {
         fprintf(ptr, "%.5e ", sim->u[i]);
     }
 
@@ -75,9 +78,9 @@ void save_array(data_Sim *sim, int t) {
 
 void set_u_gaussian(data_Sim *sim) {
     double x;
-    for (int i = 0; i < sim->N; i++) {
-        x = -sim->L / 2 + i * sim->h;
-        sim->u[i] = sim->U_max * exp(-x * x / (sim->sigma * sim->sigma));
+    for (int i = 0; i < N; i++) {
+        x = -L / 2 + i * sim->h;
+        sim->u[i] = UMAX * exp(-x * x / (SIGMA * SIGMA));
     }
 
 #   if SAVE
@@ -93,10 +96,10 @@ void display_diagnostic(data_Sim *sim, int t_idx) {
     double t = sim->dt * t_idx;
     // int k;
 
-    for (int i = 0; i < sim->N; i++) {
-        x = -sim->L / 2. + i * sim->h;
-        arg = fmod(x - sim->c * t - sim->L / 2., sim->L) + sim->L / 2.;
-        u_exact = sim->U_max * exp(-pow(arg / sim->sigma, 2.));
+    for (int i = 0; i < N; i++) {
+        x = -L / 2. + i * sim->h;
+        arg = fmod(x - C * t - L / 2., L) + L / 2.;
+        u_exact = UMAX * exp(-pow(arg / SIGMA, 2.));
 
         /*for (k = 0; k < u_exact * 20; k++) printf("-");
         for (; k < 30; k++) printf(" ");
@@ -109,14 +112,13 @@ void display_diagnostic(data_Sim *sim, int t_idx) {
     }
     // printf("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
 
-    I *= sim->h / (sim->sigma * sim->U_max);
-    E *= sim->h / (sim->sigma * pow(sim->U_max, 2.));
-    R *= sim->h / (sim->sigma * pow(sim->U_max, 2.));
+    I *= sim->h / (SIGMA * UMAX);
+    E *= sim->h / (SIGMA * UMAX * UMAX);
+    R *= sim->h / (SIGMA * UMAX * UMAX);
     printf("j = %3d  t = %.3f  :  I = %-7.3lf  E = %-7.3lf  R = %-7.3f\n", t_idx, t, I, E, R);
 }
 
 void RK4C(data_Sim *sim) {
-    int N = sim->N;
     double *u = sim->u;
     double *us = sim->us;
     double *ul = sim->ul;
@@ -131,7 +133,7 @@ void RK4C(data_Sim *sim) {
             for (i = 0; i < N; i++) {
                 ul[i] = us[i] + ALPHA[k] * sim->dt * du[i];
             }
-            sim->f_eval(sim);
+            f_eval(sim);
             for (i = 0; i < N; i++) {
                 u[i] += GAMMA[k] * sim->dt * du[i];
             }
@@ -139,7 +141,7 @@ void RK4C(data_Sim *sim) {
 
         display_diagnostic(sim, t);
 
-#       if SAVE
+#       if SAVE > 0
             save_array(sim, t);
 #       endif
         
@@ -151,7 +153,7 @@ void RK4C(data_Sim *sim) {
 int main(int argc, char *argv[]) {
 
     data_Sim *simulation = (data_Sim *)malloc(sizeof(data_Sim));
-    init_data_sim(simulation, 32, 1., 1., 1., 1. / 16., 1., "E4"); // N, Tend, c, L, sigma, Umax
+    init_data_sim(simulation); // N, Tend, c, L, sigma, Umax
     set_u_gaussian(simulation);
 
     clock_t start = clock();

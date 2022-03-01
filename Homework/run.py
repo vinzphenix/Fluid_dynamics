@@ -24,7 +24,7 @@ def plot_soluce():
             
             with open(f"./data/solution_{scheme}_{N}.txt", 'r') as file:
                 scheme = file.readline().strip()
-                c, sigma, U_max, L, dt = [float(x) for x in file.readline().split()]
+                c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
                 matrix = np.loadtxt(file)
 
             t = matrix[:, 0]
@@ -64,6 +64,63 @@ def plot_soluce():
     plt.show()
 
 
+def plot_soluce_nonuniform():
+    fig, axs = plt.subplots(2, 2, figsize=(14, 10), constrained_layout=True, sharex='all', sharey='row')
+    scheme_list = ["E2", "E4", "I4"]  # , "E6", "I6"]
+
+    T_list = [0.50312, 1.00078]
+    for i, scheme in enumerate(scheme_list):
+            
+        with open(f"./data/nonuniform_{scheme}_128.txt", 'r') as file:
+            scheme = file.readline().strip()
+            c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
+            matrix = np.loadtxt(file)
+
+        t = matrix[:, 0]
+        v = matrix[:, 1:]
+        M, N = v.shape
+        h = L / N
+        xi = np.linspace(-L/2., L/2. - h, N)
+    
+        dg = 1 - a * np.cos(2 * np.pi * xi / L)  # x here is xi
+        x = xi - a * L / (2 * np.pi) * np.sin(2 * np.pi * xi / L)  # map to physical x
+        u = v / dg  # change of variable from v to u
+
+        xi = np.r_[xi, L + xi]
+        x = np.r_[x, L + x]
+        T_idx = [np.argmin(np.abs(t - t_wanted)) for t_wanted in T_list]
+        zorder = len(scheme_list) - i
+        axs[0, 0].plot(xi, np.r_[v[T_idx[0]], v[T_idx[0]]], ls='-', marker='', color=f'C{i}', zorder=zorder)
+        axs[0, 1].plot(xi, np.r_[v[T_idx[1]], v[T_idx[1]]], ls='-', marker='', color=f'C{i}', zorder=zorder)
+        axs[1, 0].plot(x, np.r_[u[T_idx[0]], u[T_idx[0]]], ls='-', marker='', color=f'C{i}', label=f'Scheme = {scheme}', zorder=zorder)
+        axs[1, 1].plot(x, np.r_[u[T_idx[1]], u[T_idx[1]]], ls='-', marker='', color=f'C{i}', zorder=zorder)
+
+    n_plot = 500
+    x_plot = np.linspace(-L / 2., 3 * L / 2., n_plot)
+    f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod(np.abs(x_ - c * t_ + L / 2), L) - L / 2) / sigma, 2))
+    axs[1, 0].plot(x_plot, f(x_plot, T_list[0]), color='grey', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
+    axs[1, 1].plot(x_plot, f(x_plot, T_list[1]), color='grey', alpha=0.5, lw=5, zorder=0)
+
+    lines_labels = [axs[1, 0].get_legend_handles_labels()]
+    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
+                     ncol=4, facecolor='wheat', framealpha=0.25, fancybox=True, fontsize=ftSz2)
+
+    for ax in axs.flatten():
+        ax.grid(ls=':')
+    for T, ax in zip(T_list, axs[0, :]):
+        ax.set_title(r"$ct/L \; = \;{:.3f}$".format(T), fontsize=ftSz2)
+    for ax in axs[0, :]:
+        ax.set_xlabel(r"$\xi/L$", fontsize=ftSz2)
+    for ax in axs[1, :]:
+        ax.set_xlabel(r"$x/L$", fontsize=ftSz2)
+    axs[0, 0].set_ylabel(r"$v(\xi, t)$", fontsize=ftSz2)
+    axs[1, 0].set_ylabel(r"$u(x, t)$", fontsize=ftSz2)
+
+    # fig.savefig("./figures/nonuniform.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.show()
+
+
 def plot_diagnostic():
     fig, axs = plt.subplots(3, 3, figsize=(12, 8), constrained_layout=True, sharex='all', sharey='row')
     scheme_list = ["E2", "E4", "I4"]  # , "E6", "I6"]
@@ -78,7 +135,7 @@ def plot_diagnostic():
             
             with open(f"./data/solution_{scheme}_{N}.txt", 'r') as file:
                 scheme = file.readline().strip()
-                c, sigma, U_max, L, dt = [float(x) for x in file.readline().split()]
+                c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
                 matrix = np.loadtxt(file)
 
             t = matrix[:, 0]
@@ -132,7 +189,7 @@ def order_convergence():
             
             with open(f"./data/solution_{scheme}_{N}.txt", 'r') as file:
                 scheme = file.readline().strip()
-                c, sigma, U_max, L, dt = [float(x) for x in file.readline().split()]
+                c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
                 matrix = np.loadtxt(file)
 
             t = matrix[:, 0]
@@ -161,7 +218,7 @@ def order_convergence():
     plt.show()
 
 
-def animation_soluce(mapping=False):
+def animation_soluce():
     def init():
         exact.set_data(x_plot, f(x_plot, 0))
         time_text.set_text(time_template.format(0))
@@ -187,10 +244,9 @@ def animation_soluce(mapping=False):
     h = L / N
     x = np.linspace(-L/2., L/2. - h, N)
 
-    if mapping:
-        dg = 1 - a * np.cos(2 * np.pi * x / L)  # x here is xi
-        x = x - a * L / (2 * np.pi) * np.sin(2 * np.pi * x / L)  # map to physical x
-        u /= dg  # change of variable from v to u
+    dg = 1 - a * np.cos(2 * np.pi * x / L)  # x here is xi
+    x = x - a * L / (2 * np.pi) * np.sin(2 * np.pi * x / L)  # map to physical x
+    u /= dg  # change of variable from v to u
 
     f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod((x_ - c * t_ - L / 2), L) + L / 2) / sigma, 2))
 
@@ -223,7 +279,9 @@ if __name__ == "__main__":
     
     # plt.rcParams["text.usetex"] = True
 
-    animation_soluce(mapping=True)
+    # animation_soluce()
+
+    plot_soluce_nonuniform()
     # plot_soluce()
     # plot_diagnostic()
     # order_convergence()

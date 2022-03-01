@@ -5,43 +5,38 @@
 int init_data_sim(data_Sim *sim) {
 
 #   if SAVE == 1
-        sprintf(filename, "%s.txt", path);
+        sprintf(filename, "%ssolution.txt", path);
 #   elif SAVE == 2
-        sprintf(filename, "%s_%s_%d.txt", path, scheme, N);
+        sprintf(filename, "%ssolution_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
+#   elif SAVE == 3
+        sprintf(filename, "%snonuniform_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
 #   endif
 
     sim->h = L / N;
-    sim->dt = CFL * sim->h / C;
+    sim->dt = CFL * sim->h * (1 - A) / C;
     sim->M = ceil(TEND / sim->dt);
 
 #   if (SCHEME_A == 'I')
-    sim->u = (double *)calloc(5 * N, sizeof(double));
-    sim->q = sim->u + 4 * N;
+        sim->u = (double *)calloc(6 * N, sizeof(double));
+        sim->q = sim->u + 5 * N;
 #   else
-    sim->u = (double *)calloc(4 * N, sizeof(double));
-#   endif
-
-#   if (MAPPING)
-    sim->dg = (double *)malloc(N * sizeof(double));
-    double xi;
-    for (int i = 0; i < N; i++) {
-        xi = -L / 2. + i * sim->h;
-        sim->dg[i] = 1. - A * cos(2 * M_PI * xi / L);
-    }
+        sim->u = (double *)calloc(5 * N, sizeof(double));
 #   endif
 
     sim->ul = sim->u + N;
     sim->us = sim->u + 2 * N;
     sim->du = sim->u + 3 * N;
+    sim->dg = sim->u + 4 * N;
+    double xi;
+    for (int i = 0; i < N; i++) {
+        xi = -L / 2. + i * sim->h;
+        sim->dg[i] = 1. - A * cos(2 * M_PI * xi / L);
+    }
 
     return 0;
 }
 
 void free_data_sim(data_Sim *sim) {
-#   if (MAPPING)
-    free(sim->dg);
-#   endif
-
     free(sim->u);
     free(sim);
 }
@@ -69,12 +64,8 @@ void set_u_gaussian(data_Sim *sim) {
     double x;
     for (int i = 0; i < N; i++) {
         x = -L / 2. + i * sim->h;
-#   if (!MAPPING)
-        sim->u[i] = UMAX * exp(-x * x / (SIGMA * SIGMA));
-#   elif (MAPPING)
         x = x - A * L / (2 * M_PI) * sin(2 * M_PI * x / L);
         sim->u[i] = UMAX * exp(-x * x / (SIGMA * SIGMA)) * sim->dg[i];
-#   endif
     }
 
 #   if SAVE
@@ -92,14 +83,10 @@ void display_diagnostic(data_Sim *sim, int t_idx) {
 
     for (int i = 0; i < N; i++) {
         x = -L / 2. + i * sim->h;
-#   if (!MAPPING)
-        arg = fmod(x - C * t - L / 2., L) + L / 2.;
-        u_exact = UMAX * exp(-pow(arg / SIGMA, 2.));
-#   elif (MAPPING)
         x = x - A * L / (2 * M_PI) * sin(2 * M_PI * x / L);
         arg = fmod(x - C * t - L / 2., L) + L / 2.;
         u_exact = UMAX * exp(-pow(arg / SIGMA, 2.)) * sim->dg[i];
-#   endif
+
         /*for (k = 0; k < u_exact * 20; k++) printf("-");
         for (; k < 30; k++) printf(" ");
         for (k = 0; k < sim->u[i] * 20; k++) printf("-");
@@ -130,11 +117,7 @@ void RK4C(data_Sim *sim) {
         memcpy(us, u, N * sizeof(double));
         for (k = 0; k < 4; k++) {
             for (i = 0; i < N; i++) {
-#               if (!MAPPING)
-                ul[i] = (us[i] + ALPHA[k] * sim->dt * du[i]);
-#               elif (MAPPING)
                 ul[i] = (us[i] + ALPHA[k] * sim->dt * du[i]) / sim->dg[i];
-#               endif
             }
             f_eval(sim);
             for (i = 0; i < N; i++) {

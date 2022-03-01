@@ -15,7 +15,7 @@
 
 #define N 128  // nb of points
 #define TEND 1.  // final time [s]
-#define L 1.  // length [m]
+#define L 2.  // length [m]
 #define C 1.  // wave speed [m/s]
 #define SIGMA (L / 16.)  // std deviation
 #define UMAX 1.  // height of the gaussian function

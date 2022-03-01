@@ -1,8 +1,6 @@
-from urllib.parse import scheme_chars
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-import os
 
 ftSz1, ftSz2, ftSz3 = 20, 15, 12
 plt.rcParams['font.family'] = 'monospace'
@@ -103,7 +101,7 @@ def plot_soluce_nonuniform():
 
     lines_labels = [axs[1, 0].get_legend_handles_labels()]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
+    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.1, -0.99, 0.8, 1.), mode='expand',
                      ncol=4, facecolor='wheat', framealpha=0.25, fancybox=True, fontsize=ftSz2)
 
     for ax in axs.flatten():
@@ -117,7 +115,7 @@ def plot_soluce_nonuniform():
     axs[0, 0].set_ylabel(r"$v(\xi, t)$", fontsize=ftSz2)
     axs[1, 0].set_ylabel(r"$u(x, t)$", fontsize=ftSz2)
 
-    # fig.savefig("./figures/nonuniform.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
+    # fig.savefig("./figures/nonuniform_1.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.show()
 
 
@@ -279,9 +277,9 @@ if __name__ == "__main__":
     
     # plt.rcParams["text.usetex"] = True
 
-    # animation_soluce()
+    animation_soluce()
 
-    plot_soluce_nonuniform()
     # plot_soluce()
+    # plot_soluce_nonuniform()
     # plot_diagnostic()
     # order_convergence()

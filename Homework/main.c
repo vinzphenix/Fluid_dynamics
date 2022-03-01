@@ -101,7 +101,7 @@ void display_diagnostic(data_Sim *sim, int t_idx) {
     I *= sim->h / (SIGMA * UMAX);
     E *= sim->h / (SIGMA * UMAX * UMAX);
     R *= sim->h / (SIGMA * UMAX * UMAX);
-    printf("j = %3d  t = %.3f  :  I = %-7.3lf  E = %-7.3lf  R = %-7.3f\n", t_idx, t, I, E, R);
+    printf("iteration %3d   t = %.3f  :\t  I = %-7.3lf  E = %-7.3lf  R = %-7.3f\n", t_idx, t, I, E, R);
 }
 
 void RK4C(data_Sim *sim) {
@@ -125,9 +125,8 @@ void RK4C(data_Sim *sim) {
             }
         }
 
-        display_diagnostic(sim, t);
-
 #       if SAVE > 0
+            display_diagnostic(sim, t);
             save_array(sim, t);
 #       endif
         

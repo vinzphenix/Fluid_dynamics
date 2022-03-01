@@ -13,7 +13,6 @@ filename = "./data/solution.txt"
 def plot_soluce():
     fig, axs = plt.subplots(3, 2, figsize=(14, 10), constrained_layout=True, sharex='all', sharey='all')
     scheme_list = ["E2", "E4", "I4"]
-    
     # fig, axs = plt.subplots(2, 2, figsize=(14, 6.5), constrained_layout=True, sharex='all', sharey='all')
     # scheme_list = ["E6", "I6"]
     
@@ -35,8 +34,8 @@ def plot_soluce():
             x = np.linspace(-L/2., 3*L/2. - h, 2*N)
 
             T_idx = [np.argmin(np.abs(t - t_wanted)) for t_wanted in T_list]
-            axs[i, 0].plot(x, np.r_[u[T_idx[0]], u[T_idx[0]]], ls='-', marker='.', color=f'C{j}', label=f'N = {N}')
-            axs[i, 1].plot(x, np.r_[u[T_idx[1]], u[T_idx[1]]], ls='-', marker='.', color=f'C{j}')
+            axs[i, 0].plot(x, np.r_[u[T_idx[0]], u[T_idx[0]]], ls='-', marker='.', color=f'C{j}', label=f'N = {N}', zorder=len(N_list)-j)
+            axs[i, 1].plot(x, np.r_[u[T_idx[1]], u[T_idx[1]]], ls='-', marker='.', color=f'C{j}', zorder=len(N_list)-j)
 
             print(f"{scheme:2s} - N = {N:3d}  -->  0.5 =? {T_idx[0] * dt:.3f}  1. =? {T_idx[1] * dt:.3f}")
 
@@ -120,7 +119,8 @@ def plot_diagnostic():
 
 def order_convergence():
     fig, ax = plt.subplots(1, 1, figsize=(10., 6.), constrained_layout=True)
-    scheme_list = ["E2", "E4", "I4"]  # , "E6", "I6"]
+    scheme_list = ["E2", "E4", "I4", "E6", "I6"]
+    alpha_list = [1., 1., 1., 0.5, 0.5]
     N_list = [32, 64, 128]
     t_wanted = 0.525
 
@@ -147,21 +147,21 @@ def order_convergence():
             h_list[j] = h / sigma
             R_list[j] = h / (sigma * U_max * U_max) * np.sum(np.power((u[T_idx] - f(x, t[T_idx])), 2))
 
-        ax.loglog(h_list, R_list, ls='-', marker='o', color=f'C{i}', label=f'{scheme}')
+        ax.loglog(h_list, R_list, ls='-', marker='o', color=f'C{i}', label=f'{scheme}', alpha=alpha_list[i])
     
-    ax.loglog(h_list, h_list ** 2, ls='--', color='darkgrey', label='order $h^2$')
-    ax.loglog(h_list, h_list ** 4, ls='-.', color='darkgrey', label='order $h^4$')
+    ax.loglog(h_list, h_list ** 2, ls='--', color='black', label='order $h^2$')
+    ax.loglog(h_list, h_list ** 4, ls='-.', color='black', label='order $h^4$')
 
     ax.grid(ls=':', which="both")
     ax.set_xlabel(r"$h/\sigma$", fontsize=ftSz2)
     ax.set_ylabel(r"Global error at $ct/L \,=\, {:.3f}$".format(t_wanted), fontsize=ftSz2)
     ax.legend(fontsize=ftSz3)
     
-    # fig.savefig("./figures/order.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
+    # fig.savefig("./figures/order.svg", format="svg", bbox_inches='tight')
     plt.show()
 
 
-def animation_soluce():
+def animation_soluce(mapping=False):
     def init():
         exact.set_data(x_plot, f(x_plot, 0))
         time_text.set_text(time_template.format(0))
@@ -170,7 +170,7 @@ def animation_soluce():
         return tuple([line, exact, time_text])
 
     def animate(t_idx):
-        exact.set_data(x_plot, f(x_plot, t_idx * dt))
+        exact.set_data(x_plot, f(x_plot, t[t_idx]))
         time_text.set_text(time_template.format(t[t_idx]))
         line.set_data(x, u[t_idx, :])
 
@@ -178,19 +178,24 @@ def animation_soluce():
 
     with open(filename, 'r') as file:
         scheme = file.readline().strip()
-        c, sigma, U_max, L, dt = [float(x) for x in file.readline().split()]
+        c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
         matrix = np.loadtxt(file)
 
     t = matrix[:, 0]
     u = matrix[:, 1:]
     M, N = u.shape
     h = L / N
+    x = np.linspace(-L/2., L/2. - h, N)
+
+    if mapping:
+        dg = 1 - a * np.cos(2 * np.pi * x / L)  # x here is xi
+        x = x - a * L / (2 * np.pi) * np.sin(2 * np.pi * x / L)  # map to physical x
+        u /= dg  # change of variable from v to u
 
     f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod((x_ - c * t_ - L / 2), L) + L / 2) / sigma, 2))
 
     n_plot = 200
     x_plot = np.linspace(-L / 2., L / 2., n_plot)
-    x = np.linspace(-L/2., L/2. - h, N)
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), constrained_layout=True, num='Animation of the solution')
 
@@ -218,7 +223,7 @@ if __name__ == "__main__":
     
     # plt.rcParams["text.usetex"] = True
 
-    animation_soluce()
+    animation_soluce(mapping=True)
     # plot_soluce()
     # plot_diagnostic()
     # order_convergence()

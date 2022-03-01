@@ -16,19 +16,21 @@ char *path = "./data/solution";
 char filename[50];
 
 // Simulation parameters
-#define N 64
+#define N 128
 #define TEND 1.
 #define L 1.
 #define C 1.
-#define SIGMA (1. / 16.)
+#define SIGMA (L / 16.)
 #define UMAX 1.
 
 #define SCHEME_A 'E'
 #define SCHEME_B '4'
 
-#define CFL 1.4
+#define CFL 0.5//1.4
 // CFL = (E2: 2.828) (E4: 2.061) (E6: 1.783) (I4: 1.632) (I6: 1.421)
 
+#define MAPPING 1 // 0 for regular, 1 for x(xi) mapping
+#define A 0.5
 
 double ALPHA[4] = {0, 0.5, 0.5, 1.};
 double GAMMA[4] = {0.16666666666, 0.33333333333, 0.33333333333, 0.16666666666};
@@ -44,7 +46,7 @@ double GAMMA[4] = {0.16666666666, 0.33333333333, 0.33333333333, 0.16666666666};
 typedef struct data_Sim_alias {
     int M;
     double h, dt;
-    double *u, *us, *ul, *du, *q;
+    double *u, *us, *ul, *du, *q, *dg;
 } data_Sim;
 
 void f_eval(data_Sim *sim);

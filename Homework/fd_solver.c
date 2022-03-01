@@ -1,11 +1,13 @@
 #include "fd_solver.h"
 
+//#if (NONUNIFORM == 0)
+
 #if ((SCHEME_A == 'E') && (SCHEME_B == '2'))
 void f_eval(data_Sim *sim) {
     double *u = sim->ul;
     double *du = sim->du;
     double coef = -C / (2 * sim->h);
-
+    
     du[0] = coef * (u[1] - u[N - 1]);
     du[N - 1] = coef * (u[0] - u[N - 2]);
 
@@ -37,7 +39,7 @@ void f_eval(data_Sim *sim) {
     double *du = sim->du;
     double coef = -C / (20 * sim->h);
 
-    // faster than modulo, but not as nice
+    // faster than modulo everywhere, but not as nice
     int i;
     for (i = 0; i < 3; i++) {
         du[i] = coef * (15 * (u[i+1] - u[(i-1) % N]) - 3 * (u[i+2] - u[(i-2) % N]) + (u[i+3] - u[(i-3) % N]) / 3.);
@@ -88,8 +90,8 @@ void f_eval(data_Sim *sim) {
     // du is the solution of the tridiagonal system after this call
     solve_period_3diag(N, 1., 1./3., 1./3., du, q);
 }
-
 #else
 #warning "This scheme is not yet implemented"
-
 #endif
+
+//#endif

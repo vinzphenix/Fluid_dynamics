@@ -2,14 +2,7 @@
 #include "fd_solver.c"
 
 
-//int init_data_sim(data_Sim *sim, int N, double T, double c, double L, double sigma, double U_max, char *scheme) {
 int init_data_sim(data_Sim *sim) {
-    //sim->N = N;
-    //sim->c = c;
-    //sim->sigma = sigma;
-    //sim->U_max = U_max;
-    //sim->L = L;
-    //sim->scheme = scheme;
 
 #   if SAVE == 1
         sprintf(filename, "%s.txt", path);
@@ -17,8 +10,6 @@ int init_data_sim(data_Sim *sim) {
         sprintf(filename, "%s_%s_%d.txt", path, scheme, N);
 #   endif
 
-    
-    //sim->CFL = 1.4;
     sim->h = L / N;
     sim->dt = CFL * sim->h / C;
     sim->M = ceil(TEND / sim->dt);
@@ -30,29 +21,27 @@ int init_data_sim(data_Sim *sim) {
     sim->u = (double *)calloc(4 * N, sizeof(double));
 #   endif
 
+#   if (MAPPING)
+    sim->dg = (double *)malloc(N * sizeof(double));
+    double xi;
+    for (int i = 0; i < N; i++) {
+        xi = -L / 2. + i * sim->h;
+        sim->dg[i] = 1. - A * cos(2 * M_PI * xi / L);
+    }
+#   endif
+
     sim->ul = sim->u + N;
     sim->us = sim->u + 2 * N;
     sim->du = sim->u + 3 * N;
 
-    /*if (strcmp(scheme, "E2") == 0) {
-        sim->f_eval = &f_E2;
-    } else if (strcmp(scheme, "E4") == 0) {
-        sim->f_eval = &f_E4;
-    } else if (strcmp(scheme, "E6") == 0) {
-        sim->f_eval = &f_E6;
-    } else if (strcmp(scheme, "I4") == 0) {
-        sim->f_eval = &f_I4;
-        sim->q = sim->u + 4 * N;
-    } else if (strcmp(scheme, "I6") == 0) {
-        sim->f_eval = &f_I6;
-        sim->q = sim->u + 4 * N;
-    } else {
-        return -1;
-    }*/
     return 0;
 }
 
 void free_data_sim(data_Sim *sim) {
+#   if (MAPPING)
+    free(sim->dg);
+#   endif
+
     free(sim->u);
     free(sim);
 }
@@ -62,7 +51,7 @@ void save_array(data_Sim *sim, int t) {
     if (t == 0) {
         ptr = fopen(filename, "w");
         fprintf(ptr, "%c%c\n", SCHEME_A, SCHEME_B);
-        fprintf(ptr, "%lf %lf %lf %lf %lf\n", C, SIGMA, UMAX, L, sim->dt);
+        fprintf(ptr, "%lf %lf %lf %lf %lf %lf\n", C, SIGMA, UMAX, L, sim->dt, A);
     } else {
         ptr = fopen(filename, "a");
     }
@@ -79,8 +68,13 @@ void save_array(data_Sim *sim, int t) {
 void set_u_gaussian(data_Sim *sim) {
     double x;
     for (int i = 0; i < N; i++) {
-        x = -L / 2 + i * sim->h;
+        x = -L / 2. + i * sim->h;
+#   if (!MAPPING)
         sim->u[i] = UMAX * exp(-x * x / (SIGMA * SIGMA));
+#   elif (MAPPING)
+        x = x - A * L / (2 * M_PI) * sin(2 * M_PI * x / L);
+        sim->u[i] = UMAX * exp(-x * x / (SIGMA * SIGMA)) * sim->dg[i];
+#   endif
     }
 
 #   if SAVE
@@ -98,9 +92,14 @@ void display_diagnostic(data_Sim *sim, int t_idx) {
 
     for (int i = 0; i < N; i++) {
         x = -L / 2. + i * sim->h;
+#   if (!MAPPING)
         arg = fmod(x - C * t - L / 2., L) + L / 2.;
         u_exact = UMAX * exp(-pow(arg / SIGMA, 2.));
-
+#   elif (MAPPING)
+        x = x - A * L / (2 * M_PI) * sin(2 * M_PI * x / L);
+        arg = fmod(x - C * t - L / 2., L) + L / 2.;
+        u_exact = UMAX * exp(-pow(arg / SIGMA, 2.)) * sim->dg[i];
+#   endif
         /*for (k = 0; k < u_exact * 20; k++) printf("-");
         for (; k < 30; k++) printf(" ");
         for (k = 0; k < sim->u[i] * 20; k++) printf("-");
@@ -131,7 +130,11 @@ void RK4C(data_Sim *sim) {
         memcpy(us, u, N * sizeof(double));
         for (k = 0; k < 4; k++) {
             for (i = 0; i < N; i++) {
-                ul[i] = us[i] + ALPHA[k] * sim->dt * du[i];
+#               if (!MAPPING)
+                ul[i] = (us[i] + ALPHA[k] * sim->dt * du[i]);
+#               elif (MAPPING)
+                ul[i] = (us[i] + ALPHA[k] * sim->dt * du[i]) / sim->dg[i];
+#               endif
             }
             f_eval(sim);
             for (i = 0; i < N; i++) {

@@ -17,15 +17,18 @@ int init_data_sim(data_Sim *sim) {
     sim->M = ceil(TEND / sim->dt);
 
 #   if (SCHEME_A == 'I')
-        sim->u = (double *)calloc(6 * N, sizeof(double));
-        sim->q = sim->u + 5 * N;
+        sim->u = (double *)malloc(8 * N * sizeof(double));
+        sim->x1 = sim->u + 5 * N;
+        sim->at = sim->u + 6 * N;
+        sim->q = sim->u + 7 * N;
 #   else
-        sim->u = (double *)calloc(5 * N, sizeof(double));
+        sim->u = (double *)malloc(5 * N * sizeof(double));
 #   endif
 
     sim->ul = sim->u + N;
     sim->us = sim->u + 2 * N;
     sim->du = sim->u + 3 * N;
+
     sim->dg = sim->u + 4 * N;
     double xi;
     for (int i = 0; i < N; i++) {

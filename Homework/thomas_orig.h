@@ -9,15 +9,10 @@
 #ifndef thomas_h
 #define thomas_h
 
-#include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <time.h>
-
 
 void solve_Ac_thomas(const int n, const double a, const double b, const double c,
-                     double *x, double *q, double *at) {
+                     double* x,double* q){
     /*
      This function solve a constant tridiagonal problem using Thomas algorithm.
      The matrix has the following structure:
@@ -38,23 +33,29 @@ void solve_Ac_thomas(const int n, const double a, const double b, const double c
 
     int i;
 
+    double* a1 = (double*) calloc(n,sizeof(double) );
+
     // forward pass
-    at[0] = c / a;
-    q[0] = q[0] / a;
-    for (i = 1; i < n; ++i) {
-        at[i] = c / (a - b * at[i - 1]);
-        q[i] = (q[i] - b * q[i - 1]) / (a - b * at[i - 1]);
+    a1[0] = c   /a;
+    q [0] = q[0]/a;
+    for (i=1;i<n;++i){
+        a1[i] = c/(a - b * a1[i-1]);
+        q [i] = (q[i]- b * q[i-1] )/(a-b*a1[i-1]);
+
     }
 
     // backward pass
-    x[n - 1] = q[n - 1];
-    for (i = n - 2; i >= 0; --i) {
-        x[i] = q[i] - at[i] * x[i + 1];
+    x[n-1] = q[n-1];
+    for (i=n-2; i>=0 ; --i){
+        x[i] = q[i] - a1[i]*x[i+1];
     }
+
+    // free array
+    free(a1);
 }
 
 void solve_period_3diag(const int n, const double a, const double b, const double c,
-                        double *x, double *q, double *x1, double *at) {
+                        double* x,double* q){
     /*
      This function solve a constant tridiagonal problem using Thomas algorithm.
      The matrix has the following structure:
@@ -74,22 +75,29 @@ void solve_period_3diag(const int n, const double a, const double b, const doubl
      */
     int i;
 
-    // solve for the first x
-    solve_Ac_thomas(n - 1, a, b, c, x1, q, at);
+    double* q2 = (double*) calloc(n-1,sizeof(double));
+    double* x1 = (double*) calloc(n-1,sizeof(double));
+    double* x2 = (double*) calloc(n-1,sizeof(double));
 
-    // solve for the second x
-    memset(q, 0, (n - 1) * sizeof(double));
-    q[0] = -b;
-    q[n - 2] = -c;
-    solve_Ac_thomas(n - 1, a, b, c, x, q, at);
+    // boundary points treatment
+  	q2[0] 	= -b;
+	q2[n-2] = -c;
+
+    // solve the different x1 and x2
+    solve_Ac_thomas(n-1 ,a ,b ,c ,x1,q);
+    solve_Ac_thomas(n-1 ,a ,b ,c ,x2,q2);
 
     // compute x_n
-    x[n - 1] = (q[n - 1] - c * x1[0] - b * x1[n - 2]) / (a + c * x[0] + b * x[n - 2]);
+    x[n-1] = (q[n-1] - c*x1[0] - b * x1[n-2])/(1.0 + c*x2[0] + b*x2[n-2]);
 
     // compute the solution
-    for (i = 0; i < n - 1; ++i) {
-        x[i] = x1[i] + x[i] * x[n - 1];
+    for (i=0; i<n-1; ++i){
+        x[i] = x1[i] + x2[i] * x[n-1];
     }
+
+    free(q2);
+    free(x1);
+    free(x2);
 }
 
 #endif /* thomas_h */

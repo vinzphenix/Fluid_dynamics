@@ -11,11 +11,11 @@
 
 // Simulation parameters
 #define SCHEME_A 'I'
-#define SCHEME_B '4'
+#define SCHEME_B '6'
 
 #define N 128  // nb of points
-#define TEND 1.  // final time [s]
-#define L 2.  // length [m]
+#define TEND 5.  // final time [s]
+#define L 1.  // length [m]
 #define C 1.  // wave speed [m/s]
 #define SIGMA (L / 16.)  // std deviation
 #define UMAX 1.  // height of the gaussian function
@@ -35,7 +35,9 @@ double GAMMA[4] = {1./6., 1./3., 1./3., 1./6.};
 typedef struct data_Sim_alias {
     int M;
     double h, dt;
-    double *u, *us, *ul, *du, *q, *dg;
+    double *u, *us, *ul, *du;  // vectors for the RK4C
+    double *dg;  // derivative of the mapping at xi_i
+    double *x1, *at, *q;  // vectors for the tri-diagonal system
 } data_Sim;
 
 void f_eval(data_Sim *sim);

@@ -63,12 +63,15 @@ void save_array(data_Sim *sim, int t) {
     fclose(ptr);
 }
 
-void set_u_gaussian(data_Sim *sim) {
+void set_u_initial(data_Sim *sim) {
     double x;
     for (int i = 0; i < N; i++) {
         x = -L / 2. + i * sim->h;
         x = x - A * L / (2 * M_PI) * sin(2 * M_PI * x / L);
         sim->u[i] = UMAX * exp(-x * x / (SIGMA * SIGMA)) * sim->dg[i];
+#       if WAVEPACKET > 0
+        sim->u[i] *= cos(2 * M_PI * 16 / N * x);
+#       endif
     }
 
 #   if SAVE
@@ -142,7 +145,7 @@ int main(int argc, char *argv[]) {
 
     data_Sim *simulation = (data_Sim *)malloc(sizeof(data_Sim));
     init_data_sim(simulation); // N, Tend, c, L, sigma, Umax
-    set_u_gaussian(simulation);
+    set_u_initial(simulation);
 
     clock_t start = clock();
     RK4C(simulation);

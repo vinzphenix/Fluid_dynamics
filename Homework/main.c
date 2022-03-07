@@ -6,9 +6,11 @@ int init_data_sim(data_Sim *sim) {
 
 #   if SAVE == 1
         sprintf(filename, "%ssolution.txt", path);
-#   elif SAVE == 2
+#   elif (SAVE == 2) && (WAVEPACKET == 0)
         sprintf(filename, "%ssolution_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
-#   elif SAVE == 3
+#   elif (SAVE == 2) && (WAVEPACKET == 1)
+        sprintf(filename, "%swavepacket_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
+#   elif (SAVE == 3) && (WAVEPACKET == 0)
         sprintf(filename, "%snonuniform_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
 #   endif
 
@@ -70,7 +72,7 @@ void set_u_initial(data_Sim *sim) {
         x = x - A * L / (2 * M_PI) * sin(2 * M_PI * x / L);
         sim->u[i] = UMAX * exp(-x * x / (SIGMA * SIGMA)) * sim->dg[i];
 #       if WAVEPACKET > 0
-        sim->u[i] *= cos(2 * M_PI * 16 / N * x);
+        sim->u[i] *= cos(2 * M_PI * 16 * x / L);
 #       endif
     }
 
@@ -88,11 +90,15 @@ void display_diagnostic(data_Sim *sim, int t_idx) {
     // int k;
 
     for (int i = 0; i < N; i++) {
-        x = -L / 2. + i * sim->h;
-        x = x - A * L / (2 * M_PI) * sin(2 * M_PI * x / L);
+        x = -L / 2. + i * sim->h;  // uniform
+        x = x - A * L / (2 * M_PI) * sin(2 * M_PI * x / L);  // scaling
         arg = fmod(x - C * t - L / 2., L) + L / 2.;
         u_exact = UMAX * exp(-pow(arg / SIGMA, 2.)) * sim->dg[i];
 
+#       if WAVEPACKET > 0
+        u_exact *= cos(2 * M_PI * 16 * (x - C * t) / L);
+#       endif
+        
         /*for (k = 0; k < u_exact * 20; k++) printf("-");
         for (; k < 30; k++) printf(" ");
         for (k = 0; k < sim->u[i] * 20; k++) printf("-");

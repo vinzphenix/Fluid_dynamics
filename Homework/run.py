@@ -16,11 +16,13 @@ def plot_soluce():
     
     N_list = [32, 64, 128]
     T_list = [0.525, 1.006]
+    prefix = "solution"
+
     for i, scheme in enumerate(scheme_list):
         
         for j, N in enumerate(N_list):
             
-            with open(f"./data/solution_{scheme}_{N}.txt", 'r') as file:
+            with open(f"./data/{prefix}_{scheme}_{N}.txt", 'r') as file:
                 scheme = file.readline().strip()
                 c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
                 matrix = np.loadtxt(file)
@@ -39,7 +41,8 @@ def plot_soluce():
 
         n_plot = 500
         x_plot = np.linspace(-L / 2., 3 * L / 2., n_plot)
-        f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod(np.abs(x_ - c * t_ + L / 2), L) - L / 2) / sigma, 2))
+        f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod((x_ - c * t_ - 3 * L / 2), L) + L / 2) / sigma, 2))
+
         axs[i, 0].plot(x_plot, f(x_plot, T_list[0]), color='grey', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
         axs[i, 1].plot(x_plot, f(x_plot, T_list[1]), color='grey', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
 
@@ -59,6 +62,58 @@ def plot_soluce():
         ax.set_ylabel(f"u(x,t) - {scheme}", fontsize=ftSz2)
     
     # fig.savefig("./figures/overview_1.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.show()
+
+
+def plot_wavepacket():
+    fig, axs = plt.subplots(3, 2, figsize=(14, 10), constrained_layout=True, sharex='all', sharey='all')
+    scheme_list = ["E2", "E4", "I4"]
+ 
+    T_list = [0.503, 1.006]
+    prefix = "wavepacket"
+    N = 128
+
+    for i, scheme in enumerate(scheme_list):
+        
+        with open(f"./data/{prefix}_{scheme}_{N}.txt", 'r') as file:
+            scheme = file.readline().strip()
+            c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
+            matrix = np.loadtxt(file)
+
+        t = matrix[:, 0]
+        u = matrix[:, 1:]
+        M, N = u.shape
+        h = L / N
+        x = np.linspace(-L/2., 3*L/2. - h, 2*N)
+
+        T_idx = [np.argmin(np.abs(t - t_wanted)) for t_wanted in T_list]
+        axs[i, 0].plot(x, np.r_[u[T_idx[0]], u[T_idx[0]]], ls='-', marker='.', label=f'Numercial solution')  # , color=f'C{j}',
+        axs[i, 1].plot(x, np.r_[u[T_idx[1]], u[T_idx[1]]], ls='-', marker='.')
+
+        n_plot = 500
+        x_plot = np.linspace(-L / 2., 3 * L / 2., n_plot)
+        func = lambda x_, t_: U_max * np.exp(-np.power((np.fmod((x_ - c * t_ - 3 * L / 2), L) + L / 2) / sigma, 2))
+        f = lambda x_, t_: np.cos(2 * np.pi * 16 * (x_ - c * t_) / L) * func(x_, t_) 
+
+        axs[i, 0].plot(x_plot, f(x_plot, T_list[0]), color='grey', alpha=0.5, lw=2, zorder=0, label='Analytic solution')
+        axs[i, 1].plot(x_plot, f(x_plot, T_list[1]), color='grey', alpha=0.5, lw=2, zorder=0, label='Analytic solution')
+
+    lines_labels = [axs[0, 0].get_legend_handles_labels()]
+    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
+                     ncol=2, facecolor='wheat', framealpha=0.25, fancybox=True, fontsize=ftSz2)
+
+    axs[0, 0].set_ylim(-0.85, 1.1)
+    for ax in axs.flatten():
+        ax.grid(ls=':')
+    for T, ax in zip(T_list, axs[0, :]):
+        ax.set_title(r"$ct/L \; = \;{:.3f}$".format(T), fontsize=ftSz2)
+    for ax in axs[-1, :]:
+        ax.set_xlabel("$x/L$", fontsize=ftSz2)
+    for scheme, ax in zip(scheme_list, axs[:, 0]):
+        ax.set_ylabel(f"u(x,t) - {scheme}", fontsize=ftSz2)
+    
+    # fig.savefig("./figures/wavepacket_1.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
     plt.show()
 
 
@@ -246,7 +301,11 @@ def animation_soluce():
     x = x - a * L / (2 * np.pi) * np.sin(2 * np.pi * x / L)  # map to physical x
     u /= dg  # change of variable from v to u
 
-    f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod((x_ - c * t_ - L / 2), L) + L / 2) / sigma, 2))
+    func = lambda x_, t_: U_max * np.exp(-np.power((np.fmod((x_ - c * t_ - L / 2), L) + L / 2) / sigma, 2))
+    if np.any(u[0] < 0):
+        f = lambda x_, t_: np.cos(2 * np.pi * 16 * (x_ - c * t_) / L) * func(x_, t_)
+    else:
+        f = func
 
     n_plot = 200
     x_plot = np.linspace(-L / 2., L / 2., n_plot)
@@ -277,9 +336,10 @@ if __name__ == "__main__":
     
     # plt.rcParams["text.usetex"] = True
 
-    animation_soluce()
+    # animation_soluce()
 
     # plot_soluce()
+    plot_wavepacket()
     # plot_soluce_nonuniform()
     # plot_diagnostic()
     # order_convergence()

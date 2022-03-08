@@ -5,7 +5,17 @@ from matplotlib.animation import FuncAnimation
 ftSz1, ftSz2, ftSz3 = 20, 15, 12
 plt.rcParams['font.family'] = 'monospace'
 
-filename = "./data/solution.txt"
+
+def read_file(filename):
+    with open(filename, 'r') as file:
+        scheme = file.readline().strip()
+        c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
+    matrix = np.loadtxt(filename, skiprows=2)
+    t = matrix[:, 0]
+    u = matrix[:, 1:]
+    M, N = u.shape
+    h = L / N
+    return scheme, c, sigma, U_max, L, dt, a, t, u, M, N, h
 
 
 def plot_soluce():
@@ -21,16 +31,8 @@ def plot_soluce():
     for i, scheme in enumerate(scheme_list):
         
         for j, N in enumerate(N_list):
-            
-            with open(f"./data/{prefix}_{scheme}_{N}.txt", 'r') as file:
-                scheme = file.readline().strip()
-                c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
-                matrix = np.loadtxt(file)
+            scheme, c, sigma, U_max, L, dt, a, t, u, M, N, h = read_file(f"./data/{prefix}_{scheme}_{N}.txt")
 
-            t = matrix[:, 0]
-            u = matrix[:, 1:]
-            M, N = u.shape
-            h = L / N
             x = np.linspace(-L/2., 3*L/2. - h, 2*N)
 
             T_idx = [np.argmin(np.abs(t - t_wanted)) for t_wanted in T_list]
@@ -48,7 +50,7 @@ def plot_soluce():
 
     lines_labels = [axs[0, 0].get_legend_handles_labels()]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
+    _ = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
                      ncol=4, facecolor='wheat', framealpha=0.25, fancybox=True, fontsize=ftSz2)
 
     axs[0, 0].set_ylim(-0.1, 1.1)
@@ -75,19 +77,11 @@ def plot_wavepacket():
 
     for i, scheme in enumerate(scheme_list):
         
-        with open(f"./data/{prefix}_{scheme}_{N}.txt", 'r') as file:
-            scheme = file.readline().strip()
-            c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
-            matrix = np.loadtxt(file)
-
-        t = matrix[:, 0]
-        u = matrix[:, 1:]
-        M, N = u.shape
-        h = L / N
+        scheme, c, sigma, U_max, L, dt, a, t, u, M, N, h = read_file(f"./data/{prefix}_{scheme}_{N}.txt")
         x = np.linspace(-L/2., 3*L/2. - h, 2*N)
 
         T_idx = [np.argmin(np.abs(t - t_wanted)) for t_wanted in T_list]
-        axs[i, 0].plot(x, np.r_[u[T_idx[0]], u[T_idx[0]]], ls='-', marker='.', label=f'Numercial solution')  # , color=f'C{j}',
+        axs[i, 0].plot(x, np.r_[u[T_idx[0]], u[T_idx[0]]], ls='-', marker='.', label=f'Numerical solution')  # , color=f'C{j}',
         axs[i, 1].plot(x, np.r_[u[T_idx[1]], u[T_idx[1]]], ls='-', marker='.')
 
         n_plot = 500
@@ -100,7 +94,7 @@ def plot_wavepacket():
 
     lines_labels = [axs[0, 0].get_legend_handles_labels()]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
+    _ = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
                      ncol=2, facecolor='wheat', framealpha=0.25, fancybox=True, fontsize=ftSz2)
 
     axs[0, 0].set_ylim(-0.85, 1.1)
@@ -123,18 +117,9 @@ def plot_soluce_nonuniform():
 
     T_list = [0.50312, 1.00078]
     for i, scheme in enumerate(scheme_list):
-            
-        with open(f"./data/nonuniform_{scheme}_128.txt", 'r') as file:
-            scheme = file.readline().strip()
-            c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
-            matrix = np.loadtxt(file)
 
-        t = matrix[:, 0]
-        v = matrix[:, 1:]
-        M, N = v.shape
-        h = L / N
+        scheme, c, sigma, U_max, L, dt, a, t, v, M, N, h = read_file(f"./data/nonuniform_{scheme}_128.txt")
         xi = np.linspace(-L/2., L/2. - h, N)
-    
         dg = 1 - a * np.cos(2 * np.pi * xi / L)  # x here is xi
         x = xi - a * L / (2 * np.pi) * np.sin(2 * np.pi * xi / L)  # map to physical x
         u = v / dg  # change of variable from v to u
@@ -156,7 +141,7 @@ def plot_soluce_nonuniform():
 
     lines_labels = [axs[1, 0].get_legend_handles_labels()]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.1, -0.99, 0.8, 1.), mode='expand',
+    _ = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.1, -0.99, 0.8, 1.), mode='expand',
                      ncol=4, facecolor='wheat', framealpha=0.25, fancybox=True, fontsize=ftSz2)
 
     for ax in axs.flatten():
@@ -186,15 +171,7 @@ def plot_diagnostic():
         
         for j, N in enumerate(N_list):
             
-            with open(f"./data/solution_{scheme}_{N}.txt", 'r') as file:
-                scheme = file.readline().strip()
-                c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
-                matrix = np.loadtxt(file)
-
-            t = matrix[:, 0]
-            u = matrix[:, 1:]
-            M, N = u.shape
-            h = L / N
+            scheme, c, sigma, U_max, L, dt, a, t, u, M, N, h = read_file(f"./data/solution_{scheme}_{N}.txt")
             x = np.linspace(-L/2., L/2. - h, N)
             
             f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod(np.abs(x_ - c * t_ + L / 2), L) - L / 2) / sigma, 2))
@@ -210,7 +187,7 @@ def plot_diagnostic():
 
     lines_labels = [axs[0, 0].get_legend_handles_labels()]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
+    _ = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
                      ncol=3, facecolor='wheat', framealpha=0.25, fancybox=True, fontsize=ftSz2)
 
     axs[0, 0].set_ylim(1.625, 1.925)
@@ -229,7 +206,7 @@ def plot_diagnostic():
 
 def order_convergence():
     fig, ax = plt.subplots(1, 1, figsize=(10., 6.), constrained_layout=True)
-    scheme_list = ["E2", "E4", "I4", "E6", "I6"]
+    scheme_list = ["E2", "E4", "I4"]  # , "E6", "I6"]
     alpha_list = [1., 1., 1., 0.5, 0.5]
     N_list = [32, 64, 128]
     t_wanted = 0.525
@@ -240,15 +217,7 @@ def order_convergence():
         h_list = np.zeros(3)
         for j, N in enumerate(N_list):
             
-            with open(f"./data/solution_{scheme}_{N}.txt", 'r') as file:
-                scheme = file.readline().strip()
-                c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
-                matrix = np.loadtxt(file)
-
-            t = matrix[:, 0]
-            u = matrix[:, 1:]
-            M, N = u.shape
-            h = L / N
+            scheme, c, sigma, U_max, L, dt, a, t, u, M, N, h = read_file(f"./data/solution_{scheme}_{N}.txt")
             x = np.linspace(-L/2., L/2. - h, N)
             
             f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod(np.abs(x_ - c * t_ + L / 2), L) - L / 2) / sigma, 2))
@@ -286,17 +255,8 @@ def animation_soluce():
 
         return tuple([line, exact, time_text])
 
-    with open(filename, 'r') as file:
-        scheme = file.readline().strip()
-        c, sigma, U_max, L, dt, a = [float(x) for x in file.readline().split()]
-        matrix = np.loadtxt(file)
-
-    t = matrix[:, 0]
-    u = matrix[:, 1:]
-    M, N = u.shape
-    h = L / N
+    scheme, c, sigma, U_max, L, dt, a, t, u, M, N, h = read_file("./data/solution.txt")
     x = np.linspace(-L/2., L/2. - h, N)
-
     dg = 1 - a * np.cos(2 * np.pi * x / L)  # x here is xi
     x = x - a * L / (2 * np.pi) * np.sin(2 * np.pi * x / L)  # map to physical x
     u /= dg  # change of variable from v to u
@@ -339,7 +299,7 @@ if __name__ == "__main__":
     # animation_soluce()
 
     # plot_soluce()
-    plot_wavepacket()
+    # plot_wavepacket()
     # plot_soluce_nonuniform()
     # plot_diagnostic()
-    # order_convergence()
+    order_convergence()

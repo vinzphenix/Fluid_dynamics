@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fft import fft, fftshift
 from scipy.linalg import eig
-from numpy import pi, sqrt, exp, cos
+from numpy import pi, sqrt, exp, cos, sin
 
 ftSz1, ftSz2, ftSz3 = 20, 15, 12
 plt.rcParams["text.usetex"] = False
@@ -16,7 +16,7 @@ def fourier():
     h = L / N
     sigma = np.array([L / 4., L / 16.])
 
-    j = np.linspace(-N//2, (N-1)//2, N)
+    j = np.linspace(-N // 2, (N - 1) // 2, N)
     x = np.linspace(-L / 2, L / 2 - h, N)
     k = 2 * pi * j / L
 
@@ -31,7 +31,7 @@ def fourier():
     axs[0].plot(j, u_fft[0], ls="", marker="x", label='Numerical')
     axs[1].plot(j, u_analytic[1], "-", lw=3, label='Analytical', alpha=0.85)
     axs[1].plot(j, u_fft[1], ls="", marker="x", label='Numerical')
-    
+
     for ax, ratio in zip(axs, [4., 16.]):
         ax.set_ylim([1.5e-20, 5.])
         ax.set_yscale("log")
@@ -40,7 +40,7 @@ def fourier():
         ax.set_ylabel(r"$L/\sigma = {:.0f}$".format(ratio), fontsize=ftSz2)
 
     axs[1].set_xlabel("j", fontsize=ftSz2)
-    
+
     plt.show()
 
 
@@ -50,7 +50,7 @@ def fourier_packet():
     h = L / N
     s = L / 16.
 
-    j = np.linspace(-N//2, (N-1)//2, N)
+    j = np.linspace(-N // 2, (N - 1) // 2, N)
     x = np.linspace(-L / 2, L / 2 - h, N)
     k = 2 * pi * j / L
     kp = 2 * pi / N * 16
@@ -65,15 +65,61 @@ def fourier_packet():
     # for u_analytic, u_fft, ratio in zip(u_analytic_list, u_fft_list, [4., 16.]):
     ax.plot(j, u_analytic, "-", lw=3, label='Analytical', alpha=0.85)
     ax.plot(j, u_fft, ls="", marker="x", label='Numerical')
-    
+
     ax.set_ylim([1.5e-20, 5.])
     ax.set_yscale("log")
     ax.legend(fontsize=ftSz2)
     ax.grid(ls=':')
     ax.set_ylabel(r"fft")
     ax.set_xlabel("j", fontsize=ftSz2)
-    
+
     plt.show()
+
+
+def dispersion():
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6), constrained_layout=True, sharex='all')
+    n_plot = 400
+
+    x = np.linspace(0, pi, n_plot)
+    E2 = sin(x)
+    E4 = 4. / 3. * sin(x) - 1. / 6. * sin(2 * x)
+    E6 = (45. * sin(x) - 9. * sin(2 * x) + sin(3 * x)) / 30.
+    I4 = (3. * sin(x)) / (2. + cos(x))
+    I6 = (28. * sin(x) + sin(2. * x)) / (18. + 12 * cos(x))
+    axs[0].plot(x / pi, E2 / pi, label='E2', color='C0')
+    axs[0].plot(x / pi, E4 / pi, label='E4', color='C1')
+    axs[0].plot(x / pi, E6 / pi, label='E6', color='C2')
+    axs[0].plot(x / pi, I4 / pi, label='I4', color='C1', ls='--')
+    axs[0].plot(x / pi, I6 / pi, label='I6', color='C2', ls='--')
+    axs[0].plot(x / pi, x / pi, label='Exact', color='grey')
+
+    E2 = cos(x)
+    E4 = (4. * cos(x) - cos(2 * x)) / 3.
+    E6 = (15. * cos(x) - 6. * cos(2 * x) + cos(3 * x)) / 10.
+    I4 = 3. * (1 + 2. * cos(x)) / ((2. + cos(x)) ** 2)
+    I6 = 1. / 3. * ((28 * sin(x) + sin(2 * x)) * sin(x) + (3 + 2 * cos(x)) * (14 * cos(x) + cos(2 * x))) / (
+            (3 + 2 * cos(x)) ** 2)
+    axs[1].plot(x / pi, E2, label='E2', color='C0')
+    axs[1].plot(x / pi, E4, label='E4', color='C1')
+    axs[1].plot(x / pi, E6, label='E6', color='C2')
+    axs[1].plot(x / pi, I4, label='I4', color='C1', ls='--')
+    axs[1].plot(x / pi, I6, label='I6', color='C2', ls='--')
+    axs[1].plot(x / pi, np.ones_like(x), label='Exact', color='grey')
+
+    axs[0].set_title("Dispersion relation", fontsize=ftSz2)
+    axs[0].set_xlabel(r"$\frac{kh}{\pi}$", fontsize=ftSz2)
+    axs[0].set_ylabel(r"$\frac{(kh)^*}{\pi}$", fontsize=ftSz2, rotation=0)
+    axs[0].set_aspect("equal", "datalim")
+
+    axs[1].set_title("Group velocity", fontsize=ftSz2)
+    axs[1].set_xlabel(r"$\frac{kh}{\pi}$", fontsize=ftSz2)
+    axs[1].set_ylabel(r"$\frac{c_g^*}{c}$", fontsize=ftSz2, rotation=0)
+    for ax in axs:
+        ax.grid(ls=':')
+        ax.legend(fontsize=ftSz3)
+
+    plt.show()
+
 
 def stability():
     N = 10
@@ -106,5 +152,6 @@ def stability():
 
 if __name__ == "__main__":
     # fourier()
-    fourier_packet()
+    # fourier_packet()
+    dispersion()
     # stability()

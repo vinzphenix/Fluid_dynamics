@@ -50,7 +50,7 @@ def plot_soluce():
 
     lines_labels = [axs[0, 0].get_legend_handles_labels()]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    _ = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
+    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
                      ncol=4, facecolor='wheat', framealpha=0.25, fancybox=True, fontsize=ftSz2)
 
     axs[0, 0].set_ylim(-0.1, 1.1)
@@ -94,7 +94,7 @@ def plot_wavepacket():
 
     lines_labels = [axs[0, 0].get_legend_handles_labels()]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    _ = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
+    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
                      ncol=2, facecolor='wheat', framealpha=0.25, fancybox=True, fontsize=ftSz2)
 
     axs[0, 0].set_ylim(-0.85, 1.1)
@@ -141,7 +141,7 @@ def plot_soluce_nonuniform():
 
     lines_labels = [axs[1, 0].get_legend_handles_labels()]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    _ = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.1, -0.99, 0.8, 1.), mode='expand',
+    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.1, -0.99, 0.8, 1.), mode='expand',
                      ncol=4, facecolor='wheat', framealpha=0.25, fancybox=True, fontsize=ftSz2)
 
     for ax in axs.flatten():
@@ -187,7 +187,7 @@ def plot_diagnostic():
 
     lines_labels = [axs[0, 0].get_legend_handles_labels()]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    _ = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
+    lgd = fig.legend(lines, labels, labelspacing=2.5, bbox_to_anchor=(0.2, -0.99, 0.6, 1.), mode='expand',
                      ncol=3, facecolor='wheat', framealpha=0.25, fancybox=True, fontsize=ftSz2)
 
     axs[0, 0].set_ylim(1.625, 1.925)

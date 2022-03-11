@@ -19,13 +19,15 @@ int init_data_sim(data_Sim *sim) {
     sim->M = ceil(TEND / sim->dt);
 
 #   if (SCHEME_A == 'I')
-        sim->u = (double *)malloc(8 * N * sizeof(double));
+        sim->u = (double *)calloc(8 * N, sizeof(double));
         sim->x1 = sim->u + 5 * N;
         sim->at = sim->u + 6 * N;
         sim->q = sim->u + 7 * N;
 #   else
-        sim->u = (double *)malloc(5 * N * sizeof(double));
+        sim->u = (double *)calloc(5 * N, sizeof(double));
 #   endif
+    // malloc would work as good as calloc since we never use these arrays uninitialized 
+    // except "du", but it is multiplied by 0 in that case
 
     sim->ul = sim->u + N;
     sim->us = sim->u + 2 * N;
@@ -113,7 +115,7 @@ void display_diagnostic(data_Sim *sim, int t_idx) {
     I *= sim->h / (SIGMA * UMAX);
     E *= sim->h / (SIGMA * UMAX * UMAX);
     R *= sim->h / (SIGMA * UMAX * UMAX);
-    printf("iteration %3d   t = %.3f  :\t  I = %-7.3lf  E = %-7.3lf  R = %-7.3f\n", t_idx, t, I, E, R);
+    printf("iteration %3d   t = %.3f  : \t  I = %-7.3lf  E = %-7.3lf  R = %-7.3f \n", t_idx, t, I, E, R);
 }
 
 void RK4C(data_Sim *sim) {

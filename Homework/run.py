@@ -18,28 +18,28 @@ def read_file(filename):
     return scheme, c, sigma, U_max, L, dt, a, t, u, M, N, h
 
 
-def plot_soluce():
+def plot_soluce(save=False):
     fig, axs = plt.subplots(3, 2, figsize=(14, 10), constrained_layout=True, sharex='all', sharey='all')
     scheme_list = ["E2", "E4", "I4"]
     # fig, axs = plt.subplots(2, 2, figsize=(14, 6.5), constrained_layout=True, sharex='all', sharey='all')
     # scheme_list = ["E6", "I6"]
     
     N_list = [32, 64, 128]
-    T_list = [0.525, 1.006]
+    T_list = [0.500, 1.00]
     prefix = "solution"
 
     for i, scheme in enumerate(scheme_list):
         
-        for j, N in enumerate(N_list):
+        for j, (N, mk) in enumerate(zip(N_list, ['.', '^', 'x'])):
             scheme, c, sigma, U_max, L, dt, a, t, u, M, N, h = read_file(f"./data/{prefix}_{scheme}_{N}.txt")
 
             x = np.linspace(-L/2., 3*L/2. - h, 2*N)
 
             T_idx = [np.argmin(np.abs(t - t_wanted)) for t_wanted in T_list]
-            axs[i, 0].plot(x, np.r_[u[T_idx[0]], u[T_idx[0]]], ls='-', marker='.', color=f'C{j}', label=f'N = {N}', zorder=len(N_list)-j)
-            axs[i, 1].plot(x, np.r_[u[T_idx[1]], u[T_idx[1]]], ls='-', marker='.', color=f'C{j}', zorder=len(N_list)-j)
+            axs[i, 0].plot(x, np.r_[u[T_idx[0]], u[T_idx[0]]], ls='-', marker=mk, color=f'C{j}', label=f'N = {N}', zorder=len(N_list)-j)
+            axs[i, 1].plot(x, np.r_[u[T_idx[1]], u[T_idx[1]]], ls='-', marker=mk, color=f'C{j}', zorder=len(N_list)-j)
 
-            print(f"{scheme:2s} - N = {N:3d}  -->  0.5 =? {T_idx[0] * dt:.3f}  1. =? {T_idx[1] * dt:.3f}")
+            # print(f"{scheme:2s} - N = {N:3d}  -->  0.5 =? {T_idx[0] * dt:.3f}  1. =? {T_idx[1] * dt:.3f}")
 
         n_plot = 500
         x_plot = np.linspace(-L / 2., 3 * L / 2., n_plot)
@@ -63,15 +63,17 @@ def plot_soluce():
     for scheme, ax in zip(scheme_list, axs[:, 0]):
         ax.set_ylabel(f"u(x,t) - {scheme}", fontsize=ftSz2)
     
-    # fig.savefig("./figures/overview_1.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
-    plt.show()
+    if save:
+        fig.savefig("./figures/overview_1.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
+    else:
+        plt.show()
 
 
-def plot_wavepacket():
+def plot_wavepacket(save=False):
     fig, axs = plt.subplots(3, 2, figsize=(14, 10), constrained_layout=True, sharex='all', sharey='all')
     scheme_list = ["E2", "E4", "I4"]
  
-    T_list = [0.503, 1.006]
+    T_list = [0.50, 1.00]
     prefix = "wavepacket"
     N = 128
 
@@ -107,15 +109,47 @@ def plot_wavepacket():
     for scheme, ax in zip(scheme_list, axs[:, 0]):
         ax.set_ylabel(f"u(x,t) - {scheme}", fontsize=ftSz2)
     
-    # fig.savefig("./figures/wavepacket_1.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
-    plt.show()
+    if save:
+        fig.savefig("./figures/wavepacket_1.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
+    else:
+        plt.show()
 
 
-def plot_soluce_nonuniform():
+def plot_problem(save=False):
+    fig, axs = plt.subplots(2, 1, figsize=(10, 6), constrained_layout=True, sharex='all', sharey='all')
+    T_list = [0.65, 0.67]
+    scheme = 'E6'
+    scheme, c, sigma, U_max, L, dt, a, t, u, M, N, h = read_file(f"./data/solution_{scheme}_128.txt")
+
+    for i, (ax, t_wanted) in enumerate(zip(axs, T_list)):
+
+        x = np.linspace(-L/2., L/2. - h, N)
+        T_idx = np.argmin(np.abs(t - t_wanted))
+        ax.plot(x, u[T_idx], ls='-', marker='.', label=f'Numerical solution')  # , color=f'C{j}',
+
+        n_plot = 500
+        x_plot = np.linspace(-L / 2., L / 2., n_plot)
+        f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod((x_ - c * t_ - 3 * L / 2), L) + L / 2) / sigma, 2))
+
+        ax.plot(x_plot, f(x_plot, t_wanted), color='grey', alpha=0.5, lw=2, zorder=0, label='Analytic solution')
+        ax.grid(ls=':')
+        ax.set_ylabel(r"$u(x, t={:.3f})$".format(t[T_idx]), fontsize=ftSz2)
+        ax.set_xlim([-0.24, 0.19])
+        ax.set_ylim([-0.03, 0.16])
+    
+    axs[-1].set_xlabel(r"$x\:/\:L$", fontsize=ftSz2)
+    axs[-1].legend(fontsize=ftSz2)
+    if save:
+        fig.savefig("./figures/problem.svg", format="svg", bbox_inches='tight')
+    else:
+        plt.show()
+
+
+def plot_soluce_nonuniform(save=False):
     fig, axs = plt.subplots(2, 2, figsize=(14, 10), constrained_layout=True, sharex='all', sharey='row')
     scheme_list = ["E2", "E4", "I4"]  # , "E6", "I6"]
 
-    T_list = [0.50312, 1.00078]
+    T_list = [0.50, 1.00]
     for i, scheme in enumerate(scheme_list):
 
         scheme, c, sigma, U_max, L, dt, a, t, v, M, N, h = read_file(f"./data/nonuniform_{scheme}_128.txt")
@@ -147,19 +181,21 @@ def plot_soluce_nonuniform():
     for ax in axs.flatten():
         ax.grid(ls=':')
     for T, ax in zip(T_list, axs[0, :]):
-        ax.set_title(r"$ct/L \; = \;{:.3f}$".format(T), fontsize=ftSz2)
+        ax.set_title(r"$ct/L \; = \;{:.1f}$".format(T), fontsize=ftSz2)
     for ax in axs[0, :]:
-        ax.set_xlabel(r"$\xi/L$", fontsize=ftSz2)
+        ax.set_xlabel(r"$\xi\:/\:L$", fontsize=ftSz2)
     for ax in axs[1, :]:
-        ax.set_xlabel(r"$x/L$", fontsize=ftSz2)
+        ax.set_xlabel(r"$x\:/\:L$", fontsize=ftSz2)
     axs[0, 0].set_ylabel(r"$v(\xi, t)$", fontsize=ftSz2)
     axs[1, 0].set_ylabel(r"$u(x, t)$", fontsize=ftSz2)
 
-    # fig.savefig("./figures/nonuniform_1.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
-    plt.show()
+    if save:
+        fig.savefig("./figures/nonuniform_1.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
+    else:
+        plt.show()
 
 
-def plot_diagnostic():
+def plot_diagnostic(save=False):
     fig, axs = plt.subplots(3, 3, figsize=(12, 8), constrained_layout=True, sharex='all', sharey='row')
     scheme_list = ["E2", "E4", "I4"]  # , "E6", "I6"]
     
@@ -200,16 +236,18 @@ def plot_diagnostic():
     for scheme, ax in zip(["I_h", "E_h", "R_h"], axs[:, 0]):
         ax.set_ylabel(f"{scheme}", fontsize=ftSz2)
     
-    # fig.savefig("./figures/diagnostic.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
-    plt.show()
+    if save:
+        fig.savefig("./figures/diagnostic.svg", format="svg", bbox_extra_artists=(lgd,), bbox_inches='tight')
+    else:
+        plt.show()
 
 
-def order_convergence():
+def order_convergence(save=False):
     fig, ax = plt.subplots(1, 1, figsize=(10., 6.), constrained_layout=True)
     scheme_list = ["E2", "E4", "I4"]  # , "E6", "I6"]
     alpha_list = [1., 1., 1., 0.5, 0.5]
     N_list = [32, 64, 128]
-    t_wanted = 0.525
+    t_wanted = 0.5
 
     for i, scheme in enumerate(scheme_list):
         
@@ -232,15 +270,17 @@ def order_convergence():
     ax.loglog(h_list, h_list ** 4, ls='-.', color='black', label='order $h^4$')
 
     ax.grid(ls=':', which="both")
-    ax.set_xlabel(r"$h/\sigma$", fontsize=ftSz2)
-    ax.set_ylabel(r"Global error at $ct/L \,=\, {:.3f}$".format(t_wanted), fontsize=ftSz2)
+    ax.set_xlabel(r"$h\:/\:\sigma$", fontsize=ftSz2)
+    ax.set_ylabel(r"Global error at $ct\:/\:L \:=\: {:.1f}$".format(t_wanted), fontsize=ftSz2)
     ax.legend(fontsize=ftSz3)
     
-    # fig.savefig("./figures/order.svg", format="svg", bbox_inches='tight')
-    plt.show()
+    if save:
+        fig.savefig("./figures/order.svg", format="svg", bbox_inches='tight')
+    else:
+        plt.show()
 
 
-def animation_soluce():
+def animation_soluce(blit=False):
     def init():
         exact.set_data(x_plot, f(x_plot, 0))
         time_text.set_text(time_template.format(0))
@@ -285,7 +325,7 @@ def animation_soluce():
     ax.set_ylabel("u(x,t)", fontsize=ftSz2)
 
     # to animate
-    _ = FuncAnimation(fig, animate, M, interval=50, blit=True, init_func=init, repeat_delay=3000)
+    _ = FuncAnimation(fig, animate, M, interval=50, blit=blit, init_func=init, repeat_delay=3000)
 
     # to get only one frame at t = i
     # i = M-1 ; init() ; animate(i)
@@ -294,12 +334,14 @@ def animation_soluce():
 
 if __name__ == "__main__":
     
-    # plt.rcParams["text.usetex"] = True
+    save_global = False
+    plt.rcParams["text.usetex"] = save_global
 
-    # animation_soluce()
+    animation_soluce()
 
-    # plot_soluce()
-    # plot_wavepacket()
-    # plot_soluce_nonuniform()
-    # plot_diagnostic()
-    order_convergence()
+    # plot_soluce(save_global)
+    # plot_diagnostic(save_global)
+    # order_convergence(save_global)
+    # plot_soluce_nonuniform(save_global)
+    # plot_wavepacket(save_global)
+    # plot_problem(save_global)

@@ -39,7 +39,7 @@ def fourier():
         ax.grid(ls=':')
         ax.set_ylabel(r"$L/\sigma = {:.0f}$".format(ratio), fontsize=ftSz2)
 
-    axs[1].set_xlabel("j", fontsize=ftSz2)
+    axs[1].set_xlabel("Index j", fontsize=ftSz2)
 
     plt.show()
 
@@ -53,7 +53,7 @@ def fourier_packet():
     j = np.linspace(-N // 2, (N - 1) // 2, N)
     x = np.linspace(-L / 2, L / 2 - h, N)
     k = 2 * pi * j / L
-    kp = 2 * pi / N * 16
+    kp = 2 * pi / L * 16
 
     f = U * cos(kp * x) * exp(-(x / s) ** 2)
     u_analytic = U / 2. * sqrt(np.pi) * s * exp(-((k - kp) * s) ** 2 / 4)
@@ -63,15 +63,18 @@ def fourier_packet():
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), constrained_layout=True)
 
     # for u_analytic, u_fft, ratio in zip(u_analytic_list, u_fft_list, [4., 16.]):
-    ax.plot(j, u_analytic, "-", lw=3, label='Analytical', alpha=0.85)
-    ax.plot(j, u_fft, ls="", marker="x", label='Numerical')
+    ax.plot(j, u_analytic, "-", lw=3, label='Analytical FT', alpha=0.85)
+    ax.plot(j, u_fft, ls="", marker="x", label='Numerical FFT')
+
+    ax.vlines(-16, 1e-20, 1e5, color='k', ls='--', alpha=0.5)
+    ax.vlines(16, 1e-20, 1e5, color='k', ls='--', alpha=0.5, label='Cosine peaks')
 
     ax.set_ylim([1.5e-20, 5.])
     ax.set_yscale("log")
     ax.legend(fontsize=ftSz2)
     ax.grid(ls=':')
-    ax.set_ylabel(r"fft")
-    ax.set_xlabel("j", fontsize=ftSz2)
+    ax.set_ylabel("Amplitude", fontsize=ftSz2)
+    ax.set_xlabel("Index j", fontsize=ftSz2)
 
     plt.show()
 
@@ -86,12 +89,12 @@ def dispersion():
     E6 = (45. * sin(x) - 9. * sin(2 * x) + sin(3 * x)) / 30.
     I4 = (3. * sin(x)) / (2. + cos(x))
     I6 = (28. * sin(x) + sin(2. * x)) / (18. + 12 * cos(x))
-    axs[0].plot(x / pi, E2 / pi, label='E2', color='C0')
-    axs[0].plot(x / pi, E4 / pi, label='E4', color='C1')
-    axs[0].plot(x / pi, E6 / pi, label='E6', color='C2')
-    axs[0].plot(x / pi, I4 / pi, label='I4', color='C1', ls='--')
-    axs[0].plot(x / pi, I6 / pi, label='I6', color='C2', ls='--')
-    axs[0].plot(x / pi, x / pi, label='Exact', color='grey')
+    axs[0].plot(x / pi, np.divide(E2, x, out=np.ones_like(x), where=x!=0), label='E2', color='C0')
+    axs[0].plot(x / pi, np.divide(E4, x, out=np.ones_like(x), where=x!=0), label='E4', color='C1')
+    axs[0].plot(x / pi, np.divide(E6, x, out=np.ones_like(x), where=x!=0), label='E6', color='C2')
+    axs[0].plot(x / pi, np.divide(I4, x, out=np.ones_like(x), where=x!=0), label='I4', color='C1', ls='--')
+    axs[0].plot(x / pi, np.divide(I6, x, out=np.ones_like(x), where=x!=0), label='I6', color='C2', ls='--')
+    axs[0].plot(x / pi, np.ones_like(x), label='Exact', color='grey')
 
     E2 = cos(x)
     E4 = (4. * cos(x) - cos(2 * x)) / 3.
@@ -106,14 +109,14 @@ def dispersion():
     axs[1].plot(x / pi, I6, label='I6', color='C2', ls='--')
     axs[1].plot(x / pi, np.ones_like(x), label='Exact', color='grey')
 
-    axs[0].set_title("Dispersion relation", fontsize=ftSz2)
-    axs[0].set_xlabel(r"$\frac{kh}{\pi}$", fontsize=ftSz2)
-    axs[0].set_ylabel(r"$\frac{(kh)^*}{\pi}$", fontsize=ftSz2, rotation=0)
+    axs[0].set_title("Phase velocity", fontsize=ftSz2)
+    axs[0].set_xlabel(r"$kh \: / \: \pi$", fontsize=ftSz2)
+    axs[0].set_ylabel(r"$c^* \: / \: c$", fontsize=ftSz2)
     axs[0].set_aspect("equal", "datalim")
 
     axs[1].set_title("Group velocity", fontsize=ftSz2)
-    axs[1].set_xlabel(r"$\frac{kh}{\pi}$", fontsize=ftSz2)
-    axs[1].set_ylabel(r"$\frac{c_g^*}{c}$", fontsize=ftSz2, rotation=0)
+    axs[1].set_xlabel(r"$kh\: / \: \pi$", fontsize=ftSz2)
+    axs[1].set_ylabel(r"$c_g^* \: / \: c$", fontsize=ftSz2)
     for ax in axs:
         ax.grid(ls=':')
         ax.legend(fontsize=ftSz3)

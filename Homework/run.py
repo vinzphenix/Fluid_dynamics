@@ -117,10 +117,11 @@ def plot_wavepacket(save=False):
 
 
 def plot_problem(save=False):
-    fig, axs = plt.subplots(2, 1, figsize=(10, 6), constrained_layout=True, sharex='all', sharey='all')
-    T_list = [0.65, 0.67]
+    fig, axs = plt.subplots(3, 1, figsize=(10, 8), constrained_layout=True, sharex='all', sharey='all')
+    T_list = np.array([0.66, 0.682, 0.705])
     scheme = 'E6'
     scheme, c, sigma, U_max, L, dt, a, t, u, M, N, h = read_file(f"./data/solution_{scheme}_128.txt")
+    x_loc_packet = np.array([0.150, 0.100, 0.050])
 
     for i, (ax, t_wanted) in enumerate(zip(axs, T_list)):
 
@@ -131,15 +132,20 @@ def plot_problem(save=False):
         n_plot = 500
         x_plot = np.linspace(-L / 2., L / 2., n_plot)
         f = lambda x_, t_: U_max * np.exp(-np.power((np.fmod((x_ - c * t_ - 3 * L / 2), L) + L / 2) / sigma, 2))
+        ax.plot(x_plot, f(x_plot, t[T_idx]), color='grey', alpha=0.5, lw=2, zorder=0, label='Analytic solution')
 
-        ax.plot(x_plot, f(x_plot, t_wanted), color='grey', alpha=0.5, lw=2, zorder=0, label='Analytic solution')
+        x_loc_regular = c * t[T_idx] + sigma * np.sqrt(np.log(U_max / 0.10)) - L
+        ax.vlines(x_loc_regular, -0.10, 0.20, color='C1', lw=3, alpha=0.65, label='Gaussian indicator')
+        ax.vlines(x_loc_packet[i], -0.10, 0.20, color='C2', lw=3, alpha=0.65, label='Pulse indicator')
+
         ax.grid(ls=':')
         ax.set_ylabel(r"$u(x, t={:.3f})$".format(t[T_idx]), fontsize=ftSz2)
-        ax.set_xlim([-0.24, 0.19])
+        ax.set_xlim([-0.26, 0.19])
         ax.set_ylim([-0.03, 0.16])
-    
+
     axs[-1].set_xlabel(r"$x\:/\:L$", fontsize=ftSz2)
-    axs[-1].legend(fontsize=ftSz3)
+    axs[0].legend(fontsize=ftSz3, loc='upper center')
+
     if save:
         fig.savefig("./figures/problem.svg", format="svg", bbox_inches='tight')
     else:
@@ -330,7 +336,7 @@ def animation_soluce(blit=False):
     ax.set_ylabel("u(x,t)", fontsize=ftSz2)
 
     # to animate
-    _ = FuncAnimation(fig, animate, M, interval=250, blit=blit, init_func=init, repeat_delay=3000)
+    _ = FuncAnimation(fig, animate, M, interval=20, blit=blit, init_func=init, repeat_delay=3000)
 
     # to get only one frame at t = i
     # i = M-1 ; init() ; animate(i)
@@ -342,7 +348,7 @@ if __name__ == "__main__":
     save_global = False
     plt.rcParams["text.usetex"] = save_global
 
-    animation_soluce(blit=True)
+    animation_soluce(blit=False)
 
     # plot_soluce(save_global)
     # plot_diagnostic(save_global)

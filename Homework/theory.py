@@ -193,30 +193,50 @@ def dispersion_mosaic(save=False):
 
 
 def stability():
-    N = 10
+    c, L, N = 1., 1., 16
+    h = L / N
     A = np.zeros((N, N))
     A += np.diag(np.ones(N - 1), 1)
     A -= np.diag(np.ones(N - 1), -1)
     A[0, -1] = -1
     A[-1, 0] = 1
-    A *= -1 / 2
+    A *= -c / (2 * h)
 
-    print(A)
-
-    j = np.linspace(0, N - 1, N)
-    lambda_exact = -1j * np.sin(2 * pi * j / N)
+    j = np.linspace(-N//2, N//2 - 1, N)
     lambda_num = eig(A, left=False, right=False)
 
-    print(lambda_exact)
-    print(lambda_num)
+    k = 2 * pi * j / L
+    kh = 2 * pi * j / N
+    lambda_E2 = -1j * c / h * sin(kh)
+    lambda_E4 = -1j * c / h * (4. / 3. * sin(kh) - 1. / 6. * sin(2 * kh))
+    lambda_E6 = -1j * c / h * (45. * sin(kh) - 9. * sin(2 * kh) + sin(3 * kh)) / 30.
+    lambda_I4 = -1j * c / h * (3. * sin(kh)) / (2. + cos(kh))
+    lambda_I6 = -1j * c / h * (28. * sin(kh) + sin(2. * kh)) / (18. + 12 * cos(kh))
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6), constrained_layout=True)
-    ax.plot(np.real(lambda_num), np.imag(lambda_num), 'o', label='Numerical')
-    ax.plot(np.real(lambda_exact), np.imag(lambda_exact), '.', label='Analytic')
+    print(np.imag(lambda_I6 * h / c))
 
-    ax.set_aspect('equal', 'datalim')
-    ax.grid(ls=':')
-    ax.legend()
+    s, w = np.meshgrid(np.linspace(-3.1, 1.1, 1000), np.linspace(-3.1, 3.1, 1000))
+    z = s + 1j * w
+    G = abs(1 + z + z ** 2 / 2 + z ** 3 / 6 + z ** 4 / 24)
+
+    fig, axs = plt.subplots(1, 2, figsize=(10, 6), constrained_layout=True)
+    for ax in axs:
+        # ax.plot(h / c * np.real(lambda_num), h / c * np.imag(lambda_num), 'o', label='Numerical')
+        ax.plot(h / c * np.real(lambda_E2), h / c * np.imag(lambda_E2), '.', label='E2')
+        ax.plot(h / c * np.real(lambda_E4), h / c * np.imag(lambda_E4), '.', label='E4')
+        ax.plot(h / c * np.real(lambda_E6), h / c * np.imag(lambda_E6), '.', label='E6')
+        ax.plot(h / c * np.real(lambda_I4), h / c * np.imag(lambda_I4), '.', label='I4')
+        ax.plot(h / c * np.real(lambda_I6), h / c * np.imag(lambda_I6), '.', label='I6')
+
+        # ax.contourf(z.real, z.imag, G, np.array([0., 1.]), cmap=plt.get_cmap('jet'))
+        ax.contour(z.real, z.imag, G, np.array([0., 1.+1e-5]), colors='black', linewidths=1)
+        ax.grid(ls=':')
+
+    axs[0].set_aspect('equal', 'datalim')
+    axs[0].set_title('RK44', fontsize=ftSz2)
+    axs[1].set_title('RK44 zoom', fontsize=ftSz2)
+    axs[1].set_xlim([-0.009, 0.009])
+    axs[1].legend(fontsize=ftSz3)
     plt.show()
 
 
@@ -224,8 +244,13 @@ if __name__ == "__main__":
     save_global = False
     plt.rcParams["text.usetex"] = save_global
 
-    # fourier(save_global)
-    # fourier_packet(save_global)
-    # dispersion(save_global)
+    print("{:10s}".format("Plot 1 / 3"), end="\r")
+    fourier(save_global)
+    print("{:10s}".format("Plot 2 / 3"), end="\r")
+    fourier_packet(save_global)
+    print("{:10s}".format("Plot 3 / 3"), end="\r")
     dispersion_mosaic(save_global)
+    print("{:10s}".format("Job done"))
+
+    # dispersion(save_global)
     # stability()

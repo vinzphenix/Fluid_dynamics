@@ -90,7 +90,7 @@ def plot_wavepacket(save=False):
         n_plot = 500
         x_plot = np.linspace(-L / 2., 3 * L / 2., n_plot)
         func = lambda x_, t_: U_max * np.exp(-np.power((np.fmod((x_ - c * t_ - 3 * L / 2), L) + L / 2) / sigma, 2))
-        f = lambda x_, t_: np.cos(2 * np.pi * 16 * (x_ - c * t_) / L) * func(x_, t_) 
+        f = lambda x_, t_: np.cos(2 * np.pi * 16 * (x_ - c * t_) / L) * func(x_, t_)
 
         axs[i, 0].plot(x_plot, f(x_plot, T_list[0]), color='grey', alpha=0.5, lw=2, zorder=0, label='Analytic solution')
         axs[i, 1].plot(x_plot, f(x_plot, T_list[1]), color='grey', alpha=0.5, lw=2, zorder=0, label='Analytic solution')
@@ -348,11 +348,19 @@ if __name__ == "__main__":
     save_global = False
     plt.rcParams["text.usetex"] = save_global
 
+    print("{:15s}".format("Anim running"), end="\r")
     animation_soluce(blit=False)
+    print("{:15s}".format("Plot 1 / 6"), end="\r")
+    plot_soluce(save_global)
+    print("{:15s}".format("Plot 2 / 6"), end="\r")
+    plot_diagnostic(save_global)
+    print("{:15s}".format("Plot 3 / 6"), end="\r")
+    order_convergence(save_global)
+    print("{:15s}".format("Plot 4 / 6"), end="\r")
+    plot_soluce_nonuniform(save_global)
+    print("{:15s}".format("Plot 5 / 6"), end="\r")
+    plot_wavepacket(save_global)
+    print("{:15s}".format("Plot 6 / 6"), end="\r")
+    plot_problem(save_global)
+    print("{:15s}".format("Job done"))
 
-    # plot_soluce(save_global)
-    # plot_diagnostic(save_global)
-    # order_convergence(save_global)
-    # plot_soluce_nonuniform(save_global)
-    # plot_wavepacket(save_global)
-    # plot_problem(save_global)

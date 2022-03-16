@@ -4,7 +4,7 @@
 void f_eval(data_Sim *sim) {
     double *u = sim->ul;
     double *du = sim->du;
-    double coef = -C / (2 * sim->h);
+    double coef = -C / (2. * sim->h);
 
     du[0] = coef * (u[1] - u[N - 1]);
     du[N - 1] = coef * (u[0] - u[N - 2]);
@@ -18,16 +18,16 @@ void f_eval(data_Sim *sim) {
 void f_eval(data_Sim *sim) {
     double *u = sim->ul;
     double *du = sim->du;
-    double coef = -C / (3 * sim->h);
+    double coef = -C / (3. * sim->h);
 
     // faster than modulo, but not as nice
-    du[0] = coef * (2 * (u[1] - u[N-1]) - (u[2] - u[N-2]) / 4.);
-    du[1] = coef * (2 * (u[2] - u[0]) - (u[3] - u[N-1]) / 4.);
-    du[N - 2] = coef * (2 * (u[N-1] - u[N-3]) - (u[0] - u[N-4]) / 4.);
-    du[N - 1] = coef * (2 * (u[0] - u[N-2]) - (u[1] - u[N-3]) / 4.);
+    du[0] = coef * (2. * (u[1] - u[N-1]) - (u[2] - u[N-2]) / 4.);
+    du[1] = coef * (2. * (u[2] - u[0]) - (u[3] - u[N-1]) / 4.);
+    du[N - 2] = coef * (2. * (u[N-1] - u[N-3]) - (u[0] - u[N-4]) / 4.);
+    du[N - 1] = coef * (2. * (u[0] - u[N-2]) - (u[1] - u[N-3]) / 4.);
 
     for (int i = 2; i < N - 2; i++) {
-        du[i] = coef * (2 * (u[i+1] - u[i-1]) - (u[i+2] - u[i-2]) / 4.);
+        du[i] = coef * (2. * (u[i+1] - u[i-1]) - (u[i+2] - u[i-2]) / 4.);
     }
 }
 
@@ -35,7 +35,7 @@ void f_eval(data_Sim *sim) {
 void f_eval(data_Sim *sim) {
     double *u = sim->ul;
     double *du = sim->du;
-    double coef = -C / (4 * sim->h);
+    double coef = -C / (4. * sim->h);
 
     // faster than modulo everywhere, but not as nice
     int i;
@@ -56,7 +56,7 @@ void f_eval(data_Sim *sim) {
     double *u = sim->ul;
     double *du = sim->du;
     double *q = sim->q;
-    double coef = -3 * C / (4 * sim->h);
+    double coef = -3. * C / (4. * sim->h);
 
     q[0] = coef * (u[1] - u[N-1]);
     q[N - 1] = coef * (u[0] - u[N-2]);
@@ -75,15 +75,15 @@ void f_eval(data_Sim *sim) {
     double *u = sim->ul;
     double *du = sim->du;
     double *q = sim->q;
-    double coef = -1 * C / (9 * sim->h);
+    double coef = -C / (9. * sim->h);
 
-    q[0] = coef * (7 * (u[1] - u[N-1]) + (u[2] - u[N-2]) / 4.);
-    q[1] = coef * (7 * (u[2] - u[0]) + (u[3] - u[N-1]) / 4.);
-    q[N-2] = coef * (7 * (u[N-1] - u[N-3]) + (u[0] - u[N-4]) / 4.);
-    q[N-1] = coef * (7 * (u[0] - u[N-2]) + (u[1] - u[N-3]) / 4.);
+    q[0] = coef * (7. * (u[1] - u[N-1]) + (u[2] - u[N-2]) / 4.);
+    q[1] = coef * (7. * (u[2] - u[0]) + (u[3] - u[N-1]) / 4.);
+    q[N-2] = coef * (7. * (u[N-1] - u[N-3]) + (u[0] - u[N-4]) / 4.);
+    q[N-1] = coef * (7. * (u[0] - u[N-2]) + (u[1] - u[N-3]) / 4.);
     
     for (int i = 1; i < N - 1; i++) {
-        q[i] = coef * (7 * (u[i+1] - u[i-1]) + (u[i+2] - u[i-2]) / 4.);
+        q[i] = coef * (7. * (u[i+1] - u[i-1]) + (u[i+2] - u[i-2]) / 4.);
     }
 
     // du is the solution of the tridiagonal system after this call

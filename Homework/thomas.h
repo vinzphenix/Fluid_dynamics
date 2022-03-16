@@ -77,7 +77,7 @@ void solve_period_3diag(const int n, const double a, const double b, const doubl
     // solve for the first x
     solve_Ac_thomas(n - 1, a, b, c, x1, q, at);
 
-    // solve for the second x
+    // solve for the second x: reset and setup q
     memset(q, 0, (n - 1) * sizeof(double));
     q[0] = -b;
     q[n - 2] = -c;

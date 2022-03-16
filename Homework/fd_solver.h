@@ -14,14 +14,14 @@
 #define SCHEME_B '6'
 
 #define N 128  // nb of points
-#define TEND 3.  // final time [s]
+#define TEND 2.  // final time [s]
 #define L 1.  // length [m]
 #define C 1.  // wave speed [m/s]
 #define SIGMA (L / 16.)  // std deviation
 #define UMAX 1.  // height of the gaussian function
 
-#define WAVEPACKET 0  // activate wavepacket mode
-#define A 0.  // parameter of the mapping x(xi)
+#define WAVEPACKET 0  // activate wavepacket mode (0: disabled, 1:enabled)
+#define A 0.1  // parameter of the mapping x(xi) : 0. <= xi < 1.
 #define CFL 1.  // Courant–Friedrichs–Lewy condition
 // CFL = (E2: 2.828) (E4: 2.061) (E6: 1.783) 
 //       (I4: 1.632) (I6: 1.421)

@@ -15,7 +15,7 @@ int init_data_sim(data_Sim *sim) {
 #   endif
 
     sim->h = L / N;
-    sim->dt = CFL * sim->h * (1 - A) / C;
+    sim->dt = CFL * sim->h * (1 - A) / fabs(C);
     sim->M = ceil(TEND / sim->dt);
 
 #   if (SCHEME_A == 'I')
@@ -89,28 +89,21 @@ void display_diagnostic(data_Sim *sim, int t_idx) {
     double R = 0.;
     double x, u_exact, arg;
     double t = sim->dt * t_idx;
-    // int k;
 
     for (int i = 0; i < N; i++) {
         x = -L / 2. + i * sim->h;  // uniform
         x = x - A * L / (2 * M_PI) * sin(2 * M_PI * x / L);  // scaling
-        arg = fmod(x - C * t - L / 2., L) + L / 2.;
+        arg = fmod(x - C * t - L / 2., L) + L / 2.;  // working for C > 0
         u_exact = UMAX * exp(-pow(arg / SIGMA, 2.)) * sim->dg[i];
 
 #       if WAVEPACKET > 0
         u_exact *= cos(2 * M_PI * 16 * (x - C * t) / L);
 #       endif
-        
-        /*for (k = 0; k < u_exact * 20; k++) printf("-");
-        for (; k < 30; k++) printf(" ");
-        for (k = 0; k < sim->u[i] * 20; k++) printf("-");
-        printf("\n");*/
 
         I += sim->u[i];
         E += pow(sim->u[i], 2.);
         R += pow(sim->u[i] - u_exact, 2.);
     }
-    // printf("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
 
     I *= sim->h / (SIGMA * UMAX);
     E *= sim->h / (SIGMA * UMAX * UMAX);
@@ -152,7 +145,7 @@ void RK4C(data_Sim *sim) {
 int main(int argc, char *argv[]) {
 
     data_Sim *simulation = (data_Sim *)malloc(sizeof(data_Sim));
-    init_data_sim(simulation); // N, Tend, c, L, sigma, Umax
+    init_data_sim(simulation);
     set_u_initial(simulation);
 
     clock_t start = clock();
@@ -163,3 +156,5 @@ int main(int argc, char *argv[]) {
     free_data_sim(simulation);
     return 0;
 }
+
+// gcc -o hw main.c -lm -O3 && ./hw

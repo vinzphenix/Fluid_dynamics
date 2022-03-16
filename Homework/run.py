@@ -312,8 +312,8 @@ def animation_soluce(blit=False):
     x = x - a * L / (2 * np.pi) * np.sin(2 * np.pi * x / L)  # map to physical x
     u /= dg  # change of variable from v to u
 
-    func = lambda x_, t_: U_max * np.exp(-np.power((np.fmod((x_ - c * t_ - L / 2), L) + L / 2) / sigma, 2))
-    if np.any(u[0] < 0):
+    func = lambda x_, t_: U_max * np.exp(-np.power((np.fmod(np.abs(x_ - c * t_ + L / 2), L) - L / 2) / sigma, 2))
+    if np.any(u[0] < 0) and np.any(u[0] > 0):
         f = lambda x_, t_: np.cos(2 * np.pi * 16 * (x_ - c * t_) / L) * func(x_, t_)
     else:
         f = func
@@ -324,8 +324,9 @@ def animation_soluce(blit=False):
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), constrained_layout=True, num='Animation of the solution')
 
     time_template = r'$t = {:.2f} \;[s]$'
-    time_text = ax.text(0.03, 0.88, '', fontsize=17, transform=ax.transAxes)
+    time_text = ax.text(0.03, 0.82, '', fontsize=17, transform=ax.transAxes)
     ax.text(0.03, 0.94, 'FD scheme: {:s}'.format(scheme), fontsize=17, transform=ax.transAxes)
+    ax.text(0.03, 0.88, 'Param a = {:.2f}'.format(a), fontsize=17, transform=ax.transAxes)
 
     line, = ax.plot(x, u[0, :], ls='-', marker='.', color='C0', label='Numerical solution')
     exact, = ax.plot(x_plot, f(x_plot, 0), color='C1', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
@@ -348,19 +349,19 @@ if __name__ == "__main__":
     save_global = False
     plt.rcParams["text.usetex"] = save_global
 
-    print("{:15s}".format("Anim running"), end="\r")
     animation_soluce(blit=False)
-    print("{:15s}".format("Plot 1 / 6"), end="\r")
-    plot_soluce(save_global)
-    print("{:15s}".format("Plot 2 / 6"), end="\r")
-    plot_diagnostic(save_global)
-    print("{:15s}".format("Plot 3 / 6"), end="\r")
-    order_convergence(save_global)
-    print("{:15s}".format("Plot 4 / 6"), end="\r")
-    plot_soluce_nonuniform(save_global)
-    print("{:15s}".format("Plot 5 / 6"), end="\r")
-    plot_wavepacket(save_global)
-    print("{:15s}".format("Plot 6 / 6"), end="\r")
-    plot_problem(save_global)
-    print("{:15s}".format("Job done"))
+    
+    # print("{:15s}".format("Plot 1 / 6"), end="\r")
+    # plot_soluce(save_global)
+    # print("{:15s}".format("Plot 2 / 6"), end="\r")
+    # plot_diagnostic(save_global)
+    # print("{:15s}".format("Plot 3 / 6"), end="\r")
+    # order_convergence(save_global)
+    # print("{:15s}".format("Plot 4 / 6"), end="\r")
+    # plot_soluce_nonuniform(save_global)
+    # print("{:15s}".format("Plot 5 / 6"), end="\r")
+    # plot_wavepacket(save_global)
+    # print("{:15s}".format("Plot 6 / 6"), end="\r")
+    # plot_problem(save_global)
+    # print("{:15s}".format("Job done"))
 

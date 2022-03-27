@@ -21,12 +21,45 @@
  p_ = p / (rho U0^2)
 */
 
+#define TEND 50.
+#define L_ 15.
+#define H_ 5.
+#define LBOX 5.
+#define D_IN 3.
+#define D_BOT 2.
+
+// access u and v for their convection
+#define LL(w, idx, inc) w[idx-inc]
+#define RR(w, idx, inc) w[idx+inc]
+#define BB(w, idx, inc) w[idx-1]
+#define AA(w, idx, inc) w[idx+1]
+
+// access other field for convection
+#define AL(w, idx, inc) w[idx]       // above left
+#define AR(w, idx, inc) w[idx+inc]   // above right
+#define BL(w, idx, inc) w[idx-1]     // below left
+#define BR(w, idx, inc) w[idx+inc-1] // below right
+
+/*// access u for convection of v
+#define LA(w, idx, inc) w[idx-inc+1]
+#define RA(w, idx, inc) w[idx+1]
+#define LB(w, idx, inc) w[idx-inc]
+#define RB(w, idx, inc) w[idx]*/
+
+
+char *path = "./data/";
+char filename_params[50];
+char filename_u[50];
+char filename_v[50];
+char filename_p[50];
+
 typedef struct {
-    int nx, ny;
+    int nt, nx, ny, size_u, size_v, size_p;
     double h, dt;
-    double *u;
-    double *v;
-    double *p;
+    double uMesh, vMesh;
+    double *u, *u_temp, *u_prev, *Hx, *Hx_prev;
+    double *v, *v_temp, *v_prev, *Hy, *Hy_prev;
+    double *p, *phi;
 } data_Sim;
 
 #endif

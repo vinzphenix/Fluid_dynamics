@@ -68,16 +68,53 @@ void poisson_solver(Poisson_data *data)
 /*More than probably, you should need to add arguments to the prototype ... .*/
 /*Modification to do in this function : */
 /*   -Insert the correct factor in matrix A*/
-void computeLaplacianMatrix(Mat A, int rowStart, int rowEnd)
-{
+void computeLaplacianMatrix(data_Sim *sim, Mat A, int rowStart, int rowEnd) {
+    // ugly "if" in the loops, but only called once, so who cares 
 
-    int r;
-    for (r = rowStart; r < rowEnd; r++){
-        MatSetValue(A, r, r , 1.0, INSERT_VALUES);
-        /*USING MATSETVALUE FUNCTION, INSERT THE GOOD FACTOR AT THE GOOD PLACE*/
-        /*Be careful; the solution from the system solved is defined within a constant.
-        One point from Phi must then be set to an abritrary constant.*/
+    int i, j, idx, count, start, mask;
+    int k = sim->ny;
+    
+    for (i = 0; i < sim->nx; i++) {
+        
+        start = (i == 0) ? 1 : 0; // start at 1 if (i == 0), start at 0 otherwise
+        if (start) { // set reference pressure in origin box (i = 0, j = 0)
+            MatSetValue(A, 0, 0, 1.0, INSERT_VALUES);
+        }
+
+        for (j = start; j < sim->ny; j++) {
+            idx = i * k + j;
+            count = 0;
+
+            mask = (D_IN * sim->n <= i) && (i < (D_IN + LBOX) * sim->n) && (D_BOT * sim->n <= j) && (j < (D_BOT + 1) * sim->n);
+            if (mask) { // inside rectangle
+                count = 1;  // set diagonal to 1
+            }
+            else {
+                if ((i != 0) && (i != (D_IN + LBOX) * sim->n)) { // it has left neighbor
+                    MatSetValue(A, idx, idx-k, 1.0, INSERT_VALUES);
+                    count ++;
+                }
+                if ((i != sim->nx - 1) && (i != D_IN * sim->n - 1)) { // it has right neighbor
+                    MatSetValue(A, idx, idx+k, 1.0, INSERT_VALUES);
+                    count ++;
+                }
+                if ((j != 0) && (j != (D_BOT + 1) * sim->n)) { // it has neighbor below
+                    MatSetValue(A, idx, idx-1, 1.0, INSERT_VALUES);
+                    count ++;
+                }
+                if ((j != sim->ny - 1) && (j != D_BOT * sim->n - 1)) { // it has neighbor above
+                    MatSetValue(A, idx, idx+1, 1.0, INSERT_VALUES);
+                    count ++;
+                }
+            }
+            
+            MatSetValue(A, idx, idx, -(double) count, INSERT_VALUES);  // itself
+        }
     }
+    
+    /*USING MATSETVALUE FUNCTION, INSERT THE GOOD FACTOR AT THE GOOD PLACE*/
+    /*Be careful; the solution from the system solved is defined within a constant.
+    One point from Phi must then be set to an abritrary constant.*/
 
 }
 
@@ -86,7 +123,7 @@ void computeLaplacianMatrix(Mat A, int rowStart, int rowEnd)
 /*Modification to do in this function :*/
 /*   -Specify the number of unknows*/
 /*   -Specify the number of non-zero diagonals in the sparse matrix*/
-PetscErrorCode initialize_poisson_solver(Poisson_data* data)
+PetscErrorCode initialize_poisson_solver(data_Sim *sim, Poisson_data* data)
 {
     PetscInt rowStart; /*rowStart = 0*/
     PetscInt rowEnd; /*rowEnd = the number of unknows*/
@@ -111,7 +148,7 @@ PetscErrorCode initialize_poisson_solver(Poisson_data* data)
     MatSeqAIJSetPreallocation(data->A,5, NULL); // /*SET HERE THE NUMBER OF NON-ZERO DIAGONALS*/
     MatGetOwnershipRange(data->A, &rowStart, &rowEnd);
 
-    computeLaplacianMatrix(data->A, rowStart, rowEnd);
+    computeLaplacianMatrix(sim, data->A, rowStart, rowEnd);
     ierr = MatAssemblyBegin(data->A, MAT_FINAL_ASSEMBLY);
     CHKERRQ(ierr);
     ierr = MatAssemblyEnd(data->A, MAT_FINAL_ASSEMBLY);

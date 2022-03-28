@@ -1,23 +1,31 @@
 #include "poisson.h"
 #include "project.h"
 
+char *myPath = "./data/";
+char filename_params[50];
+char filename_u[50];
+char filename_v[50];
+char filename_p[50];
+
 
 void init_data_sim(data_Sim *sim) {
-    sprintf(filename_params, "%ssimu_params.txt", path);
-    sprintf(filename_u, "%ssimu_u.txt", path);
-    sprintf(filename_v, "%ssimu_v.txt", path);
-    sprintf(filename_p, "%ssimu_p.txt", path);
+    sprintf(filename_params, "%ssimu_params.txt", myPath);
+    sprintf(filename_u, "%ssimu_u.txt", myPath);
+    sprintf(filename_v, "%ssimu_v.txt", myPath);
+    sprintf(filename_p, "%ssimu_p.txt", myPath);
 
     // sim->h = CFL / (FOURIER * RE * 5);
     // sim->dt = FOURIER * RE * (sim->h) * (sim->h);
 
     // sim->nt = ceil(TEND / sim->dt);
-    // sim->nx = L_ / sim->h;
-    // sim->ny = H_ / sim->h;
+    // sim->nx = (double) L_ / sim->h;
+    // sim->ny = (double) H_ / sim->h;
+
+    sim->n = 1;  // 1. / h
 
     sim->nt = 1;
-    sim->nx = 15;
-    sim->ny = 5;
+    sim->nx = 15 * sim->n;
+    sim->ny = 5 * sim->n;
 
     sim->dt = TEND / (double) sim->nt;
     sim->h = H_ / (double) sim->ny;
@@ -87,7 +95,8 @@ void save_fields(data_Sim *sim, int t) {
 
 
 void compute_shadow_pts(data_Sim *sim) {
-    int i, j, idx_u, idx_v;
+    int i, j;
+    // int idx_u, idx_v;
     
     int k = sim->ny + 2;
     int l = sim->ny + 1;
@@ -121,7 +130,6 @@ void compute_convection(data_Sim *sim) {
     double *v = sim->v;
     double uMesh = sim->uMesh;
     double vMesh = sim->vMesh;
-    double adv, dvg;
 
     double *H = sim->Hx;
     for (i = 1; i < sim->nx; i++) {
@@ -306,16 +314,16 @@ void update_2(data_Sim *sim) {
 void integrate_flow(data_Sim *sim) {
     for (int t = 1; t <= sim->nt; t++) {
         
-        compute_shadow_pts(sim);
-        compute_convection(sim);
-        update_1(sim);
+        //compute_shadow_pts(sim);
+        // compute_convection(sim);
+        // update_1(sim);
         // poisson ???
-        update_2(sim);
+        // update_2(sim);
 
     }
 
-    compute_convection(sim);
-    save_debug(sim);
+    // compute_convection(sim);
+    // save_debug(sim);
 
 }
 

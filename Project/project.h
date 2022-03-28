@@ -22,19 +22,19 @@
 */
 
 #define TEND 50.
-#define L_ 15.
-#define H_ 5.
-#define LBOX 5.
-#define D_IN 3.
-#define D_BOT 2.
+#define L_ 15
+#define H_ 5
+#define LBOX 5
+#define D_IN 3
+#define D_BOT 2
 
-// access u and v for their convection
+// access u and v neighbors
 #define LL(w, idx, inc) w[idx-inc]
 #define RR(w, idx, inc) w[idx+inc]
 #define BB(w, idx, inc) w[idx-1]
 #define AA(w, idx, inc) w[idx+1]
 
-// access other field for convection
+// access other field neighbors (reference taken as AL)
 #define AL(w, idx, inc) w[idx]       // above left
 #define AR(w, idx, inc) w[idx+inc]   // above right
 #define BL(w, idx, inc) w[idx-1]     // below left
@@ -46,15 +46,8 @@
 #define LB(w, idx, inc) w[idx-inc]
 #define RB(w, idx, inc) w[idx]*/
 
-
-char *path = "./data/";
-char filename_params[50];
-char filename_u[50];
-char filename_v[50];
-char filename_p[50];
-
 typedef struct {
-    int nt, nx, ny, size_u, size_v, size_p;
+    int nt, nx, ny, n, size_u, size_v, size_p;
     double h, dt;
     double uMesh, vMesh;
     double *u, *u_temp, *u_prev, *Hx, *Hx_prev;

@@ -28,6 +28,8 @@
 #define D_IN 3
 #define D_BOT 2
 
+#define FMT "%.5le "
+
 // access u and v neighbors
 #define LL(w, idx, inc) w[idx-inc]
 #define RR(w, idx, inc) w[idx+inc]
@@ -47,11 +49,12 @@
 #define RB(w, idx, inc) w[idx]*/
 
 typedef struct {
-    int nt, nx, ny, n, size_u, size_v, size_p;
+    int nt, nx, ny, n;
+    int size_u, size_v, size_p;
     double h, dt;
     double uMesh, vMesh;
-    double *u, *u_temp, *u_prev, *Hx, *Hx_prev;
-    double *v, *v_temp, *v_prev, *Hy, *Hy_prev;
+    double *u, *u_star, *Hx, *Hx_prev;
+    double *v, *v_star, *Hy, *Hy_prev;
     double *p, *phi;
 } data_Sim;
 

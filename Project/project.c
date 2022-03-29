@@ -6,6 +6,7 @@ char filename_params[50];
 char filename_u[50];
 char filename_v[50];
 char filename_p[50];
+char filename_w[50];
 
 
 void init_data_sim(data_Sim *sim) {
@@ -24,8 +25,8 @@ void init_data_sim(data_Sim *sim) {
     sim->n = 1;  // 1. / h
 
     sim->nt = 1;
-    sim->nx = 15 * sim->n;
-    sim->ny = 5 * sim->n;
+    sim->nx = L_ * sim->n;
+    sim->ny = H_ * sim->n;
 
     sim->dt = TEND / (double) sim->nt;
     sim->h = H_ / (double) sim->ny;
@@ -41,14 +42,14 @@ void init_data_sim(data_Sim *sim) {
     sim->size_p = size_p;
     
     sim->u = (double *)calloc(5*size_u, sizeof(double));
-    sim->u_temp = sim->u + size_u;
-    sim->u_prev = sim->u + 2*size_u;
+    sim->u_star = sim->u + size_u;
+    //sim->u_prev = sim->u + 2*size_u;
     sim->Hx = sim->u + 3*size_u;
     sim->Hx_prev = sim->u + 4*size_u;
 
     sim->v = (double *)calloc(5*size_v, sizeof(double));
-    sim->v_temp = sim->v + size_v;
-    sim->v_prev = sim->v + 2*size_v;
+    sim->v_star = sim->v + size_v;
+    //sim->v_prev = sim->v + 2*size_v;
     sim->Hy = sim->v + 3*size_v;
     sim->Hy_prev = sim->v + 4*size_v;
 
@@ -58,43 +59,55 @@ void init_data_sim(data_Sim *sim) {
 
 
 void save_fields(data_Sim *sim, int t) {
-    FILE *ptr, *ptr_u, *ptr_v, *ptr_p;
+    FILE *ptr, *ptr_u, *ptr_v, *ptr_p, *ptr_w;
+
     if (t == 0) {
         ptr = fopen(filename_params, "w");
         fprintf(ptr, "%d %d %d\n", sim->nt, sim->nx, sim->ny);
         fprintf(ptr, "%lf %lf %lf %lf %lf %lf %lf %lf\n", TEND, L_, H_, LBOX, D_IN, D_BOT, sim->dt, sim->h);
-    } else {
-        ptr_u = fopen(filename_u, "a");
-        ptr_v = fopen(filename_v, "a");
-        ptr_p = fopen(filename_p, "a");
-    }
-
-    for (int i = 0; i < sim->size_u; i++) {
-        fprintf(ptr, "%.5le ", sim->u[i]);
-    }
-    fprintf(ptr, "\n");
-
-    for (int i = 0; i < sim->size_v; i++) {
-        fprintf(ptr, "%.5le ", sim->v[i]);
-    }
-    fprintf(ptr, "\n");
-
-    for (int i = 0; i < sim->size_p; i++) {
-        fprintf(ptr, "%.5le ", sim->p[i]);
-    }
-    fprintf(ptr, "\n");
-    
-    if (t == 0) {
         fclose(ptr);
-    } else {
-        fclose(ptr_u);
-        fclose(ptr_v);
-        fclose(ptr_p);
     }
+
+    char mode[1] = (t == 0) ? "w": "a";
+    int i, j;
+    int k = sim->ny+2;
+    int l = sim->ny+1;
+    double u_up, u_dw, v_lf, v_rg;
+    
+    ptr_u = fopen(filename_u, mode);
+    ptr_v = fopen(filename_v, mode);
+    ptr_w = fopen(filename_w, mode);
+    ptr_p = fopen(filename_w, mode);
+
+    // loop over corners
+    for (i = 0; i < sim->nx + 1; i++) {
+        for (j = 0; j < sim->ny + 1; j++) {
+            
+            u_up = sim->u[i*k + j + 1]; // u above
+            u_dw = sim->u[i*k + j];     // u below
+            v_lf = sim->v[i*l + j];     // v left
+            v_rg = sim->v[(i+1)*l + j]; // v right
+            
+            fprintf(ptr_u, FMT, 0.5 * (u_up, u_dw));                        // u average
+            fprintf(ptr_v, FMT, 0.5 * (v_lf + v_rg));                       // v average
+            fprintf(ptr_w, FMT, ((v_rg - v_lf) - (u_up - u_dw)) / sim->h);  // vorticity
+        }
+    }
+
+    // loop over centers
+    for (i = 0; i < sim->size_p; i++) {
+        fprintf(ptr_p, FMT, sim->p[i]);  // pressure
+    }
+    
+    fprintf(ptr_u, "\n");    fclose(ptr_u);
+    fprintf(ptr_v, "\n");    fclose(ptr_v);
+    fprintf(ptr_w, "\n");    fclose(ptr_w);    
+    fprintf(ptr_w, "\n");    fclose(ptr_w);
+
 }
 
 
-void compute_shadow_pts(data_Sim *sim) {
+void compute_ghost_pts(data_Sim *sim) {
     int i, j;
     // int idx_u, idx_v;
     
@@ -105,7 +118,7 @@ void compute_shadow_pts(data_Sim *sim) {
     for (j = 1; j < sim->ny; j++) {   // Inflow uniform profile u
         sim->u[j] = 1.;               // could do a special profile
     }
-    for (j = 0; j <= sim->ny; j++) {  // trick for zero v at inflow
+    for (j = 0; j <= sim->ny; j++) {  // trick with ghost for zero v at inflow
         sim->v[j] = -0.2 * (sim->v[3*l + j] - 5. * sim->v[2*l + j] + 15. * sim->v[l + j] - 16. * 0.);
     }
 
@@ -236,7 +249,7 @@ void update_1(data_Sim *sim) {
             conv = 0.5 * (3. * sim->Hx[idx_u] - sim->Hx_prev[idx_u]);  // u du/dx + v du/dy
             pres = sim->p[idx_p] - sim->p[idx_p - sim->ny];  // dp/dx
             diff = 1. / (RE * pow(sim->h, 2)) * (RR(u, idx_u, k) + AA(u, idx_u, k) - 4*u[idx_u] + LL(u, idx_u, k) + BB(u, idx_u, k));  // d2u/dx2 + d2u/dy2
-            sim->u_temp[idx_u] = sim->u[idx_u] + sim->dt * (-conv - pres + diff);
+            sim->u_star[idx_u] = sim->u[idx_u] + sim->dt * (-conv - pres + diff);
         }
     }
 
@@ -250,7 +263,7 @@ void update_1(data_Sim *sim) {
             conv = 0.5 * (3. * sim->Hy[idx_v] - sim->Hy_prev[idx_v]);  // u dv/dx + v dv/dy
             pres = sim->p[idx_p] - sim->p[idx_p - 1];  // dp/dy
             diff = 1. / (RE * pow(sim->h, 2)) * (RR(v, idx_v, l) + AA(v, idx_v, l) - 4*v[idx_v] + LL(v, idx_v, l) + BB(v, idx_v, l));  // d2v/dx2 + d2v/dy2
-            sim->v_temp[idx_v] = sim->v[idx_v] + sim->dt * (-conv - pres + diff);
+            sim->v_star[idx_v] = sim->v[idx_v] + sim->dt * (-conv - pres + diff);
         }
     }
 }
@@ -268,7 +281,7 @@ void update_2(data_Sim *sim) {
             idx_p = i * sim->ny + j-1;
 
             dphi = sim->phi[idx_p] - sim->phi[idx_p-sim->ny];
-            sim->u[idx_u] = sim->u_temp[idx_u] - sim->dt * dphi;  // - d phi / dx
+            sim->u[idx_u] = sim->u_star[idx_u] - sim->dt * dphi;  // - d phi / dx
         }
     }
 
@@ -279,7 +292,7 @@ void update_2(data_Sim *sim) {
             idx_p = (i-1) * sim->ny + j;
 
             dphi = sim->phi[idx_p] - sim->phi[idx_p-1];
-            sim->v[idx_v] = sim->v_temp[idx_v] - sim->dt * dphi; // - d phi / dy
+            sim->v[idx_v] = sim->v_star[idx_v] - sim->dt * dphi; // - d phi / dy
         }
     }
 
@@ -290,6 +303,10 @@ void update_2(data_Sim *sim) {
 
     double w, w_left;
     // Outflow boundary condition
+    /* 
+    
+    TO BE MODIFIED : REALLY NEED (???) TO KEEP IN MEMORY THESOLUTION AT PREVIOUS TIME ?
+
     for (j = 1; j <= sim->ny; j++) {  // u is advected at velocity (1 - uMesh)
         idx_u = sim->nx * k + j;
         sim->u[idx_u] += sim->dt * (1. - sim->uMesh) * (sim->u[idx_u] - LL(sim->u, idx_u, k)) / sim->h;
@@ -307,17 +324,17 @@ void update_2(data_Sim *sim) {
 
         // derive the condition on v
         sim->v[idx_v] = LL(sim->v, idx_v, l) + (sim->u[idx_u] - sim->u[idx_u-1]) + (1. - sim->uMesh) * sim->dt / sim->h * (w - w_left);
-    }
+    }*/
 
 }
 
-void integrate_flow(data_Sim *sim) {
+void integrate_flow(data_Sim *sim, Poisson_data *poisson) {
     for (int t = 1; t <= sim->nt; t++) {
         
-        //compute_shadow_pts(sim);
+        // compute_ghost_pts(sim);
         // compute_convection(sim);
         // update_1(sim);
-        // poisson ???
+        // poisson_solver(sim, poisson)
         // update_2(sim);
 
     }
@@ -335,8 +352,12 @@ int main(int argc, char *argv[]){
     init_data_sim(simulation);
     init_fields(simulation);
 
-    integrate_flow(simulation);
+    Poisson_data *poisson = (Poisson_data *)malloc(sizeof(Poisson_data));
+    initialize_poisson_solver(simulation, poisson);
 
+    integrate_flow(simulation, poisson);
+    
+    free_poisson_solver(poisson);
     PetscFinalize();
 
 }

@@ -11,6 +11,8 @@
 #define CFL 1.
 #define FOURIER 1.
 
+#define DEBUG 0
+
 
 /*
  x_ = x / Hbox
@@ -21,12 +23,16 @@
  p_ = p / (rho U0^2)
 */
 
-#define TEND 50.
+#define TEND 0.1
 #define L_ 15
 #define H_ 5
 #define LBOX 5
 #define D_IN 3
 #define D_BOT 2
+
+#define ALPHA 0.5
+#define STROUHAL 0.333333333
+
 
 #define FMT "%.5le "
 

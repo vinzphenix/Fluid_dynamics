@@ -13,7 +13,11 @@ def read_data_neumann_example(filename):
     return values.T
 
 
-def read_data():
+def read_data(names):
+    for name in names:
+        if name not in ['p', 'u', 'v', 'w']:
+            raise ValueError
+
     with open("./data/simu_params.txt", "r") as f:
         lines = f.readlines()
         params1 = [int(x) for x in lines[0].split(" ")]
@@ -21,40 +25,54 @@ def read_data():
         # param_list = (nt, nx, ny, T, L, H, lbox, din, dbot, dt, h, alpha, strouhal)
     
     nt, nx, ny = params1
-    u = np.loadtxt("./data/simu_u.txt").reshape((nt+1, nx+1, ny+1))
-    v = np.loadtxt("./data/simu_v.txt").reshape((nt+1, nx+1, ny+1))
-    w = np.loadtxt("./data/simu_w.txt").reshape((nt+1, nx+1, ny+1))
-    p = np.loadtxt("./data/simu_p.txt").reshape((nt+1, nx+0, ny+0))
+    inc = [int(name != 'p') for name in names]
 
-    return params1, params2, np.swapaxes(u, 1, 2), np.swapaxes(v, 1, 2), np.swapaxes(w, 1, 2), np.swapaxes(p, 1, 2)
+    f1 = np.loadtxt(f"./data/simu_{names[0]}.txt").reshape((nt+1, nx+inc[0], ny+inc[0]))
+    f2 = np.loadtxt(f"./data/simu_{names[1]}.txt").reshape((nt+1, nx+inc[1], ny+inc[1]))
+    
+    nt = 400//5
+    params1[0] = nt
+    f1 = f1[:nt+1]
+    f2 = f2[:nt+1]
+
+    if names[0] != 'p':
+        f1 = (f1[:, :-1, :-1] + f1[:, 1:, :-1] + f1[:, :-1, 1:] + f1[:, 1:, 1:]) / 4.
+    if names[1] != 'p':
+        f2 = (f2[:, :-1, :-1] + f2[:, 1:, :-1] + f2[:, :-1, 1:] + f2[:, 1:, 1:]) / 4.
+
+    return params1, params2, np.swapaxes(f1, 1, 2), np.swapaxes(f2, 1, 2)
 
 
 def init():
-    pressure.set_data(p[0])
-    vorticity.set_data(w[0])
-    uv.set_UVC(u[0], v[0])
+    pressure.set_data(f1[0])
+    vorticity.set_data(f2[0])
+    # uv.set_UVC(u[0], v[0])
 
     time_text.set_text(time_template.format(0))
-    return pressure, vorticity, uv, time_text
+    return pressure, vorticity, time_text, # uv
 
 
 def update(t):
-    pressure.set_data(p[t])
-    vorticity.set_data(w[t])
-    uv.set_UVC(u[t], v[t])
+    pressure.set_data(f1[t])
+    vorticity.set_data(f2[t])
+    # uv.set_UVC(u[t], v[t])
 
-    time_text.set_text(time_template.format(t * dt))
-    return pressure, vorticity, uv, time_text
+    time_text.set_text(time_template.format(t * save_dt))
+    return pressure, vorticity, time_text, # uv
 
     # im.set_clim(vmin=np.amin(field[t]),vmax=np.amax(field[t]))
 
 
 if __name__ == "__main__":
 
-    params1, params2, u, v, w, p = read_data()
+    params1, params2, f1, f2 = read_data(['p', 'w'])
+
     nt, nx, ny = params1
-    T, L, H, lbox, din, dbot, dt, h, alpha, strouhal = params2
+    T, L, H, lbox, din, dbot, dt, h, alpha, strouhal, save_dt = params2
     n = int(nx // L)
+    
+    cmap1 = "Spectral_r"
+    cmap2 = "Spectral_r"
     
     # L, H = 15, 5
     # n = 5
@@ -77,37 +95,43 @@ if __name__ == "__main__":
     # w_full = np.sin(np.pi * xx_ / L) * np.sin(2 * np.pi * yy_ / H)
     # u = +1./H * np.sin(np.pi * xx_ / L) ** 2 * np.sin(2 * np.pi * yy_ / H)
     # v = -1./L * np.sin(2 * np.pi * xx_ / L) * np.sin(np.pi * yy_ / H) ** 2
+    
+    # plot u and v
+    # p = u
+    # w = np.hypot(u, v)
+    # p = (p[:, :-1, :-1] + p[:, 1:, :-1] + p[:, :-1, 1:] + p[:, 1:, 1:]) / 4. 
 
-    w = (w[:, :-1, :-1] + w[:, 1:, :-1] + w[:, :-1, 1:] + w[:, 1:, 1:]) / 4.
+
 
     mask = (din < xx) * (xx < din+lbox) * (dbot < yy) * (yy < dbot+1)
-    p = np.ma.masked_array(p, [mask for _ in range(nt+1)])
-    w = np.ma.masked_array(w, [mask for _ in range(nt+1)])
+    f1_masked = np.ma.masked_array(f1, [mask for _ in range(nt+1)])
+    f2_masked = np.ma.masked_array(f2, [mask for _ in range(nt+1)])
 
-    mask_ = (din < xx_) * (xx_ < din+lbox) * (dbot < yy_) * (yy_ < dbot+1)
-    u = np.ma.masked_array(u, [mask_ for _ in range(nt+1)])
-    v = np.ma.masked_array(v, [mask_ for _ in range(nt+1)])
-    # field[:, mask] = 0.
+    # mask_ = (din < xx_) * (xx_ < din+lbox) * (dbot < yy_) * (yy_ < dbot+1)
+    # u_masked = np.ma.masked_array(u, [mask_ for _ in range(nt+1)])
+    # v_masked = np.ma.masked_array(v, [mask_ for _ in range(nt+1)])
 
 
     ################################  -  FIGURE  -  ################################
-    fig, axs = plt.subplots(2, 1, figsize=(12., 8.), constrained_layout=True)
+    fig, axs = plt.subplots(2, 1, figsize=(12., 8.), constrained_layout=True, sharex="all", sharey="all")
 
     for ax in axs:
-        rect = Rectangle((3., 2.), 5., 1., fc="grey", ec="none")
+        rect = Rectangle((3., 2.), 5., 1., fc="grey", ec="none", alpha=0.5, zorder=3)
         ax.add_patch(rect)
 
     # ax.pcolormesh(x, y, u, cmap="bwr", shading="flat", aspect="")
 
-    pmin, pmax = np.amin(p), np.amax(p)    
-    pressure = axs[0].imshow(w[0], extent=(0, L, 0, H), vmin=pmin, vmax=pmax, cmap="Spectral", origin="lower")
+    f1min, f1max = np.amin(f1), np.amax(f1)
+    # pmin, pmax = -10, 5
+    pressure = axs[0].imshow(f1[0], extent=(0, L, 0, H), vmin=f1min, vmax=f1max, cmap=cmap1, origin="lower")
     cbar_p = plt.colorbar(pressure, ax=axs[0])
 
-    wmin, wmax = np.amin(w), np.amax(w)
-    vorticity = axs[1].imshow(w[0], extent=(0, L, 0, H), vmin=wmin, vmax=wmax, cmap="Spectral", origin="lower")
+    f2min, f2max = np.amin(f2)/5., np.amax(f2)/5.
+    # f2min, f2max = -5, 5
+    vorticity = axs[1].imshow(f2[0], extent=(0, L, 0, H), vmin=f2min, vmax=f2max, cmap=cmap2, origin="lower")
     cbar_w = plt.colorbar(vorticity, ax=axs[1])
 
-    uv = ax.quiver(xx_, yy_, u[0], v[0], width=0.0015, zorder=2)
+    # uv = ax.quiver(xx_, yy_, u[0], v[0], width=0.0015, zorder=2)
 
 
     # stream = ax.streamplot(x, y, u, v, density=1.5)
@@ -117,11 +141,23 @@ if __name__ == "__main__":
 
     # ax.axis([0., L, 0., H])
     
-    time_template = "t = {:4.2f} [s]"
+    time_template = "t = {:6.4f} [s]"
     time_text = axs[0].text(0.8,0.9, time_template.format(0),
                         fontsize=ftSz2, transform=axs[0].transAxes,
                         bbox=dict(boxstyle="round", fc="wheat", ec="none", alpha=0.85))
 
-    anim = FuncAnimation(fig, update, nt+1, interval=500, blit=False, init_func=init, repeat_delay=3000)
+    anim_type = 0
+
+    if anim_type == 0:
+        anim = FuncAnimation(fig, update, nt+1, interval=500, blit=False, init_func=init, repeat_delay=5000)
+    elif anim_type == 1:
+        update(nt)
+        # stream = axs[0].streamplot(x, y, u[-1], v[-1], density=1)
+    elif anim_type == 3:
+        init()
+        for t in range(nt+1):
+            update(t)
+            fig.savefig("./anim/frame_{:05d}.png", format="png", bbox_inches='tight')
+
 
     plt.show()

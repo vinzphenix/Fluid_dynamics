@@ -7,7 +7,7 @@ LIB := -lpetsc
 #LIB_DIR := -L/usr/local/opt/petsc/lib
 #LIB := -lpetsc.3.14
 
-CXX_FLAGS := -J -O3 -Wall -Werror #-g
+CXX_FLAGS := -J -O3 -Wall #-Werror #-g
 
 #Compilation
 all :
@@ -19,4 +19,5 @@ clean :
 
 #Delete of results
 clean_txt :
-	rm -vf results/*.txt results/P-* results/U-* results/V-* results/Reh-* results/Vtx-* results/Rehw-* results/Div-*
+#	rm -vf results/*.txt results/P-* results/U-* results/V-* results/Reh-* results/Vtx-* results/Rehw-* results/Div-*
+	rm data/*.txt

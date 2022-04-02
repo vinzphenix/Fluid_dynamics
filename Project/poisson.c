@@ -13,8 +13,8 @@ void computeRHS(data_Sim *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) 
     // KESKE C KSA ???
 
     int i, j;
-    int k = sim->ny + 2; // number of u values for each x position (nx + 1)
-    int l = sim->ny + 1; // number of v values for each x position (nx + 2)
+    // int k = sim->ny + 2; // number of u values for each x position (nx + 1)
+    // int l = sim->ny + 1; // number of v values for each x position (nx + 2)
 
     int r = rowStart;
 
@@ -23,9 +23,7 @@ void computeRHS(data_Sim *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) 
     int j_w_below = D_BOT * sim->n - 1;
     int j_w_above = (D_BOT + 1) * sim->n;*/
 
-#if DEBUG
-    l++; k++; // avoid warning unused
-
+#if TEST_POISSON
     // be carefull : (int_boundary fluxes) MUST BE EQUAL TO (int_domain) source term
     for (i = 0; i < sim->nx; i++) {
         for (j = 0; j < sim->ny; j++) {
@@ -39,17 +37,30 @@ void computeRHS(data_Sim *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) 
         }
     }
 #else
+    // int i_w_left =  D_IN * sim->n - 1;
+    // int i_w_right = (D_IN + LBOX) * sim->n;
+    // int j_w_below = D_BOT * sim->n - 1;
+    // int j_w_above = (D_BOT + 1) * sim->n;
+
+    // 1/h factor of the divergence operator is taken into account in the matrix
+
     for (i = 0; i < sim->nx; i++) {
         for (j = 0; j < sim->ny; j++) {
-            rhs[r++] = ((sim->u_star[(i+1)*k+j+1] - sim->u_star[i*k+j+1]) 
-                      + (sim->v_star[(i+1)*l+j+1] - sim->v_star[(i+1)*l+j]));
+
+            // if ((i_w_left < i) && (i < i_w_right) && (j_w_below < j) && (j < j_w_above)) {
+            //     rhs[r++] = 0.;
+            //     continue;
+            // }
+
+            rhs[r++] = ((sim->US[i+1][j+1] - sim->US[i  ][j+1])
+                      + (sim->VS[i+1][j+1] - sim->VS[i+1][j  ])); 
         }
     }
 #endif
 
     /*Do not forget that the solution for the Poisson equation is defined within a constant.
     One point from Phi must then be set to an abritrary constant.*/
-    rhs[0*sim->ny+0] = 0.;  // set value of phi at inflow
+    rhs[0] = 0.;  // set value of phi at inflow
 }
 
 /*To call at each time step after computation of U_star. This function solves the poisson equation*/
@@ -83,9 +94,10 @@ void poisson_solver(data_Sim *sim, Poisson_data *data) {
 
     VecGetArray(x, &sol);
 
+    int q = sim->size_p;
     int r;
-    for(r=rowStart; r<rowEnd; r++){
-        sim->phi[r] = sol[r];
+    for(r = rowStart; r < rowEnd; r++, q++){
+        sim->p_data[q] = sol[r];
     }
 
     VecRestoreArray(x, &sol);
@@ -95,12 +107,11 @@ void poisson_solver(data_Sim *sim, Poisson_data *data) {
 
 /*
 This function is called only once during the simulation, i.e. in initialize_poisson_solver.
-It is faster but also less readable. Since it is called only once, it is totaly useless
 */
 void computeLaplacianMatrix_NO_IF(data_Sim *sim, Mat A, int rowStart, int rowEnd) {
     int i, j, idx;
     int k = sim->ny;
-    double alpha = sim->dt / (sim->h * sim->h);
+    double alpha = sim->dt / (sim->h);
     
     int i_w_left =  D_IN * sim->n - 1;
     int i_w_right = (D_IN + LBOX) * sim->n;
@@ -220,17 +231,15 @@ void computeLaplacianMatrix_NO_IF(data_Sim *sim, Mat A, int rowStart, int rowEnd
     MatSetValue(A, idx, idx, -2. * alpha, INSERT_VALUES);
     MatSetValue(A, idx, idx-1, alpha, INSERT_VALUES);
     MatSetValue(A, idx, idx-k, alpha, INSERT_VALUES);
-
 }
 
 void computeLaplacianMatrix(data_Sim *sim, Mat A, int rowStart, int rowEnd) {
-    // ugly "if" in the loops, but only called once, so who cares
 
     int i, j, idx;
     int flag_right, flag_left, flag_above, flag_below;
     int k = sim->ny;
     double diag_value;
-    double alpha = 1. / (sim->h * sim->h);
+    double alpha = sim->dt / (sim->h);
     
     int i_w_left =  D_IN * sim->n - 1;
     int i_w_right = (D_IN + LBOX) * sim->n;
@@ -249,7 +258,7 @@ void computeLaplacianMatrix(data_Sim *sim, Mat A, int rowStart, int rowEnd) {
             flag_above = (j == j_w_above) && (i_w_left  < i) && (i < i_w_right);
 
             if ((i_w_left < i) && (i < i_w_right) && (j_w_below < j) && (j < j_w_above)) { // inside rectangle
-                diag_value -= alpha;  // could use 1., but matrix conditionning would be worse
+                diag_value += alpha;  // could use 1., but matrix conditionning would be worse
             } else { // outside rectangle
                 if ((i != 0) && (!flag_right)) { // it has left neighbor
                     MatSetValue(A, idx, idx-k, alpha, INSERT_VALUES);
@@ -342,4 +351,5 @@ void free_poisson_solver(Poisson_data* data) {
     VecDestroy(&(data->b));
     VecDestroy(&(data->x));
     KSPDestroy(&(data->sles));
+    free(data);
 }

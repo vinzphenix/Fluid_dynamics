@@ -8,11 +8,17 @@
 #include <time.h>
 
 #define RE 500.
-#define CFL 1.
-#define FOURIER 1.
+#define CFL 0.5
+#define FOURIER 0.25
 
 #define DEBUG 0
+#define OUFLOW_STUPID 0
 
+#define CONVECTION_MODE 0  // 0: advective form, 1: divergence form, 2: both
+
+#define N 50
+#define SAVE_MODULO 5
+#define FMT "%.4le "
 
 /*
  x_ = x / Hbox
@@ -32,9 +38,6 @@
 
 #define ALPHA 0.5
 #define STROUHAL 0.333333333
-
-
-#define FMT "%.5le "
 
 // access u and v neighbors
 #define LL(w, idx, inc) w[idx-inc]
@@ -57,11 +60,18 @@
 typedef struct {
     int nt, nx, ny, n;
     int size_u, size_v, size_p;
+    int i_start[8], i_final[8], j_start[8], j_final[8];
     double h, dt;
     double uMesh, vMesh;
-    double *u, *u_star, *Hx, *Hx_prev;
+    
+    double *u_data, *v_data, *p_data;
+    double **U, **US, **HX, **HX_;
+    double **V, **VS, **HY, **HY_;
+    double **P, **PHI;
+
+    /*double *u, *u_star, *Hx, *Hx_prev;
     double *v, *v_star, *Hy, *Hy_prev;
-    double *p, *phi;
+    double *p, *phi;*/
 } data_Sim;
 
 #endif

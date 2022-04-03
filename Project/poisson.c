@@ -7,21 +7,25 @@
 /*Modification to do :*/
 /*    -Impose zero mass flow here by changing value of U_star*/
 /*    -Fill vector rhs*/
-void computeRHS(data_Sim *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) {
+void computeRHS(Sim_data *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) {
 
     // YOU MUST IMPOSE A ZERO-MASS FLOW HERE ...
     // KESKE C KSA ???
 
     int i, j;
-    // int k = sim->ny + 2; // number of u values for each x position (nx + 1)
-    // int l = sim->ny + 1; // number of v values for each x position (nx + 2)
-
     int r = rowStart;
 
-    /*int i_w_left =  D_IN * sim->n - 1;
-    int i_w_right = (D_IN + LBOX) * sim->n;
-    int j_w_below = D_BOT * sim->n - 1;
-    int j_w_above = (D_BOT + 1) * sim->n;*/
+    /*double inflow = 0.;
+    double outflow = 0.;
+    for (j = 1; j < sim->ny + 1; j++) {
+        inflow += sim->US[0][j];
+        outflow += sim->US[sim->nx][j];
+    }
+    printf("\ninflow = %lf\t outflow = %lf\n", inflow, outflow);
+
+    for (j = 1; j < sim->ny + 1; j++) {
+        sim->US[sim->nx][j] -= (outflow - inflow) / (H_ * sim->n);
+    }*/
 
 #if TEST_POISSON
     // be carefull : (int_boundary fluxes) MUST BE EQUAL TO (int_domain) source term
@@ -37,23 +41,22 @@ void computeRHS(data_Sim *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) 
         }
     }
 #else
-    // int i_w_left =  D_IN * sim->n - 1;
-    // int i_w_right = (D_IN + LBOX) * sim->n;
-    // int j_w_below = D_BOT * sim->n - 1;
-    // int j_w_above = (D_BOT + 1) * sim->n;
+    int i_w_left =  D_IN * sim->n - 1;
+    int i_w_right = (D_IN + LBOX) * sim->n;
+    int j_w_below = D_BOT * sim->n - 1;
+    int j_w_above = (D_BOT + 1) * sim->n;
 
     // 1/h factor of the divergence operator is taken into account in the matrix
 
     for (i = 0; i < sim->nx; i++) {
         for (j = 0; j < sim->ny; j++) {
 
-            // if ((i_w_left < i) && (i < i_w_right) && (j_w_below < j) && (j < j_w_above)) {
-            //     rhs[r++] = 0.;
-            //     continue;
-            // }
+            if ((i_w_left < i) && (i < i_w_right) && (j_w_below < j) && (j < j_w_above)) {
+                rhs[r++] = 0.;
+                continue;
+            }
 
-            rhs[r++] = ((sim->US[i+1][j+1] - sim->US[i  ][j+1])
-                      + (sim->VS[i+1][j+1] - sim->VS[i+1][j  ])); 
+            rhs[r++] = (sim->US[i+1][j+1] - sim->US[i  ][j+1]) + (sim->VS[i+1][j+1] - sim->VS[i+1][j  ]); 
         }
     }
 #endif
@@ -69,7 +72,7 @@ void computeRHS(data_Sim *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) 
 /*Modification to do :*/
 /*    - Change the call to computeRHS as you have to modify its prototype too*/
 /*    - Copy solution of the equation into your vector PHI*/
-void poisson_solver(data_Sim *sim, Poisson_data *data) {
+void poisson_solver(Sim_data *sim, Poisson_data *data) {
 
     /* Solve the linear system Ax = b for a 2-D poisson equation on a structured grid */
     int its;
@@ -108,7 +111,7 @@ void poisson_solver(data_Sim *sim, Poisson_data *data) {
 /*
 This function is called only once during the simulation, i.e. in initialize_poisson_solver.
 */
-void computeLaplacianMatrix_NO_IF(data_Sim *sim, Mat A, int rowStart, int rowEnd) {
+void computeLaplacianMatrix_NO_IF(Sim_data *sim, Mat A, int rowStart, int rowEnd) {
     int i, j, idx;
     int k = sim->ny;
     double alpha = sim->dt / (sim->h);
@@ -233,7 +236,7 @@ void computeLaplacianMatrix_NO_IF(data_Sim *sim, Mat A, int rowStart, int rowEnd
     MatSetValue(A, idx, idx-k, alpha, INSERT_VALUES);
 }
 
-void computeLaplacianMatrix(data_Sim *sim, Mat A, int rowStart, int rowEnd) {
+void computeLaplacianMatrix(Sim_data *sim, Mat A, int rowStart, int rowEnd) {
 
     int i, j, idx;
     int flag_right, flag_left, flag_above, flag_below;
@@ -292,7 +295,7 @@ void computeLaplacianMatrix(data_Sim *sim, Mat A, int rowStart, int rowEnd) {
 /*Modification to do in this function :*/
 /*   -Specify the number of unknows*/
 /*   -Specify the number of non-zero diagonals in the sparse matrix*/
-PetscErrorCode initialize_poisson_solver(data_Sim *sim, Poisson_data *data) {
+PetscErrorCode initialize_poisson_solver(Sim_data *sim, Poisson_data *data) {
     PetscInt rowStart = 0;         /*rowStart = 0*/
     PetscInt rowEnd = sim->size_p; /*rowEnd = the number of unknows*/
     PetscErrorCode ierr;
@@ -333,7 +336,7 @@ PetscErrorCode initialize_poisson_solver(data_Sim *sim, Poisson_data *data) {
     PC prec;
     KSPGetPC(data->sles, &prec);
     PCSetType(prec, PCLU);
-    // KSPSetFromOptions(data->sles); // to uncomment if we want to specify the solver to use in command line. Ex: mpirun -ksp_type gmres -pc_type gamg
+    KSPSetFromOptions(data->sles); // to uncomment if we want to specify the solver to use in command line. Ex: mpirun -ksp_type gmres -pc_type gamg
     KSPSetTolerances(data->sles, 1.e-12, 1e-12, PETSC_DEFAULT, PETSC_DEFAULT);
     KSPSetReusePreconditioner(data->sles, PETSC_TRUE);
     KSPSetUseFischerGuess(data->sles, 1, 4);

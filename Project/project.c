@@ -9,7 +9,7 @@ char filename_p[50];
 char filename_w[50];
 
 
-void init_data_sim(data_Sim *sim) {
+void init_Sim_data(Sim_data *sim) {
     sprintf(filename_params, "%ssimu_params.txt", myPath);
     sprintf(filename_u, "%ssimu_u.txt", myPath);
     sprintf(filename_v, "%ssimu_v.txt", myPath);
@@ -30,13 +30,13 @@ void init_data_sim(data_Sim *sim) {
     sim->n = N;  // 1. / h
 #endif
 
-    sim->nt = 5;
+    sim->nt = NT;
     sim->nx = L_ * sim->n;
     sim->ny = H_ * sim->n;
 
     // sim->dt = TEND / (double) sim->nt;
     sim->dt = 0.001;
-    sim->h = H_ / (double) sim->ny;
+    sim->h = 1. / ((double) sim->n);
     
     sim->uMesh = 0.;
     sim->vMesh = 0.;
@@ -85,7 +85,7 @@ void init_data_sim(data_Sim *sim) {
     sim->p_data = (double *)calloc(2 * size_p, sizeof(double));
 
     sim->P = (double **)malloc(2 * (sim->nx) * sizeof(double *));
-    sim->PHI =sim->P + (sim->nx);
+    sim->PHI = sim->P + (sim->nx);
 
     for (int i = 0; i < sim->nx; i++) {
         sim->P[i]   = sim->p_data + 0 * size_p + i * (sim->ny);
@@ -93,10 +93,10 @@ void init_data_sim(data_Sim *sim) {
     }
 
 
-    // set bounds for sub-domains (that's HELL !!!)
+    // set bounds for sub-domains
     sim->i_start[0] = 1;                          sim->i_final[0] = (D_IN * sim->n);
-    sim->i_start[1] = (D_IN * sim->n);            sim->i_final[1] = (D_IN + LBOX) * sim->n;
-    sim->i_start[2] = (D_IN * sim->n);            sim->i_final[2] = (D_IN + LBOX) * sim->n;
+    sim->i_start[1] = (D_IN * sim->n);            sim->i_final[1] = (D_IN + LBOX) * sim->n + 1;
+    sim->i_start[2] = (D_IN * sim->n);            sim->i_final[2] = (D_IN + LBOX) * sim->n + 1;
     sim->i_start[3] = (D_IN + LBOX) * sim->n + 1; sim->i_final[3] = sim->nx;
 
     sim->j_start[0] = 1;                          sim->j_final[0] = sim->ny + 1;
@@ -105,8 +105,8 @@ void init_data_sim(data_Sim *sim) {
     sim->j_start[3] = 1;                          sim->j_final[3] = sim->ny + 1;
 
     sim->i_start[4] = sim->i_start[0];            sim->i_final[4] = sim->i_final[0] + 1;
-    sim->i_start[5] = sim->i_start[1] + 1;        sim->i_final[5] = sim->i_final[1] + 1;
-    sim->i_start[6] = sim->i_start[2] + 1;        sim->i_final[6] = sim->i_final[2] + 1;
+    sim->i_start[5] = sim->i_start[1] + 1;        sim->i_final[5] = sim->i_final[1];
+    sim->i_start[6] = sim->i_start[2] + 1;        sim->i_final[6] = sim->i_final[2];
     sim->i_start[7] = sim->i_start[3];            sim->i_final[7] = sim->i_final[3] + 1;
 
     sim->j_start[4] = sim->j_start[0];            sim->j_final[4] = sim->j_final[0] - 1;
@@ -118,7 +118,7 @@ void init_data_sim(data_Sim *sim) {
 
 
 
-void init_fields(data_Sim *sim) {
+void init_fields(Sim_data *sim) {
     int i, j;
 
     int i_w_left =  D_IN * sim->n;           // on boundary
@@ -167,7 +167,7 @@ void init_fields(data_Sim *sim) {
 }
 
 
-void save_fields(data_Sim *sim, int t) {
+void save_fields(Sim_data *sim, int t) {
     FILE *ptr, *ptr_u, *ptr_v, *ptr_p, *ptr_w;
 
     if (t == 0) {
@@ -214,15 +214,19 @@ void save_fields(data_Sim *sim, int t) {
         fprintf(ptr_p, FMT, sim->p_data[i]);  // pressure
     }
     
-    fprintf(ptr_u, "\n");    fclose(ptr_u);
-    fprintf(ptr_v, "\n");    fclose(ptr_v);
-    fprintf(ptr_w, "\n");    fclose(ptr_w);    
-    fprintf(ptr_p, "\n");    fclose(ptr_p);
+    // fprintf(ptr_u, "\n");
+    fclose(ptr_u);
+    // fprintf(ptr_v, "\n");
+    fclose(ptr_v);
+    // fprintf(ptr_w, "\n");
+    fclose(ptr_w);
+    // fprintf(ptr_p, "\n");
+    fclose(ptr_p);
 
 }
 
 
-void set_bd_conditions(data_Sim *sim, double **U, double **V) {
+void set_bd_conditions(Sim_data *sim, double **U, double **V) {
     int i, j;
     
     // int k = sim->ny + 2;
@@ -236,7 +240,11 @@ void set_bd_conditions(data_Sim *sim, double **U, double **V) {
     // Outflow boundary condition for u
     i = sim->nx;
     for (j = 1; j <= sim->ny; j++) {  // u is advected at velocity (1 - uMesh)
-        U[i][j] += sim->dt * (1. - sim->uMesh) * (sim->U[i][j] - sim->U[i-1][j]) / sim->h;
+#if OUTFLOW_STUPID
+        U[i][j] = 1.;
+#else
+        U[i][j] -= sim->dt / sim->h * (1. - sim->uMesh) * (sim->U[i][j] - sim->U[i-1][j]);
+#endif
     }
 
     /*// Lateral walls condition for v
@@ -266,7 +274,7 @@ void set_bd_conditions(data_Sim *sim, double **U, double **V) {
     }
 }
 
-void set_ghost_points(data_Sim *sim) {
+void set_ghost_points(Sim_data *sim) {
     int i, j;
 
     // External walls (v = 0 and w = 0 --> du/dy = 0)
@@ -282,7 +290,7 @@ void set_ghost_points(data_Sim *sim) {
     
     // Outflow boundary condition for v
 
-#if OUFLOW_STUPID
+#if OUTFLOW_STUPID
     for (j = 1; j < sim->ny; j++) {
         sim->V[sim->nx+1][j] = 0.;
     }
@@ -291,10 +299,10 @@ void set_ghost_points(data_Sim *sim) {
     double w_last, w_left;
     i = sim->nx;
     for (j = 1; j < sim->ny; j++) {
-        w_last = sim->V[i+1][j] - sim->V[i][j]   - sim->U[i][j+1] + sim->U[i][j];
-        w_left = sim->V[i][j]   - sim->V[i-1][j] - sim->U[i-1][j+1] + sim->U[i-1][j];
+        w_last = sim->V[i+1][j] - sim->V[i  ][j] - sim->U[i  ][j+1] + sim->U[i  ][j];
+        w_left = sim->V[i  ][j] - sim->V[i-1][j] - sim->U[i-1][j+1] + sim->U[i-1][j];
         sim->V[i+1][j] = (sim->V[i][j] + sim->U[i][j+1] - sim->U[i][j]) \
-                           + w_last + sim->dt / sim->h * (1 - sim->uMesh) * (w_last - w_left);
+                           + w_last - sim->dt / sim->h * (1 - sim->uMesh) * (w_last - w_left);
         // [ v_(i+0.5,j) - v_(i-0.5,j) - u_(i,j+0.5) + u(i,j-0.5) ] / h = w_ij + dt uc / h * [ w_ij - w_(i-1, j) ]
     }
 #endif
@@ -313,15 +321,15 @@ void set_ghost_points(data_Sim *sim) {
     for (i = D_IN * sim->n + 1; i < (D_IN + LBOX) * sim->n; i++) {
     
         j = D_BOT * sim->n + 1;  // below
-        sim->U[i][j] = -0.2 * (sim->U[i][j-3] - 5.*sim->U[i][j-2] + 15 * sim->U[i][j-1] - 16*sim->uMesh);
+        sim->U[i][j] = -0.2 * (sim->U[i][j-3] - 5.*sim->U[i][j-2] + 15.*sim->U[i][j-1] - 16*sim->uMesh);
 
         j = (D_BOT + 1) * sim->n;  // above
-        sim->U[i][j] = -0.2 * (sim->U[i][j+3] - 5.*sim->U[i][j+2] + 15 * sim->U[i][j+1] - 16*sim->uMesh);
+        sim->U[i][j] = -0.2 * (sim->U[i][j+3] - 5.*sim->U[i][j+2] + 15.*sim->U[i][j+1] - 16*sim->uMesh);
     }
 }
 
 
-void compute_convection(data_Sim *sim) {
+void compute_convection(Sim_data *sim) {
     int i, j;
 
     double **U = sim->U;
@@ -411,7 +419,7 @@ void compute_convection(data_Sim *sim) {
 }
 
 
-void check_convection(data_Sim *sim) {
+void check_convection(Sim_data *sim) {
     int i, j;
     double x, y;
     FILE *ptr = fopen("check_convection.txt", "w");
@@ -447,7 +455,7 @@ void check_convection(data_Sim *sim) {
     fclose(ptr);
 }
 
-void save_debug(data_Sim *sim) {
+void save_debug(Sim_data *sim) {
     int i, j;
     FILE *ptr_u = fopen("fields_u.txt", "w");
     FILE *ptr_v = fopen("fields_v.txt", "w");
@@ -472,7 +480,7 @@ void save_debug(data_Sim *sim) {
 }
 
 
-void update_1(data_Sim *sim, int t) {
+void predictor_step(Sim_data *sim, int t) {
     int i, j;
     double conv, pres, diff;
 
@@ -481,6 +489,8 @@ void update_1(data_Sim *sim, int t) {
 
     double coef_1 = (t = 1) ? -1. : -1.5;
     double coef_2 = (t = 1) ? +0. : +0.5;
+    // double coef_1 = -1.;
+    // double coef_2 = 0.;
     double alpha = 1. / (RE * sim->h * sim->h);
 
     // update u field
@@ -499,7 +509,7 @@ void update_1(data_Sim *sim, int t) {
             for (j = j_s; j < j_f; j++) {
                             
                 conv = coef_1 * sim->HX[i][j] + coef_2 * sim->HX_[i][j];  // (u du/dx + v du/dy) at t_n and t_(n-1)
-                pres = -(sim->P[i][j-1] - sim->P[i-1][j-1]);  // dp/dx
+                pres = -(sim->P[i][j-1] - sim->P[i-1][j-1]) / sim->h;  // dp/dx
                 diff = alpha * (U[i+1][j] + U[i-1][j] - 4*U[i][j] + U[i][j+1] + U[i][j-1]);  // d2u/dx2 + d2u/dy2
                 
                 sim->US[i][j] = U[i][j] + sim->dt * (conv + pres + diff);
@@ -521,7 +531,7 @@ void update_1(data_Sim *sim, int t) {
             for (j = j_s; j < j_f; j++) {
                 
                 conv = coef_1 * sim->HY[i][j] + coef_2 * sim->HY_[i][j];  // (u dv/dx + v dv/dy) at t_n and t_(n-1)
-                pres = -(sim->P[i-1][j] - sim->P[i-1][j-1]);  // dp/dy
+                pres = -(sim->P[i-1][j] - sim->P[i-1][j-1]) / sim->h;  // dp/dy
                 diff = alpha * (V[i+1][j] + V[i-1][j] - 4*V[i][j] + V[i][j+1] + V[i][j-1]);  // d2v/dx2 + d2v/dy2
 
                 sim->VS[i][j] = V[i][j] + sim->dt * (conv + pres + diff);
@@ -530,7 +540,7 @@ void update_1(data_Sim *sim, int t) {
     }
 }
 
-void update_2(data_Sim *sim) {
+void corrector_step(Sim_data *sim) {
     int i, j;
     double dphi;
 
@@ -548,7 +558,7 @@ void update_2(data_Sim *sim) {
         
         for (i = i_s;  i < i_f; i++) {
             for (j = j_s; j < j_f; j++) {
-                dphi = sim->PHI[i][j-1] - sim->PHI[i-1][j-1];
+                dphi = (sim->PHI[i][j-1] - sim->PHI[i-1][j-1]) / sim->h;
                 sim->U[i][j] = sim->US[i][j] - sim->dt * dphi;  // - d phi / dx
             }
         }
@@ -566,7 +576,7 @@ void update_2(data_Sim *sim) {
         
         for (i = i_s;  i < i_f; i++) {
             for (j = j_s; j < j_f; j++) {
-                dphi = sim->PHI[i-1][j] - sim->PHI[i-1][j-1];
+                dphi = (sim->PHI[i-1][j] - sim->PHI[i-1][j-1]) / sim->h;
                 sim->V[i][j] = sim->VS[i][j] - sim->dt * dphi; // - d phi / dy
             }
         }
@@ -584,7 +594,7 @@ void update_2(data_Sim *sim) {
     }*/
 }
 
-void swap_next_previous(data_Sim *sim) {
+void swap_next_previous(Sim_data *sim) {
     double **temp;
     
     temp = sim->HX;
@@ -597,7 +607,17 @@ void swap_next_previous(data_Sim *sim) {
 }
 
 
-void integrate_flow(data_Sim *sim, Poisson_data *poisson) {
+void display_outflow(Sim_data *sim) {
+    int i, j;
+    i = sim->nx;
+    for (j = 0; j < sim->ny+2; j++) {
+        printf("%10.6lf\n", sim->U[i][j]);
+    }
+    printf("\n");
+}
+
+
+void integrate_flow(Sim_data *sim, Poisson_data *poisson) {
     int t = 0;
 
     set_ghost_points(sim);
@@ -612,14 +632,17 @@ void integrate_flow(data_Sim *sim, Poisson_data *poisson) {
         // sim->uMesh = ALPHA * 2. * M_PI * STROUHAL * sin(2. * M_PI * STROUHAL * t * sim->dt);
         // sim->vMesh = 0.;
         
+        // set_bd_conditions(sim, sim->U, sim->V);
+        // set_ghost_points(sim);
+
         compute_convection(sim);
-        update_1(sim, t);
+        predictor_step(sim, t);
         set_bd_conditions(sim, sim->US, sim->VS);
 
         // check_convection(sim);
 
         poisson_solver(sim, poisson);
-        update_2(sim);
+        corrector_step(sim);
         set_bd_conditions(sim, sim->U, sim->V);
         set_ghost_points(sim);
 
@@ -636,7 +659,7 @@ void integrate_flow(data_Sim *sim, Poisson_data *poisson) {
 }
 
 
-void free_data_Sim(data_Sim *sim) {
+void free_Sim_data(Sim_data *sim) {
     free(sim->u_data); free(sim->U);
     free(sim->v_data); free(sim->V);
     free(sim->p_data); free(sim->P);
@@ -648,8 +671,8 @@ int main(int argc, char *argv[]){
     // argv : -ksp_type gmres -pc_type lu
     PetscInitialize(&argc, &argv, 0, 0);
 
-    data_Sim *simulation = (data_Sim *)malloc(sizeof(data_Sim));
-    init_data_sim(simulation);
+    Sim_data *simulation = (Sim_data *)malloc(sizeof(Sim_data));
+    init_Sim_data(simulation);
     init_fields(simulation);
 
     Poisson_data *poisson = (Poisson_data *)malloc(sizeof(Poisson_data));
@@ -674,7 +697,7 @@ int main(int argc, char *argv[]){
 
 #endif
 
-    free_data_Sim(simulation);
+    free_Sim_data(simulation);
     free_poisson_solver(poisson);
     PetscFinalize();
 }

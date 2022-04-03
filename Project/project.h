@@ -11,14 +11,15 @@
 #define CFL 0.5
 #define FOURIER 0.25
 
-#define DEBUG 0
-#define OUFLOW_STUPID 0
+#define TEST_POISSON 0
+#define OUTFLOW_STUPID 0
 
-#define CONVECTION_MODE 0  // 0: advective form, 1: divergence form, 2: both
+#define CONVECTION_MODE 1  // 0: advective form, 1: divergence form, 2: both
 
-#define N 50
-#define SAVE_MODULO 5
-#define FMT "%.4le "
+#define N 30
+#define NT 50
+#define SAVE_MODULO 100
+#define FMT "%.4le\n"
 
 /*
  x_ = x / Hbox
@@ -72,7 +73,7 @@ typedef struct {
     /*double *u, *u_star, *Hx, *Hx_prev;
     double *v, *v_star, *Hy, *Hy_prev;
     double *p, *phi;*/
-} data_Sim;
+} Sim_data;
 
 #endif
 

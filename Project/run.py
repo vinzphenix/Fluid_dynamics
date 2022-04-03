@@ -30,15 +30,15 @@ def read_data(names):
     f1 = np.loadtxt(f"./data/simu_{names[0]}.txt").reshape((nt+1, nx+inc[0], ny+inc[0]))
     f2 = np.loadtxt(f"./data/simu_{names[1]}.txt").reshape((nt+1, nx+inc[1], ny+inc[1]))
     
-    nt = 400//5
-    params1[0] = nt
-    f1 = f1[:nt+1]
-    f2 = f2[:nt+1]
+    # nt = 300//5
+    # params1[0] = nt
+    # f1 = f1[:nt+1]
+    # f2 = f2[:nt+1]
 
-    if names[0] != 'p':
-        f1 = (f1[:, :-1, :-1] + f1[:, 1:, :-1] + f1[:, :-1, 1:] + f1[:, 1:, 1:]) / 4.
-    if names[1] != 'p':
-        f2 = (f2[:, :-1, :-1] + f2[:, 1:, :-1] + f2[:, :-1, 1:] + f2[:, 1:, 1:]) / 4.
+    # if names[0] != 'p':
+        # f1 = (f1[:, :-1, :-1] + f1[:, 1:, :-1] + f1[:, :-1, 1:] + f1[:, 1:, 1:]) / 4.
+    # if names[1] != 'p':
+        # f2 = (f2[:, :-1, :-1] + f2[:, 1:, :-1] + f2[:, :-1, 1:] + f2[:, 1:, 1:]) / 4.
 
     return params1, params2, np.swapaxes(f1, 1, 2), np.swapaxes(f2, 1, 2)
 
@@ -74,10 +74,6 @@ if __name__ == "__main__":
     cmap1 = "Spectral_r"
     cmap2 = "Spectral_r"
     
-    # L, H = 15, 5
-    # n = 5
-    # h = 1. / n
-
     # middle of cell : p value of MAC mesh
     xm = np.linspace(h/2., L-h/2., nx)
     ym = np.linspace(h/2., H-h/2., ny)
@@ -91,25 +87,15 @@ if __name__ == "__main__":
 
     # want u and v at corners of boxes
     # want w and p at center of boxes
-
     # w_full = np.sin(np.pi * xx_ / L) * np.sin(2 * np.pi * yy_ / H)
     # u = +1./H * np.sin(np.pi * xx_ / L) ** 2 * np.sin(2 * np.pi * yy_ / H)
     # v = -1./L * np.sin(2 * np.pi * xx_ / L) * np.sin(np.pi * yy_ / H) ** 2
-    
-    # plot u and v
-    # p = u
-    # w = np.hypot(u, v)
-    # p = (p[:, :-1, :-1] + p[:, 1:, :-1] + p[:, :-1, 1:] + p[:, 1:, 1:]) / 4. 
-
-
 
     mask = (din < xx) * (xx < din+lbox) * (dbot < yy) * (yy < dbot+1)
-    f1_masked = np.ma.masked_array(f1, [mask for _ in range(nt+1)])
-    f2_masked = np.ma.masked_array(f2, [mask for _ in range(nt+1)])
+    mask_ = (din < xx_) * (xx_ < din+lbox) * (dbot < yy_) * (yy_ < dbot+1)
 
-    # mask_ = (din < xx_) * (xx_ < din+lbox) * (dbot < yy_) * (yy_ < dbot+1)
-    # u_masked = np.ma.masked_array(u, [mask_ for _ in range(nt+1)])
-    # v_masked = np.ma.masked_array(v, [mask_ for _ in range(nt+1)])
+    f1_masked = np.ma.masked_array(f1, [mask for _ in range(nt+1)])
+    f2_masked = np.ma.masked_array(f2, [mask_ for _ in range(nt+1)])
 
 
     ################################  -  FIGURE  -  ################################
@@ -119,26 +105,22 @@ if __name__ == "__main__":
         rect = Rectangle((3., 2.), 5., 1., fc="grey", ec="none", alpha=0.5, zorder=3)
         ax.add_patch(rect)
 
-    # ax.pcolormesh(x, y, u, cmap="bwr", shading="flat", aspect="")
 
     f1min, f1max = np.amin(f1), np.amax(f1)
     # pmin, pmax = -10, 5
     pressure = axs[0].imshow(f1[0], extent=(0, L, 0, H), vmin=f1min, vmax=f1max, cmap=cmap1, origin="lower")
     cbar_p = plt.colorbar(pressure, ax=axs[0])
 
-    f2min, f2max = np.amin(f2)/5., np.amax(f2)/5.
-    # f2min, f2max = -5, 5
+    # f2min, f2max = np.amin(f2)/1., np.amax(f2)/1.
+    f2min, f2max = -15, 15
     vorticity = axs[1].imshow(f2[0], extent=(0, L, 0, H), vmin=f2min, vmax=f2max, cmap=cmap2, origin="lower")
     cbar_w = plt.colorbar(vorticity, ax=axs[1])
 
     # uv = ax.quiver(xx_, yy_, u[0], v[0], width=0.0015, zorder=2)
-
-
     # stream = ax.streamplot(x, y, u, v, density=1.5)
 
     # im.set_data(field)  # update values
     # im.set_extent([-1, L-1, 0, H])  # update position
-
     # ax.axis([0., L, 0., H])
     
     time_template = "t = {:6.4f} [s]"
@@ -149,7 +131,7 @@ if __name__ == "__main__":
     anim_type = 0
 
     if anim_type == 0:
-        anim = FuncAnimation(fig, update, nt+1, interval=500, blit=False, init_func=init, repeat_delay=5000)
+        anim = FuncAnimation(fig, update, nt+1, interval=500, blit=False, init_func=init, repeat=False)
     elif anim_type == 1:
         update(nt)
         # stream = axs[0].streamplot(x, y, u[-1], v[-1], density=1)

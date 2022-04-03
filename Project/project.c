@@ -1,5 +1,6 @@
 #include "poisson.h"
 #include "project.h"
+#include "adi.h"
 
 char *myPath = "./data/";
 char filename_params[50];
@@ -49,8 +50,10 @@ void init_Sim_data(Sim_data *sim) {
     sim->size_p = size_p;
     
 
+    int n_vectors = 4;
+
     // Allocate u and set matrix access
-    sim->u_data = (double *)calloc(4*size_u, sizeof(double));
+    sim->u_data = (double *)calloc(n_vectors * size_u, sizeof(double));
 
     sim->U = (double **)malloc(4*(sim->nx + 1) * sizeof(double *));
     sim->US  = sim->U + 1 * (sim->nx + 1);
@@ -66,7 +69,7 @@ void init_Sim_data(Sim_data *sim) {
 
 
     // Allocate v and set matrix access
-    sim->v_data = (double *)calloc(4*size_v, sizeof(double));
+    sim->v_data = (double *)calloc(n_vectors * size_v, sizeof(double));
     
     sim->V = (double **)malloc(4*(sim->nx + 2) * sizeof(double *));
     sim->VS  = sim->V + 1 * (sim->nx + 2);
@@ -480,17 +483,15 @@ void save_debug(Sim_data *sim) {
 }
 
 
-void predictor_step(Sim_data *sim, int t) {
+void predictor_step(Sim_data *sim) {
     int i, j;
     double conv, pres, diff;
 
     double **U = sim->U;
     double **V = sim->V;
 
-    double coef_1 = (t = 1) ? -1. : -1.5;
-    double coef_2 = (t = 1) ? +0. : +0.5;
-    // double coef_1 = -1.;
-    // double coef_2 = 0.;
+    double coef_1 = (sim->t = 1) ? -1. : -1.5;
+    double coef_2 = (sim->t = 1) ? +0. : +0.5;
     double alpha = 1. / (RE * sim->h * sim->h);
 
     // update u field
@@ -594,6 +595,7 @@ void corrector_step(Sim_data *sim) {
     }*/
 }
 
+
 void swap_next_previous(Sim_data *sim) {
     double **temp;
     
@@ -607,17 +609,7 @@ void swap_next_previous(Sim_data *sim) {
 }
 
 
-void display_outflow(Sim_data *sim) {
-    int i, j;
-    i = sim->nx;
-    for (j = 0; j < sim->ny+2; j++) {
-        printf("%10.6lf\n", sim->U[i][j]);
-    }
-    printf("\n");
-}
-
-
-void integrate_flow(Sim_data *sim, Poisson_data *poisson) {
+void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
     int t = 0;
 
     set_ghost_points(sim);
@@ -628,15 +620,24 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson) {
     printf("starting ... \n"); fflush(stdout);
 
     for (t = 1; t <= sim->nt; t++) {
-
-        // sim->uMesh = ALPHA * 2. * M_PI * STROUHAL * sin(2. * M_PI * STROUHAL * t * sim->dt);
-        // sim->vMesh = 0.;
+        
+        sim->t = t;
+        if (T_START < t * sim->dt) {
+            sim->uMesh = ALPHA * 2. * M_PI * STROUHAL * sin(2. * M_PI * STROUHAL * (t * sim->dt - T_START));
+            sim->vMesh = 0.;
+        }
         
         // set_bd_conditions(sim, sim->U, sim->V);
         // set_ghost_points(sim);
 
         compute_convection(sim);
-        predictor_step(sim, t);
+
+#       if USE_ADI
+        predictor_step_adi(sim, adi);
+#       else
+        predictor_step(sim);
+#       endif
+
         set_bd_conditions(sim, sim->US, sim->VS);
 
         // check_convection(sim);
@@ -678,26 +679,27 @@ int main(int argc, char *argv[]){
     Poisson_data *poisson = (Poisson_data *)malloc(sizeof(Poisson_data));
     initialize_poisson_solver(simulation, poisson);
 
-#if TEST_POISSON
-    
-    poisson_solver(simulation, poisson);
-    FILE *ptr = fopen("test_poisson.txt", "w");
-    fprintf(ptr, "%d\n", simulation->n);
-    for (int i = 0; i < simulation->nx; i++) {
-        for (int j = 0; j < simulation->ny; j++) {
-            fprintf(ptr, "%.4le ", simulation->phi[i*simulation->ny+j]);
-        }
-        fprintf(ptr, "\n");
-    } 
-    fclose(ptr);
+    ADI_data *adi_solver = (ADI_data *)malloc(sizeof(ADI_data));
+#   if USE_ADI
+    init_adi_solver(simulation, adi_solver);
+#   endif
 
-#else
 
-    integrate_flow(simulation, poisson);
+    // MAIN PROCESS
+#   if TEST_POISSON    
+    test_poisson(simulation, poisson);
+#   else
+    integrate_flow(simulation, poisson, adi_solver);
+#   endif
 
-#endif
 
+    // Free memory
     free_Sim_data(simulation);
     free_poisson_solver(poisson);
+#   if USE_ADI
+    free_adi_solver(adi_solver);
+#   else
+    free(adi_solver);
+#   endif
     PetscFinalize();
 }

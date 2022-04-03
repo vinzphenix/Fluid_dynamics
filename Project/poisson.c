@@ -30,8 +30,7 @@ void computeRHS(Sim_data *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) 
 #if TEST_POISSON
     // be carefull : (int_boundary fluxes) MUST BE EQUAL TO (int_domain) source term
     for (i = 0; i < sim->nx; i++) {
-        for (j = 0; j < sim->ny; j++) {
-            r = i*sim->ny + j;
+        for (j = 0; j < sim->ny; j++, r++) {
             if ((j == 0)) {
                 rhs[r] += 2. / sim->h * cos(2. * M_PI * (i + 0.5) * sim->h / L_);
             }
@@ -93,8 +92,8 @@ void poisson_solver(Sim_data *sim, Poisson_data *data) {
     /*Solve the linear system of equations */
     KSPSolve(sles, b, x);  // printf("res = %d\n", res);
     KSPGetIterationNumber(sles, &its);
+    // if (sim->t % SAVE_MODULO == 0)
     PetscPrintf(PETSC_COMM_WORLD, "Solution to Poisson eqn in %d iterations \n", its);
-
     VecGetArray(x, &sol);
 
     int q = sim->size_p;
@@ -355,4 +354,18 @@ void free_poisson_solver(Poisson_data* data) {
     VecDestroy(&(data->x));
     KSPDestroy(&(data->sles));
     free(data);
+}
+
+
+void test_poisson(Sim_data *sim, Poisson_data *poisson) {
+    poisson_solver(sim, poisson);
+    FILE *ptr = fopen("test_poisson.txt", "w");
+    fprintf(ptr, "%d\n", sim->n);
+    for (int i = 0; i < sim->nx; i++) {
+        for (int j = 0; j < sim->ny; j++) {
+            fprintf(ptr, "%.4le ", sim->PHI[i][j]);
+        }
+        fprintf(ptr, "\n");
+    } 
+    fclose(ptr);
 }

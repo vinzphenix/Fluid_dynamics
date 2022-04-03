@@ -11,7 +11,7 @@ CXX_FLAGS := -J -Oz -Wall #-Werror #-g
 
 #Compilation
 all :
-	gcc -o project project.c poisson.c -lm -lmpi $(CXX_FLAGS) $(LIB_DIR) $(LIB) $(INC_DIR)
+	gcc -o project project.c poisson.c adi.c -lm -lmpi $(CXX_FLAGS) $(LIB_DIR) $(LIB) $(INC_DIR)
 
 #Delete of executable files
 clean :

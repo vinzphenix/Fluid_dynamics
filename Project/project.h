@@ -11,14 +11,12 @@
 #define CFL 0.5
 #define FOURIER 0.25
 
-#define TEST_POISSON 0
-#define OUTFLOW_STUPID 0
-
+#define USE_ADI 0
 #define CONVECTION_MODE 1  // 0: advective form, 1: divergence form, 2: both
 
 #define N 30
-#define NT 50
-#define SAVE_MODULO 100
+#define NT 2500
+#define SAVE_MODULO 50
 #define FMT "%.4le\n"
 
 /*
@@ -37,8 +35,13 @@
 #define D_IN 3
 #define D_BOT 2
 
+#define T_START 100.
 #define ALPHA 0.5
 #define STROUHAL 0.333333333
+
+
+#define TEST_POISSON 0
+#define OUTFLOW_STUPID 0
 
 // access u and v neighbors
 #define LL(w, idx, inc) w[idx-inc]
@@ -59,15 +62,15 @@
 #define RB(w, idx, inc) w[idx]*/
 
 typedef struct {
-    int nt, nx, ny, n;
+    int nt, nx, ny, n, t;
     int size_u, size_v, size_p;
     int i_start[8], i_final[8], j_start[8], j_final[8];
     double h, dt;
     double uMesh, vMesh;
     
     double *u_data, *v_data, *p_data;
-    double **U, **US, **HX, **HX_;
-    double **V, **VS, **HY, **HY_;
+    double **U, **US, **HX, **HX_, **CPX;
+    double **V, **VS, **HY, **HY_, **CPY;
     double **P, **PHI;
 
     /*double *u, *u_star, *Hx, *Hx_prev;

@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
 
     f1min, f1max = np.amin(f1), np.amax(f1)
-    # pmin, pmax = -10, 5
+    f1min, f1max = -2., 2.
     pressure = axs[0].imshow(f1[0], extent=(0, L, 0, H), vmin=f1min, vmax=f1max, cmap=cmap1, origin="lower")
     cbar_p = plt.colorbar(pressure, ax=axs[0])
 

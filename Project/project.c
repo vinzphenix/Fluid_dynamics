@@ -36,7 +36,7 @@ void init_Sim_data(Sim_data *sim) {
     sim->ny = H_ * sim->n;
 
     // sim->dt = TEND / (double) sim->nt;
-    sim->dt = 0.001;
+    sim->dt = 0.002;
     sim->h = 1. / ((double) sim->n);
     
     sim->uMesh = 0.;
@@ -176,7 +176,8 @@ void save_fields(Sim_data *sim, int t) {
     if (t == 0) {
         ptr = fopen(filename_params, "w");
         fprintf(ptr, "%d %d %d\n", sim->nt / SAVE_MODULO, sim->nx, sim->ny);
-        fprintf(ptr, "%lf %d %d %d %d %d %lf %lf %lf %lf %lf\n", TEND, L_, H_, LBOX, D_IN, D_BOT, sim->dt, sim->h, ALPHA, STROUHAL, sim->dt * SAVE_MODULO);
+        fprintf(ptr, "%lf %d %d %d %d %d %lf %lf\n", TEND, L_, H_, LBOX, D_IN, D_BOT, sim->dt, sim->h);
+        fprintf(ptr, "%lf %lf %lf %lf\n", T_START, ALPHA, STROUHAL, sim->dt * SAVE_MODULO);
         fclose(ptr);
     }
 
@@ -686,8 +687,15 @@ int main(int argc, char *argv[]){
 
 
     // MAIN PROCESS
-#   if TEST_POISSON    
+#   if TEST_POISSON
     test_poisson(simulation, poisson);
+#   elif TEST_TRIDIAGONAL
+    double a[5] = {0.0, 1.0,-1.1, 1.2,-1.3};
+    double b[5] = {5.0, 6.0, 7.0, 8.0, 9.0};
+    double c[5] = {1.0,-1.1, 1.2,-1.3, 0.0};
+    double q[5] = {1.0, 1.0, 1.0, 1.0, 1.0};
+    solve_thomas(5, a, b, c, q);
+    for (int i = 0; i < 5; i++) printf("q[%d] = %lf\n", i, q[i]);
 #   else
     integrate_flow(simulation, poisson, adi_solver);
 #   endif

@@ -1,8 +1,6 @@
 #include "adi.h"
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 
-#define RESETHARD 0
-
 
 void init_adi_solver(Sim_data *sim, ADI_data *adi) {
     int j, size;
@@ -65,8 +63,9 @@ void reset_tridiagonal(ADI_data *adi, int size) {
 }
 
 
-void set_system_ux(Sim_data *sim, ADI_data *adi, int k) {
-    int i, j, idx;
+void set_system_ux(Sim_data *sim, ADI_data *adi) {
+    int i, j, k, idx;
+    k = sim->nx + 1;
 
     // set identity for upper and lower walls
     for (i = 0; i < sim->nx + 1; i++) {
@@ -96,8 +95,9 @@ void set_system_ux(Sim_data *sim, ADI_data *adi, int k) {
     }
 }
 
-void set_system_uy(Sim_data *sim, ADI_data *adi, int k) {
-    int i, j, idx;
+void set_system_uy(Sim_data *sim, ADI_data *adi) {
+    int i, j, k, idx;
+    k = sim->ny + 2;
 
     // set identity for upper and lower walls
     for (i = 0; i < sim->nx + 1; i++) {
@@ -127,15 +127,16 @@ void set_system_uy(Sim_data *sim, ADI_data *adi, int k) {
     }
 }
 
-void set_system_vx(Sim_data *sim, ADI_data *adi, int k) {
-    int i, j, idx;
+void set_system_vx(Sim_data *sim, ADI_data *adi) {
+    int i, j, k, idx;
+    k = sim->nx + 2;
 
     // set identity for upper and lower walls
     for (i = 0; i < sim->nx + 2; i++) {
         for (j = 0; j < sim->ny + 1; j += sim->ny) {
             idx = j*k + i;
             adi->a[idx] = 0.; adi->b[idx] = 1.; adi->c[idx] = 0.;
-            adi->Q_vx[j][i] = sim->V[i][j];
+            adi->Q_vx[j][i] = sim->U[i][j];
         }
     }
 
@@ -144,7 +145,7 @@ void set_system_vx(Sim_data *sim, ADI_data *adi, int k) {
         for (i = 0; i < sim->nx+2; i += sim->nx + 1) {
             idx = j*k + i;
             adi->a[idx] = 0.; adi->b[idx] = 1.; adi->c[idx] = 0.;
-            adi->Q_vx[j][i] = sim->V[i][j];
+            adi->Q_vx[j][i] = sim->U[i][j];
         }
     }
 
@@ -153,20 +154,21 @@ void set_system_vx(Sim_data *sim, ADI_data *adi, int k) {
         for (j = D_BOT * sim->n; j < (D_BOT + 1) * sim->n + 1; j++) {
             idx = j*k + i;
             adi->a[idx] = 0.; adi->b[idx] = 1.; adi->c[idx] = 0.;
-            adi->Q_vx[j][i] = sim->V[i][j];
+            adi->Q_vx[j][i] = sim->U[i][j];
         }
     }
 }
 
-void set_system_vy(Sim_data *sim, ADI_data *adi, int k) {
-    int i, j, idx;
+void set_system_vy(Sim_data *sim, ADI_data *adi) {
+    int i, j, k, idx;
+    k = sim->ny + 1;
 
     // set identity for upper and lower walls
     for (i = 0; i < sim->nx + 2; i++) {
         for (j = 0; j < sim->ny + 1; j += sim->ny) {
             idx = i*k + j;
             adi->a[idx] = 0.; adi->b[idx] = 1.; adi->c[idx] = 0.;
-            sim->VS[i][j] = sim->V[i][j];
+            sim->VS[i][j] = sim->U[i][j];
         }
     }
 
@@ -175,7 +177,7 @@ void set_system_vy(Sim_data *sim, ADI_data *adi, int k) {
         for (i = 0; i < sim->nx+2; i += sim->nx + 1) {
             idx = i*k + j;
             adi->a[idx] = 0.; adi->b[idx] = 1.; adi->c[idx] = 0.;
-            sim->VS[i][j] = sim->V[i][j];
+            sim->VS[i][j] = sim->U[i][j];
         }
     }
 
@@ -184,39 +186,40 @@ void set_system_vy(Sim_data *sim, ADI_data *adi, int k) {
         for (j = D_BOT * sim->n; j < (D_BOT + 1) * sim->n + 1; j++) {
             idx = i*k + j;
             adi->a[idx] = 0.; adi->b[idx] = 1.; adi->c[idx] = 0.;
-            sim->VS[i][j] = sim->V[i][j];
+            sim->VS[i][j] = sim->U[i][j];
         }
     }
 }
 
 
-void predictor_step_u_adi(Sim_data *sim, ADI_data *adi) {
-    /*
-     This function updates the field u, in the first step of the LEE & KIM algorithm:
-     (u* - u^n) / dt = -0.5 (3 H^n - H^(n-1)) - dP^n/dx + nu/2 (Lapl u* + Lapl u^n)
-     Since the scheme is implicit in u*, we use an ADI solver to get u*.
-    */
+void check_adi(Sim_data *sim) {
+    int i, j;
+    for (i = 0; i < sim->nx+1; i++) {
+        for (j = 0; j < sim->ny+2; j++) {
+            PRINTF("u[%4d][%4d] = %.5lf  vs us = %.5lf\n", i, j, sim->U[i][j], sim->US[i][j]);
+        }
+    }
+}
 
+
+void predictor_step_adi(Sim_data *sim, ADI_data *adi) {
     int i, j, idx, k;
     int i_s, i_f, j_s, j_f;
 
+    double conv, pres, diff;
+
     double **U = sim->U;
+    double **V = sim->V;
 
     double coef_1 = (sim->t = 1) ? -1. : -1.5;
     double coef_2 = (sim->t = 1) ? +0. : +0.5;
     double alpha = (0.5 * sim->dt) / (RE * sim->h * sim->h);
-    double conv, pres, diff;
 
-    // Solve system implicit in X (reversed indices for Q_ux)
+    // SOLVE FOR U
+
+    // Implicit in X  -->  swap indices in RHS "Q" of the system
+    set_system_ux(sim, adi);
     k = sim->nx + 1;
-#   if RESETHARD
-    reset_tridiagonal(adi, sim->size_u);
-    for (i = 0; i < sim->nx + 1; i++)
-        for (j = 0; j < sim->ny+2; j++)
-            adi->Q_ux[j][i] = sim->U[i][j];
-#   else
-    set_system_ux(sim, adi, k);
-#   endif
 
     for (int block = 0; block < 4; block++) {
         i_s = sim->i_start[block];
@@ -238,16 +241,9 @@ void predictor_step_u_adi(Sim_data *sim, ADI_data *adi) {
     }
     solve_thomas(sim->size_u, adi->a, adi->b, adi->c, adi->q);
 
-    // Solve system implicit in Y
+    // Implicit in Y (SEEMS TO FAIL !!!)
+    set_system_uy(sim, adi);
     k = sim->ny + 2;
-#   if RESETHARD
-    reset_tridiagonal(adi, sim->size_u);
-    for (i = 0; i < sim->nx + 1; i++)
-        for (j = 0; j < sim->ny+2; j++) 
-            sim->US[i][j] = sim->U[i][j];
-#   else
-    set_system_uy(sim, adi, k);
-#   endif
 
     for (int block = 0; block < 4; block++) {
         i_s = sim->i_start[block];
@@ -268,36 +264,13 @@ void predictor_step_u_adi(Sim_data *sim, ADI_data *adi) {
         }
     }
     solve_thomas(sim->size_u, adi->a, adi->b, adi->c, sim->US[0]);
-}
 
 
-void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
-    /*
-     This function updates the field v, in the first step of the LEE & KIM algorithm:
-     (v* - v^n) / dt = -0.5 (3 H^n - H^(n-1)) - dP^n/dy + nu/2 (Lapl v* + Lapl v^n)
-     Since the scheme is implicit in u*, we use an ADI solver to get u*.
-    */
+    // SOLVE FOR V
 
-    int i, j, idx, k;
-    int i_s, i_f, j_s, j_f;
-
-    double **V = sim->V;
-
-    double coef_1 = (sim->t = 1) ? -1. : -1.5;
-    double coef_2 = (sim->t = 1) ? +0. : +0.5;
-    double alpha = (0.5 * sim->dt) / (RE * sim->h * sim->h);
-    double conv, pres, diff;
-
-    // Solve system implicit in X (reversed indices for Q_ux)
+    // Implicit in X  -->  swap indices in RHS "q" of the system
+    set_system_vx(sim, adi);
     k = sim->nx + 2;
-#   if RESETHARD
-    reset_tridiagonal(adi, sim->size_v);
-    for (i = 0; i < sim->nx + 2; i++)
-        for (j = 0; j < sim->ny+1; j++)
-            adi->Q_vx[j][i] = sim->V[i][j];
-#   else
-    set_system_vx(sim, adi, k);
-#   endif
 
     for (int block = 4; block < 8; block++) {
         i_s = sim->i_start[block];
@@ -319,16 +292,9 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
     }
     solve_thomas(sim->size_v, adi->a, adi->b, adi->c, adi->q);
 
-    // Solve system implicit in Y
+    // Implicit in Y
+    set_system_vy(sim, adi);
     k = sim->ny + 1;
-#   if RESETHARD
-    reset_tridiagonal(adi, sim->size_v);
-    for (i = 0; i < sim->nx + 2; i++)
-        for (j = 0; j < sim->ny+1; j++) 
-            sim->VS[i][j] = sim->V[i][j];
-#   else
-    set_system_vy(sim, adi, k);
-#   endif
 
     for (int block = 4; block < 8; block++) {
         i_s = sim->i_start[block];
@@ -344,11 +310,13 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
                 
                 idx = i*k + j;
                 adi->a[idx] = -alpha; adi->b[idx] = 1. + 2.*alpha; adi->c[idx] = -alpha;
-                sim->VS[i][j] = adi->Q_vx[j][i] + 0.5*sim->dt * (conv + pres) + alpha * diff;
+                sim->VS[i][j] = adi->q[idx] + 0.5*sim->dt * (conv + pres) + alpha * diff;
             }
         }
     }
     solve_thomas(sim->size_v, adi->a, adi->b, adi->c, sim->VS[0]);
+
+    // check_adi(sim);
 }
 
 

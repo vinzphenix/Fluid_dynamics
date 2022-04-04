@@ -11,12 +11,12 @@
 #define CFL 0.5
 #define FOURIER 0.25
 
-#define USE_ADI 0
-#define CONVECTION_MODE 1  // 0: advective form, 1: divergence form, 2: both
+#define USE_ADI 1
+#define CONVECTION_MODE 2  // 0: advective form, 1: divergence form, 2: both
 
 #define N 30
-#define NT 2500
-#define SAVE_MODULO 50
+#define NT 200
+#define SAVE_MODULO 20
 #define FMT "%.4le\n"
 
 /*
@@ -39,7 +39,14 @@
 #define ALPHA 0.5
 #define STROUHAL 0.333333333
 
+#define DEBUG 0
+#if DEBUG
+  #define PRINTF(...) printf(__VA_ARGS__)
+#else
+  #define PRINTF(...) (void)0
+#endif
 
+#define TEST_TRIDIAGONAL 0
 #define TEST_POISSON 0
 #define OUTFLOW_STUPID 0
 
@@ -69,8 +76,8 @@ typedef struct {
     double uMesh, vMesh;
     
     double *u_data, *v_data, *p_data;
-    double **U, **US, **HX, **HX_, **CPX;
-    double **V, **VS, **HY, **HY_, **CPY;
+    double **U, **US, **HX, **HX_;
+    double **V, **VS, **HY, **HY_;
     double **P, **PHI;
 
     /*double *u, *u_star, *Hx, *Hx_prev;

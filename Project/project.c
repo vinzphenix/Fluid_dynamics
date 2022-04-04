@@ -21,22 +21,17 @@ void init_Sim_data(Sim_data *sim) {
     // sim->h = CFL / (FOURIER * RE * 5);
     // sim->dt = FOURIER * RE * (sim->h) * (sim->h);
 
-    // sim->nt = ceil(TEND / sim->dt);
+    // sim->nt = ceil(TSIM / sim->dt);
     // sim->nx = (double) L_ / sim->h;
     // sim->ny = (double) H_ / sim->h;
 
-#if TEST_POISSON
-    sim->n = 4;
-#else
-    sim->n = N;  // 1. / h
-#endif
-
+    sim->n = N_;  // 1. / h
     sim->nt = NT;
     sim->nx = L_ * sim->n;
     sim->ny = H_ * sim->n;
 
-    // sim->dt = TEND / (double) sim->nt;
-    sim->dt = 0.002;
+    // sim->dt = TSIM / (double) sim->nt;
+    sim->dt = DT;
     sim->h = 1. / ((double) sim->n);
     
     sim->uMesh = 0.;
@@ -116,9 +111,7 @@ void init_Sim_data(Sim_data *sim) {
     sim->j_start[5] = sim->j_start[1];            sim->j_final[5] = sim->j_final[1] - 1;
     sim->j_start[6] = sim->j_start[2];            sim->j_final[6] = sim->j_final[2] - 1;
     sim->j_start[7] = sim->j_start[3];            sim->j_final[7] = sim->j_final[3] - 1;
-
 }
-
 
 
 void init_fields(Sim_data *sim) {
@@ -162,10 +155,10 @@ void init_fields(Sim_data *sim) {
     // set ghost for u on upper and lower walls of rectangle
     for (i = i_w_left + 1; i < i_w_right; i++) {
         j = j_w_below;
-        sim->U[i][j] = -0.2 * 11.; // since u(t=0) is 1.
+        sim->U[i][j] = -0.2 * 11.; // since u(t=0, x, y) is 1.
 
         j = j_w_above;
-        sim->U[i][j] = -0.2 * 11.; // since u(t=0) is 1.
+        sim->U[i][j] = -0.2 * 11.; // since u(t=0, x, y) is 1.
     }
 }
 
@@ -175,15 +168,13 @@ void save_fields(Sim_data *sim, int t) {
 
     if (t == 0) {
         ptr = fopen(filename_params, "w");
-        fprintf(ptr, "%d %d %d\n", sim->nt / SAVE_MODULO, sim->nx, sim->ny);
-        fprintf(ptr, "%lf %d %d %d %d %d %lf %lf\n", TEND, L_, H_, LBOX, D_IN, D_BOT, sim->dt, sim->h);
-        fprintf(ptr, "%lf %lf %lf %lf\n", T_START, ALPHA, STROUHAL, sim->dt * SAVE_MODULO);
+        fprintf(ptr, "%d %d %d %d %d\n", sim->nt / SAVE_MODULO, sim->nx, sim->ny, sim->n, SAVE_MODULO);
+        fprintf(ptr, "%lf %lf %lf %d %d %d %d %d\n", TSIM, sim->dt, sim->h, L_, H_, LBOX, D_IN, D_BOT);
+        fprintf(ptr, "%lf %lf %lf %lf %lf\n", SIWNG_START, PERT_START, PERT_DT, ALPHA, STROUHAL);
         fclose(ptr);
     }
 
     int i, j;
-    // int k = sim->ny+2;
-    // int l = sim->ny+1;
     double u_up, u_dw, v_lf, v_rg;
     
     if (t == 0) {
@@ -218,15 +209,10 @@ void save_fields(Sim_data *sim, int t) {
         fprintf(ptr_p, FMT, sim->p_data[i]);  // pressure
     }
     
-    // fprintf(ptr_u, "\n");
     fclose(ptr_u);
-    // fprintf(ptr_v, "\n");
     fclose(ptr_v);
-    // fprintf(ptr_w, "\n");
     fclose(ptr_w);
-    // fprintf(ptr_p, "\n");
     fclose(ptr_p);
-
 }
 
 
@@ -236,7 +222,7 @@ void set_bd_conditions(Sim_data *sim, double **U, double **V) {
     // int k = sim->ny + 2;
     // int l = sim->ny + 1;
 
-    /*// Inflow boundary condition for u
+    /*// Inflow boundary condition for u  // never changes
     for (j = 1; j <= sim->ny; j++) {   // Inflow uniform profile u
         U[0][j] = 1.;   // could do a special profile
     }*/
@@ -244,14 +230,10 @@ void set_bd_conditions(Sim_data *sim, double **U, double **V) {
     // Outflow boundary condition for u
     i = sim->nx;
     for (j = 1; j <= sim->ny; j++) {  // u is advected at velocity (1 - uMesh)
-#if OUTFLOW_STUPID
-        U[i][j] = 1.;
-#else
         U[i][j] -= sim->dt / sim->h * (1. - sim->uMesh) * (sim->U[i][j] - sim->U[i-1][j]);
-#endif
     }
 
-    /*// Lateral walls condition for v
+    /*// Lateral walls condition for v  // never changes
     for (i = 0; i < sim->nx + 2; i++) { // no-through flow
         V[i][0] = 0.;             // below
         V[i][sim->ny] = 0.;       // above
@@ -274,7 +256,6 @@ void set_bd_conditions(Sim_data *sim, double **U, double **V) {
 
         j = (D_BOT + 1) * sim->n;  // upper wall of the rectangle
         V[i][j] = sim->vMesh;
-        // printf("x = %.3lf,  y = %.3lf,  v[%d, %d] = %.3lf\n", (i-0.5)*sim->h, j*sim->h, i,j, v[i, j]); fflush(stdout);
     }
 }
 
@@ -293,13 +274,6 @@ void set_ghost_points(Sim_data *sim) {
     }
     
     // Outflow boundary condition for v
-
-#if OUTFLOW_STUPID
-    for (j = 1; j < sim->ny; j++) {
-        sim->V[sim->nx+1][j] = 0.;
-    }
-
-#else
     double w_last, w_left;
     i = sim->nx;
     for (j = 1; j < sim->ny; j++) {
@@ -309,7 +283,6 @@ void set_ghost_points(Sim_data *sim) {
                            + w_last - sim->dt / sim->h * (1 - sim->uMesh) * (w_last - w_left);
         // [ v_(i+0.5,j) - v_(i-0.5,j) - u_(i,j+0.5) + u(i,j-0.5) ] / h = w_ij + dt uc / h * [ w_ij - w_(i-1, j) ]
     }
-#endif
 
     // Left wall of rectangle
     i = D_IN * sim->n + 1;
@@ -340,6 +313,7 @@ void compute_convection(Sim_data *sim) {
     double **V = sim->V;
     double uMesh = sim->uMesh;
     double vMesh = sim->vMesh;
+    double factor = 1. / (4. * sim->h);
 
     double **H = sim->HX;
     /*for (i = 1; i < sim->nx; i++) {
@@ -372,10 +346,10 @@ void compute_convection(Sim_data *sim) {
                          + (U[i  ][j+1] + U[i][j]) * (V[i  ][j  ] + V[i+1][j  ] - 2.*vMesh)\
                          - (U[i  ][j-1] + U[i][j]) * (V[i  ][j-1] + V[i+1][j-1] - 2.*vMesh);
     #endif
-                H[i][j] /= (4. * sim->h);  // possible since dx = dy = h; factor "2" since avg of Adv / Div
+                H[i][j] *= factor;  // possible since dx = dy = h; factor "2" since avg of Adv / Div
 
     #if         (CONVECTION_MODE == 2)
-                H[i][j] /= 2.;
+                H[i][j] *= 0.5;
     #endif
             }
         }
@@ -411,10 +385,10 @@ void compute_convection(Sim_data *sim) {
                          + (V[i  ][j+1] + V[i][j]) * (V[i  ][j+1] + V[i  ][j  ] - 2.*vMesh)
                          - (V[i  ][j-1] + V[i][j]) * (V[i  ][j-1] + V[i  ][j  ] - 2.*vMesh);
     #endif
-                H[i][j] /= (4. * sim->h);
+                H[i][j] *= factor;  // equivalent to divide by 4*h
 
     #if         (CONVECTION_MODE == 2)
-                H[i][j] /= 2.;
+                H[i][j] *= 0.5;
     #endif
 
             }
@@ -457,30 +431,6 @@ void check_convection(Sim_data *sim) {
         }
     }
     fclose(ptr);
-}
-
-void save_debug(Sim_data *sim) {
-    int i, j;
-    FILE *ptr_u = fopen("fields_u.txt", "w");
-    FILE *ptr_v = fopen("fields_v.txt", "w");
-
-    for (j = sim->ny+1; j >= 0; j--) {
-        for (i = 0 ; i < sim->nx+1; i++) {
-            fprintf(ptr_u, "%3.0lf/%7.2lf     ", sim->U[i][j], sim->HX[i][j]);
-        }
-        fprintf(ptr_u, "\n");
-    }
-
-    for (j = sim->ny; j >= 0; j--) {
-        for (i = 0 ; i <= sim->nx+1; i++) {
-            fprintf(ptr_v, "%3.0lf/%7.2lf     ", sim->V[i][j], sim->HY[i][j]);
-        }
-        fprintf(ptr_v, "\n");
-    }
-
-    fclose(ptr_u);
-    fclose(ptr_v);
-    printf("done\n");
 }
 
 
@@ -541,6 +491,7 @@ void predictor_step(Sim_data *sim) {
         }
     }
 }
+
 
 void corrector_step(Sim_data *sim) {
     int i, j;
@@ -610,54 +561,50 @@ void swap_next_previous(Sim_data *sim) {
 }
 
 
-void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
-    int t = 0;
+void check_boundary(Sim_data *sim) {
+    int i, j;
 
-    set_ghost_points(sim);
-    set_bd_conditions(sim, sim->U, sim->V);
-    set_bd_conditions(sim, sim->US, sim->VS);
-    save_fields(sim, t);
-
-    printf("starting ... \n"); fflush(stdout);
-
-    for (t = 1; t <= sim->nt; t++) {
-        
-        sim->t = t;
-        if (T_START < t * sim->dt) {
-            sim->uMesh = ALPHA * 2. * M_PI * STROUHAL * sin(2. * M_PI * STROUHAL * (t * sim->dt - T_START));
-            sim->vMesh = 0.;
-        }
-        
-        // set_bd_conditions(sim, sim->U, sim->V);
-        // set_ghost_points(sim);
-
-        compute_convection(sim);
-
-#       if USE_ADI
-        predictor_step_adi(sim, adi);
-#       else
-        predictor_step(sim);
-#       endif
-
-        set_bd_conditions(sim, sim->US, sim->VS);
-
-        // check_convection(sim);
-
-        poisson_solver(sim, poisson);
-        corrector_step(sim);
-        set_bd_conditions(sim, sim->U, sim->V);
-        set_ghost_points(sim);
-
-        swap_next_previous(sim);
-
-        if (t % SAVE_MODULO == 0) {
-            printf("Saving results ... t = %3d\n", t);
-            save_fields(sim, t);
+    // set identity for upper and lower walls
+    for (i = 0; i < sim->nx + 1; i++) {
+        for (j = 0; j < sim->ny + 2; j += sim->ny+1) {
+            printf("u[%d][%d] = %lf \t us = %lf\n", i, j, sim->U[i][j], sim->US[i][j]);
         }
     }
 
-    printf("\n");
+    // set identity for left and right walls
+    for (j = 1; j < sim->ny + 1; j++) {
+        for (i = 0; i < sim->nx+1; i += sim->nx) {
+            printf("u[%d][%d] = %lf \t us = %lf\n", i, j, sim->U[i][j], sim->US[i][j]);
+        }
+    }
 
+    // set identity for rectangle
+    for (i = sim->n * D_IN; i < (D_IN + LBOX) * sim->n + 1; i++) {
+        for (j = D_BOT * sim->n + 1; j < (D_BOT + 1) * sim->n + 1; j++) {
+            printf("u[%d][%d] = %lf \t us = %lf\n", i, j, sim->U[i][j], sim->US[i][j]);
+        }
+    }
+
+    // set identity for upper and lower walls
+    for (i = 0; i < sim->nx + 2; i++) {
+        for (j = 0; j < sim->ny + 1; j += sim->ny) {
+            printf("v[%d][%d] = %lf \t vs = %lf\n", i, j, sim->V[i][j], sim->VS[i][j]);
+        }
+    }
+
+    // set identity for left and right walls
+    for (j = 1; j < sim->ny; j++) {
+        for (i = 0; i < sim->nx+2; i += sim->nx + 1) {
+            printf("v[%d][%d] = %lf \t vs = %lf\n", i, j, sim->V[i][j], sim->VS[i][j]);
+        }
+    }
+
+    // set identity for rectangle
+    for (i = sim->n * D_IN + 1; i < (D_IN + LBOX) * sim->n + 1; i++) {
+        for (j = D_BOT * sim->n; j < (D_BOT + 1) * sim->n + 1; j++) {
+            printf("v[%d][%d] = %lf \t vs = %lf\n", i, j, sim->V[i][j], sim->VS[i][j]);
+        }
+    }
 }
 
 
@@ -668,46 +615,3 @@ void free_Sim_data(Sim_data *sim) {
     free(sim);
 }
 
-
-int main(int argc, char *argv[]){
-    // argv : -ksp_type gmres -pc_type lu
-    PetscInitialize(&argc, &argv, 0, 0);
-
-    Sim_data *simulation = (Sim_data *)malloc(sizeof(Sim_data));
-    init_Sim_data(simulation);
-    init_fields(simulation);
-
-    Poisson_data *poisson = (Poisson_data *)malloc(sizeof(Poisson_data));
-    initialize_poisson_solver(simulation, poisson);
-
-    ADI_data *adi_solver = (ADI_data *)malloc(sizeof(ADI_data));
-#   if USE_ADI
-    init_adi_solver(simulation, adi_solver);
-#   endif
-
-
-    // MAIN PROCESS
-#   if TEST_POISSON
-    test_poisson(simulation, poisson);
-#   elif TEST_TRIDIAGONAL
-    double a[5] = {0.0, 1.0,-1.1, 1.2,-1.3};
-    double b[5] = {5.0, 6.0, 7.0, 8.0, 9.0};
-    double c[5] = {1.0,-1.1, 1.2,-1.3, 0.0};
-    double q[5] = {1.0, 1.0, 1.0, 1.0, 1.0};
-    solve_thomas(5, a, b, c, q);
-    for (int i = 0; i < 5; i++) printf("q[%d] = %lf\n", i, q[i]);
-#   else
-    integrate_flow(simulation, poisson, adi_solver);
-#   endif
-
-
-    // Free memory
-    free_Sim_data(simulation);
-    free_poisson_solver(poisson);
-#   if USE_ADI
-    free_adi_solver(adi_solver);
-#   else
-    free(adi_solver);
-#   endif
-    PetscFinalize();
-}

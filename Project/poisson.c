@@ -71,7 +71,7 @@ void computeRHS(Sim_data *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) 
 /*Modification to do :*/
 /*    - Change the call to computeRHS as you have to modify its prototype too*/
 /*    - Copy solution of the equation into your vector PHI*/
-void poisson_solver(Sim_data *sim, Poisson_data *data) {
+int poisson_solver(Sim_data *sim, Poisson_data *data) {
 
     /* Solve the linear system Ax = b for a 2-D poisson equation on a structured grid */
     int its;
@@ -93,7 +93,7 @@ void poisson_solver(Sim_data *sim, Poisson_data *data) {
     KSPSolve(sles, b, x);  // printf("res = %d\n", res);
     KSPGetIterationNumber(sles, &its);
     // if (sim->t % SAVE_MODULO == 0)
-    PetscPrintf(PETSC_COMM_WORLD, "Solution to Poisson eqn in %d iterations \n", its);
+    // printf("t = %5d \t Poisson solved in %d iterations \r", sim->t, its);
     VecGetArray(x, &sol);
 
     int q = sim->size_p;
@@ -105,6 +105,8 @@ void poisson_solver(Sim_data *sim, Poisson_data *data) {
     VecRestoreArray(x, &sol);
     free(sol);
     free(rhs);
+    
+    return its;
 }
 
 /*
@@ -318,10 +320,10 @@ PetscErrorCode initialize_poisson_solver(Sim_data *sim, Poisson_data *data) {
     MatSeqAIJSetPreallocation(data->A, 5, NULL); // 5 nnz per row seems ok ! /*SET HERE THE NUMBER OF NON-ZERO DIAGONALS*/
     MatGetOwnershipRange(data->A, &rowStart, &rowEnd);
 
-    clock_t start = clock();
+    // clock_t start = clock();
     // computeLaplacianMatrix_NO_IF(sim, data->A, rowStart, rowEnd); // not even faster
     computeLaplacianMatrix(sim, data->A, rowStart, rowEnd);
-    clock_t end = clock();
+    // clock_t end = clock();
 
     ierr = MatAssemblyBegin(data->A, MAT_FINAL_ASSEMBLY);
     CHKERRQ(ierr);
@@ -341,7 +343,7 @@ PetscErrorCode initialize_poisson_solver(Sim_data *sim, Poisson_data *data) {
     KSPSetUseFischerGuess(data->sles, 1, 4);
     KSPGMRESSetPreAllocateVectors(data->sles);
 
-    PetscPrintf(PETSC_COMM_WORLD, "Assembly of Mattrix and Vectors is done (time taken = %.3lf ms) \n", 1000 * ((double)end - (double)start) / CLOCKS_PER_SEC);
+    // printf("Assembly of Mattrix and Vectors is done (time taken = %.3lf ms) \n\n", 1000 * ((double)end - (double)start) / CLOCKS_PER_SEC);
 
     return ierr;
 }

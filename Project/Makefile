@@ -7,15 +7,20 @@ LIB := -lpetsc
 #LIB_DIR := -L/usr/local/opt/petsc/lib
 #LIB := -lpetsc.3.14
 
-CXX_FLAGS := -J -Oz -Wall #-Werror #-g
+CXX_FLAGS := -J -O3 -Wall #-Werror #-g
 
 #Compilation
 all :
-	gcc -o project project.c poisson.c adi.c -lm -lmpi $(CXX_FLAGS) $(LIB_DIR) $(LIB) $(INC_DIR)
+	gcc -o cfd main.c project.c poisson.c adi.c -lm -lmpi $(CXX_FLAGS) $(LIB_DIR) $(LIB) $(INC_DIR)
+
+run :
+	gcc -o cfd main.c project.c poisson.c adi.c -lm -lmpi $(CXX_FLAGS) $(LIB_DIR) $(LIB) $(INC_DIR)
+	./cfd -ksp_type gmres -pc_type lu
+
 
 #Delete of executable files
 clean :
-	rm projet
+	rm cdf
 
 #Delete of results
 clean_txt :

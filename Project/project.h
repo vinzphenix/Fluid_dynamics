@@ -7,66 +7,45 @@
 #include <string.h>
 #include <time.h>
 
-#define RE 500.
-#define CFL 0.5
-#define FOURIER 0.25
+#define N_ 40
+#define NT 4000
+#define DT 0.002
 
-#define USE_ADI 1
-#define CONVECTION_MODE 2  // 0: advective form, 1: divergence form, 2: both
+// Simulation parameters
+#define RE 500.            // Reynolds number of the simulation
+#define TSIM 8.0           // Final time of the simulation
 
-#define N 30
-#define NT 200
-#define SAVE_MODULO 20
-#define FMT "%.4le\n"
+// Oscillation parameters
+#define ALPHA 0.5          // Amplitude of the oscillation
+#define STROUHAL (1. / 3.) // Frequency of the oscillation
+#define SIWNG_START 100.   // Starting time of the oscillation
+#define PERT_START 2.0     // Starting time of the perturbation
+#define PERT_DT 1.0        // Duration of the perturbation
 
-/*
- x_ = x / Hbox
- y_ = y / Hbox
- u_ = u / U0
- v_ = v / U0
- t_ = t / (Hbox/U0)
- p_ = p / (rho U0^2)
-*/
+// Code parameters
+#define USE_ADI 0          // 0: classic scheme, 1: solve using ADI method
+#define CONVECTION_MODE 2  // 0: advective form, 1: divergence form, 2: average of both
+#define SAVE 1             // 1 to save, 0 otherwise
+#define SAVE_MODULO 40     // save results every ... iteration
 
-#define TEND 0.1
+// Box measurements
 #define L_ 15
 #define H_ 5
 #define LBOX 5
 #define D_IN 3
 #define D_BOT 2
 
-#define T_START 100.
-#define ALPHA 0.5
-#define STROUHAL 0.333333333
+// Stability settings
+#define CFL 0.5
+#define FOURIER 0.25
 
-#define DEBUG 0
-#if DEBUG
-  #define PRINTF(...) printf(__VA_ARGS__)
-#else
-  #define PRINTF(...) (void)0
-#endif
 
 #define TEST_TRIDIAGONAL 0
 #define TEST_POISSON 0
-#define OUTFLOW_STUPID 0
+#define FMT "%.5le\n"
+#define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+#define PBWIDTH 60
 
-// access u and v neighbors
-#define LL(w, idx, inc) w[idx-inc]
-#define RR(w, idx, inc) w[idx+inc]
-#define BB(w, idx, inc) w[idx-1]
-#define AA(w, idx, inc) w[idx+1]
-
-// access other field neighbors (reference taken as AL)
-#define AL(w, idx, inc) w[idx]       // above left
-#define AR(w, idx, inc) w[idx+inc]   // above right
-#define BL(w, idx, inc) w[idx-1]     // below left
-#define BR(w, idx, inc) w[idx+inc-1] // below right
-
-/*// access u for convection of v
-#define LA(w, idx, inc) w[idx-inc+1]
-#define RA(w, idx, inc) w[idx+1]
-#define LB(w, idx, inc) w[idx-inc]
-#define RB(w, idx, inc) w[idx]*/
 
 typedef struct {
     int nt, nx, ny, n, t;
@@ -79,11 +58,19 @@ typedef struct {
     double **U, **US, **HX, **HX_;
     double **V, **VS, **HY, **HY_;
     double **P, **PHI;
-
-    /*double *u, *u_star, *Hx, *Hx_prev;
-    double *v, *v_star, *Hy, *Hy_prev;
-    double *p, *phi;*/
 } Sim_data;
 
-#endif
 
+void init_Sim_data(Sim_data *sim);
+void init_fields(Sim_data *sim);
+void save_fields(Sim_data *sim, int t);
+void free_Sim_data(Sim_data *sim);
+
+void set_bd_conditions(Sim_data *sim, double **U, double **V);
+void set_ghost_points(Sim_data *sim);
+void compute_convection(Sim_data *sim);
+void predictor_step(Sim_data *sim);
+void corrector_step(Sim_data *sim);
+void swap_next_previous(Sim_data *sim);
+
+#endif

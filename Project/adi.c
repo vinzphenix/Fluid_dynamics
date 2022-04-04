@@ -1,14 +1,12 @@
 #include "adi.h"
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 
-#define RESETHARD 0
-
 
 void init_adi_solver(Sim_data *sim, ADI_data *adi) {
     int j, size;
     size = MAX(sim->size_u, sim->size_v);
     
-    adi->a = (double *)calloc(4 * size, sizeof(double));
+    adi->a = (double *)malloc(4 * size * sizeof(double));
     adi->b = adi->a + size;
     adi->c = adi->b + size;
     adi->q = adi->c + size;
@@ -55,17 +53,12 @@ void solve_thomas(int size, double *a, double *b, double *c, double *sol) {
 }
 
 
-void reset_tridiagonal(ADI_data *adi, int size) {
-    for (int i = 0; i < size; i++) {
-        adi->a[i] = 0.;
-        adi->b[i] = 1.;
-        adi->c[i] = 0.;
-        // adi->q[i] = 0.;
-    }
-}
-
-
 void set_system_ux(Sim_data *sim, ADI_data *adi, int k) {
+    /*
+     These 4 functions set_system_xx initialize the tridiagonal matrix and their corresponding RHS.
+     All the nodes on the boundaries, or inside the rectangle are set to u^n.
+    */
+
     int i, j, idx;
 
     // set identity for upper and lower walls
@@ -207,16 +200,10 @@ void predictor_step_u_adi(Sim_data *sim, ADI_data *adi) {
     double alpha = (0.5 * sim->dt) / (RE * sim->h * sim->h);
     double conv, pres, diff;
 
+    
     // Solve system implicit in X (reversed indices for Q_ux)
     k = sim->nx + 1;
-#   if RESETHARD
-    reset_tridiagonal(adi, sim->size_u);
-    for (i = 0; i < sim->nx + 1; i++)
-        for (j = 0; j < sim->ny+2; j++)
-            adi->Q_ux[j][i] = sim->U[i][j];
-#   else
     set_system_ux(sim, adi, k);
-#   endif
 
     for (int block = 0; block < 4; block++) {
         i_s = sim->i_start[block];
@@ -227,7 +214,7 @@ void predictor_step_u_adi(Sim_data *sim, ADI_data *adi) {
         for (i = i_s; i < i_f; i++) {
             for (j = j_s; j < j_f; j++) {
                 conv = coef_1 * sim->HX[i][j] + coef_2 * sim->HX_[i][j]; // swap indices since system tridiagonal with X direction
-                pres = -(sim->P[i][j-1] - sim->P[i-1][j-1]) / sim->h;
+                pres = -(sim->P[i][j-1] - sim->P[i-1][j-1]) * sim->n;  //  1/dx = n 
                 diff = U[i][j-1] - 2.*U[i][j] + U[i][j+1];
 
                 idx = j*k + i;
@@ -238,16 +225,11 @@ void predictor_step_u_adi(Sim_data *sim, ADI_data *adi) {
     }
     solve_thomas(sim->size_u, adi->a, adi->b, adi->c, adi->q);
 
+
     // Solve system implicit in Y
     k = sim->ny + 2;
-#   if RESETHARD
-    reset_tridiagonal(adi, sim->size_u);
-    for (i = 0; i < sim->nx + 1; i++)
-        for (j = 0; j < sim->ny+2; j++) 
-            sim->US[i][j] = sim->U[i][j];
-#   else
+
     set_system_uy(sim, adi, k);
-#   endif
 
     for (int block = 0; block < 4; block++) {
         i_s = sim->i_start[block];
@@ -257,8 +239,8 @@ void predictor_step_u_adi(Sim_data *sim, ADI_data *adi) {
 
         for (i = i_s; i < i_f; i++) {
             for (j = j_s; j < j_f; j++) {
-                conv = coef_1 * sim->HX[i][j] + coef_2 * sim->HX_[i][j]; // swap indices since system tridiagonal with X direction
-                pres = -(sim->P[i][j-1] - sim->P[i-1][j-1]) / sim->h;
+                conv = coef_1 * sim->HX[i][j] + coef_2 * sim->HX_[i][j]; // pretty dumb to compute it again, but otherwise an other array would be needed
+                pres = -(sim->P[i][j-1] - sim->P[i-1][j-1]) * sim->n;  // equivalent to divide by dx
                 diff = adi->Q_ux[j][i-1] - 2.*adi->Q_ux[j][i] + adi->Q_ux[j][i+1];
 
                 idx = i*k + j;
@@ -288,16 +270,10 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
     double alpha = (0.5 * sim->dt) / (RE * sim->h * sim->h);
     double conv, pres, diff;
 
+
     // Solve system implicit in X (reversed indices for Q_ux)
     k = sim->nx + 2;
-#   if RESETHARD
-    reset_tridiagonal(adi, sim->size_v);
-    for (i = 0; i < sim->nx + 2; i++)
-        for (j = 0; j < sim->ny+1; j++)
-            adi->Q_vx[j][i] = sim->V[i][j];
-#   else
     set_system_vx(sim, adi, k);
-#   endif
 
     for (int block = 4; block < 8; block++) {
         i_s = sim->i_start[block];
@@ -308,7 +284,7 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
         for (i = i_s; i < i_f; i++) {
             for (j = j_s; j < j_f; j++) {
                 conv = coef_1 * sim->HY[i][j] + coef_2 * sim->HY_[i][j]; // swap indices since system tridiagonal with X direction
-                pres = -(sim->P[i-1][j] - sim->P[i-1][j-1]) / sim->h;
+                pres = -(sim->P[i-1][j] - sim->P[i-1][j-1]) * sim->n;
                 diff = V[i][j-1] - 2.*V[i][j] + V[i][j+1];
 
                 idx = j*k + i;
@@ -319,16 +295,10 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
     }
     solve_thomas(sim->size_v, adi->a, adi->b, adi->c, adi->q);
 
+
     // Solve system implicit in Y
     k = sim->ny + 1;
-#   if RESETHARD
-    reset_tridiagonal(adi, sim->size_v);
-    for (i = 0; i < sim->nx + 2; i++)
-        for (j = 0; j < sim->ny+1; j++) 
-            sim->VS[i][j] = sim->V[i][j];
-#   else
     set_system_vy(sim, adi, k);
-#   endif
 
     for (int block = 4; block < 8; block++) {
         i_s = sim->i_start[block];
@@ -339,7 +309,7 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
         for (i = i_s; i < i_f; i++) {
             for (j = j_s; j < j_f; j++) {
                 conv = coef_1 * sim->HY[i][j] + coef_2 * sim->HY_[i][j]; // swap indices since system tridiagonal with X direction
-                pres = -(sim->P[i-1][j] - sim->P[i-1][j-1]) / sim->h;
+                pres = -(sim->P[i-1][j] - sim->P[i-1][j-1]) * sim->n;
                 diff = adi->Q_vx[j][i-1] - 2.*adi->Q_vx[j][i] + adi->Q_vx[j][i+1];
                 
                 idx = i*k + j;

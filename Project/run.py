@@ -196,7 +196,7 @@ def modify_html(html_filename):
 
 if __name__ == "__main__":
 
-    kwargs = {"stream":True, "streak":True}
+    kwargs = {"stream":False, "streak":False}
 
     ############################################################################################
     ####################################  -  SETUP DATA  -  ####################################
@@ -208,14 +208,14 @@ if __name__ == "__main__":
     swing_start, pert_start, pert_dt, alpha, strouhal = params3
     
     cmap1, cmap2, cmap3, cmap4 = "Spectral_r", "bwr", "viridis", "turbo_r"
-    strm_levels, strm_color, strm_alpha = 17, "grey", 0.5
-    nStreakLines, nParticles, strk_lw, strk_color, strk_alpha = 4, 100, 3., "grey", 0.5
+    strm_levels, strm_color, strm_alpha = np.linspace(0., 2.75, 16), "grey", 0.5
+    nStreakLines, nParticles, strk_lw, strk_color, strk_alpha = 4, 500, 3., "grey", 0.5
 
     
     # Oscillation parameters
     t_array = np.linspace(0., T, nt + 1)
     kappa = alpha / (2 * np.pi * strouhal)
-    delta_x = 0. * kappa * (1. - np.cos(2. * np.pi * strouhal * t_array))
+    delta_x = kappa * (1. - np.cos(2. * np.pi * strouhal * t_array))
     delta_y = 0.5 * pert_dt / (2. * np.pi) * (1. - np.cos(2. * np.pi * (t_array - pert_start) / pert_dt))
     delta_x[t_array < swing_start] = 0.
     delta_y[~((pert_start < t_array) * (t_array < pert_start + pert_dt))] = 0.
@@ -297,10 +297,11 @@ if __name__ == "__main__":
         anim.save("flow.mp4", writer=writerMP4)
 
     elif save == "html":
+        caseNb = 2
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
         init()
         for t in tqdm(range(nt + 1)):
             update(t)
-            fig.savefig("./anim/frame_{:05d}.png".format(t), format="png", bbox_inches='tight', pad_inches=0.02)
+            fig.savefig(f"./anim/case_{caseNb:d}/frame_{t:05d}.png", format="png", bbox_inches='tight', pad_inches=0.02)
         
-        modify_html("animation.html")
+        modify_html(f"./anim/case_{caseNb:d}.html")

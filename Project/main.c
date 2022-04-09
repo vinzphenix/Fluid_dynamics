@@ -65,15 +65,15 @@ void printProgress(double percentage, int res, int t, int nt, double dt, int nde
 void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
     time_t start_exec;
 
-    int res;
+    int nIterations;
     int t = 0;
     int ndec1 = (int) ceil(log10(sim->nt + 1));
     int ndec2 = (int) ceil(log10(TSIM + 1.));
 
-    set_bd_conditions(sim, sim->U, sim->V);
-    set_ghost_points(sim);
+    // set_bd_conditions(sim, sim->U, sim->V);
+    // set_ghost_points(sim);
+    
     save_fields(sim, t);
-
     time(&start_exec);
 
     for (t = 1; t <= sim->nt; t++) {
@@ -90,6 +90,9 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
             sim->vMesh = 0.;
         }
         
+        set_bd_conditions(sim, sim->U, sim->V);
+        set_ghost_points(sim);
+        
         compute_convection(sim);
 
 #       if USE_ADI
@@ -99,15 +102,15 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
         predictor_step(sim);
 #       endif
 
-        res = poisson_solver(sim, poisson);
+        nIterations = poisson_solver(sim, poisson);
         corrector_step(sim);
 
-        set_bd_conditions(sim, sim->U, sim->V);
-        set_ghost_points(sim);
+        // set_bd_conditions(sim, sim->U, sim->V);
+        // set_ghost_points(sim);
 
         swap_next_previous(sim);
 
-        printProgress((double) t / (double) sim->nt, res, t, sim->nt, sim->dt, ndec1, ndec2, start_exec);
+        printProgress((double) t / (double) sim->nt, nIterations, t, sim->nt, sim->dt, ndec1, ndec2, start_exec);
         if ((t % SAVE_MODULO == 0) && (SAVE)) {
             save_fields(sim, t);
         }

@@ -8,25 +8,25 @@
 #include <time.h>
 
 #define N_ 40
-#define NT 4000
+#define NT 8000
 #define DT 0.002
 
 // Simulation parameters
 #define RE 500.            // Reynolds number of the simulation
-#define TSIM 8.0           // Final time of the simulation
+#define TSIM 16.           // Final time of the simulation
 
 // Oscillation parameters
 #define ALPHA 0.5          // Amplitude of the oscillation
 #define STROUHAL (1. / 3.) // Frequency of the oscillation
 #define SIWNG_START 100.   // Starting time of the oscillation
-#define PERT_START 2.0     // Starting time of the perturbation
+#define PERT_START 100.     // Starting time of the perturbation
 #define PERT_DT 1.0        // Duration of the perturbation
 
 // Code parameters
 #define USE_ADI 0          // 0: classic scheme, 1: solve using ADI method
 #define CONVECTION_MODE 2  // 0: advective form, 1: divergence form, 2: average of both
 #define SAVE 1             // 1 to save, 0 otherwise
-#define SAVE_MODULO 40     // save results every ... iteration
+#define SAVE_MODULO 50     // save results every ... iteration
 
 // Box measurements
 #define L_ 15

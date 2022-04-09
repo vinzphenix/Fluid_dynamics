@@ -7,7 +7,7 @@ char filename_params[50];
 char filename_u[50];
 char filename_v[50];
 char filename_p[50];
-char filename_w[50];
+// char filename_w[50];
 
 
 void init_Sim_data(Sim_data *sim) {
@@ -15,7 +15,7 @@ void init_Sim_data(Sim_data *sim) {
     sprintf(filename_u, "%ssimu_u.txt", myPath);
     sprintf(filename_v, "%ssimu_v.txt", myPath);
     sprintf(filename_p, "%ssimu_p.txt", myPath);
-    sprintf(filename_w, "%ssimu_w.txt", myPath);
+    // sprintf(filename_w, "%ssimu_w.txt", myPath);
 
 
     // sim->h = CFL / (FOURIER * RE * 5);
@@ -164,7 +164,8 @@ void init_fields(Sim_data *sim) {
 
 
 void save_fields(Sim_data *sim, int t) {
-    FILE *ptr, *ptr_u, *ptr_v, *ptr_p, *ptr_w;
+    FILE *ptr, *ptr_u, *ptr_v, *ptr_p;
+    int i;
 
     if (t == 0) {
         ptr = fopen(filename_params, "w");
@@ -173,45 +174,24 @@ void save_fields(Sim_data *sim, int t) {
         fprintf(ptr, "%lf %lf %lf %lf %lf\n", SIWNG_START, PERT_START, PERT_DT, ALPHA, STROUHAL);
         fclose(ptr);
     }
-
-    int i, j;
-    double u_up, u_dw, v_lf, v_rg;
     
     if (t == 0) {
         ptr_u = fopen(filename_u, "w");
         ptr_v = fopen(filename_v, "w");
-        ptr_w = fopen(filename_w, "w");
         ptr_p = fopen(filename_p, "w");
     } else {
         ptr_u = fopen(filename_u, "a");
         ptr_v = fopen(filename_v, "a");
-        ptr_w = fopen(filename_w, "a");
         ptr_p = fopen(filename_p, "a");
     }
 
-    // loop over corners
-    for (i = 0; i < sim->nx + 1; i++) {
-        for (j = 0; j < sim->ny + 1; j++) {
-            
-            u_up = sim->U[i][j + 1]; // u above
-            u_dw = sim->U[i][j];     // u below
-            v_lf = sim->V[i][j];     // v left
-            v_rg = sim->V[i + 1][j]; // v right
-            
-            fprintf(ptr_u, FMT, 0.5 * (u_up + u_dw));                       // u average 
-            fprintf(ptr_v, FMT, 0.5 * (v_lf + v_rg));                       // v average
-            fprintf(ptr_w, FMT, ((v_rg - v_lf) - (u_up - u_dw)) / sim->h);  // vorticity
-        }
-    }
 
-    // loop over centers
-    for (i = 0; i < sim->size_p; i++) {
-        fprintf(ptr_p, FMT, sim->p_data[i]);  // pressure
-    }
+    for (i = 0; i < sim->size_u; i++) fprintf(ptr_u, FMT, sim->u_data[i]);  // pressure
+    for (i = 0; i < sim->size_v; i++) fprintf(ptr_v, FMT, sim->v_data[i]);  // velocity x
+    for (i = 0; i < sim->size_p; i++) fprintf(ptr_p, FMT, sim->p_data[i]);  // velocity y
     
     fclose(ptr_u);
     fclose(ptr_v);
-    fclose(ptr_w);
     fclose(ptr_p);
 }
 
@@ -537,7 +517,7 @@ void corrector_step(Sim_data *sim) {
 
     // update p field
     for (i = 0, j = sim->size_p; i < sim->size_p; i++, j++) {
-        sim->p_data[i] += sim->p_data[j];
+        sim->p_data[i] += sim->p_data[j];  // p = p + phi
     }
 
     /*for (i = 0; i < sim->nx; i++) {

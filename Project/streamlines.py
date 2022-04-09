@@ -80,10 +80,12 @@ def animate(i):
     if kwargs["streak"]:
 
         for j, (line, x_particles, y_particles) in enumerate(zip(lines, streaklines_x, streaklines_y)):
-            
+
             # add new particle
-            x_particles[i % nParticles] = 0.
-            y_particles[i % nParticles] = spots_y[j]
+            if j == 0 and i % 10 == 0:
+                print((i//10) % nParticles)
+                x_particles[(i // 10) % nParticles] = 0.
+                y_particles[(i // 10) % nParticles] = spots_y[j]
 
             mask = (0. <= x_particles) * (x_particles <= L) * (-H/2. <= y_particles) * (y_particles <= H/2)
 
@@ -102,7 +104,10 @@ def animate(i):
             # x_particles[mask] += dt * u_interp(args)
             # y_particles[mask] += dt * v_interp(args)
 
-            line.set_data(x_particles[mask], y_particles[mask])
+            x_particles[~mask] = np.nan
+            y_particles[~mask] = np.nan
+            line.set_data(x_particles, y_particles)
+            # line.set_data(x_particles[mask], y_particles[mask])
         
         animated_items += lines
 
@@ -147,7 +152,7 @@ if __name__ == "__main__":
     u_interp = RegularGridInterpolator((t, x, y), U, bounds_error=False, fill_value=0)
     v_interp = RegularGridInterpolator((t, x, y), V, bounds_error=False, fill_value=0)
 
-    nLines, nParticles = 3, 10*nx
+    nLines, nParticles = 3, nx
     spots_y = np.linspace(-H/2 + H/(nLines+1), H/2 - H/(nLines+1), nLines)
     streaklines_x = [-np.ones(nParticles) for _ in range(nLines)]
     streaklines_y = [spots_y[j]*np.ones(nParticles) for j in range(nLines)]
@@ -158,7 +163,7 @@ if __name__ == "__main__":
         Q = ax.quiver(X, Y, U[0], V[0], width=0.0015, zorder=2)
     
     if kwargs["streak"]:
-        lines = [ax.plot([], [], "o", color="yellow", markersize=3, alpha=0.75)[0] for i in range(nLines)]
+        lines = [ax.plot([], [], "-", marker="o", color="yellow", lw=3,markersize=10, alpha=0.75)[0] for i in range(nLines)]
 
     if kwargs["stream"]:
         1

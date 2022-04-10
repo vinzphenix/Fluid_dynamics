@@ -297,7 +297,7 @@ if __name__ == "__main__":
         ax.set_aspect('equal')
     
     # Time text
-    time_str = "t = {:5.3f} [s]"
+    time_str = "t = {:6.3f} [s]"
     bbox_dic = dict(boxstyle="round", fc="wheat", ec="none", alpha=0.85)
     time_text = axs[0].text(0.8,0.9, time_str.format(0), fontsize=ftSz2, transform=axs[0].transAxes, bbox=bbox_dic)
 
@@ -327,7 +327,7 @@ if __name__ == "__main__":
         anim.save(f"{path_anim}/flow.mp4", writer=writerMP4)
 
     elif save == "html":
-        caseNb = "4a"
+        caseNb = "1"
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
         init()
         for t in tqdm(range(nt + 1)):

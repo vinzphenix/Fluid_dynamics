@@ -325,7 +325,7 @@ PetscErrorCode initialize_poisson_solver(Sim_data *sim, Poisson_data *data) {
     /* Create the Krylov context */
     KSPCreate(PETSC_COMM_WORLD, &(data->sles));
     KSPSetOperators(data->sles, data->A, data->A);
-    KSPSetType(data->sles, KSPGMRES); // KSPGMRES seems the best, it will not be used if PC LU.
+    KSPSetType(data->sles, KSPFGMRES); // KSPGMRES seems the best, it will not be used if PC LU.
     PC prec;
     KSPGetPC(data->sles, &prec);
     PCSetType(prec, PCLU);

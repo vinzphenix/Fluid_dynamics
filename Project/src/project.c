@@ -10,7 +10,7 @@ char filename_p[50];
 // char filename_w[50];
 
 
-void init_Sim_data(Sim_data *sim) {
+void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input) {
     sprintf(filename_params, "%s/simu_params.txt", myPath);
     sprintf(filename_u, "%s/simu_u.txt", myPath);
     sprintf(filename_v, "%s/simu_v.txt", myPath);
@@ -18,14 +18,18 @@ void init_Sim_data(Sim_data *sim) {
     // sprintf(filename_w, "%s/simu_w.txt", myPath);
     
     // Space discretization
-    sim->n = N_;
+    // sim->n = N_;
+    sim->n = n_input;
     sim->nx = L_ * sim->n;
     sim->ny = H_ * sim->n;
     sim->h = 1. / ((double) sim->n);
 
     // Time discretization
-    sim->dt = DT;
-    sim->nt = (int) ceil(TSIM / sim->dt);
+    // sim->dt = DT;
+    // sim->tsim = TSIM;
+    sim->dt = dt_input;
+    sim->tsim = tend_input;
+    sim->nt = (int) ceil(sim->tsim / sim->dt);
     double dtStable = fmin(FOURIER * RE * (sim->h) * (sim->h), CFL * sim->h / U0V0);
     printf("Current \u0394t = %.5lf  vs  %.5lf = \u0394t maximal\n", sim->dt, dtStable);
     
@@ -165,7 +169,7 @@ void save_fields(Sim_data *sim, int t) {
     if (t == 0) {
         ptr = fopen(filename_params, "w");
         fprintf(ptr, "%d %d %d %d %d\n", sim->nt / SAVE_MODULO, sim->nx, sim->ny, sim->n, SAVE_MODULO);
-        fprintf(ptr, "%lf %lf %lf %d %d %d %d %d\n", TSIM, sim->dt, sim->h, L_, H_, LBOX, D_IN, D_BOT);
+        fprintf(ptr, "%lf %lf %lf %d %d %d %d %d\n", sim->tsim, sim->dt, sim->h, L_, H_, LBOX, D_IN, D_BOT);
         fprintf(ptr, "%lf %lf %lf %lf %lf\n", SIWNG_START, PERT_START, PERT_DT, ALPHA, STROUHAL);
         fclose(ptr);
     }
@@ -508,6 +512,21 @@ void swap_next_previous(Sim_data *sim) {
     temp = sim->HY;
     sim->HY = sim->HY_;
     sim->HY_ = temp;
+}
+
+
+void set_mesh_velocity(Sim_data *sim) {
+    int t = sim->t;
+    if (SIWNG_START < t * sim->dt) {
+        sim->uMesh = ALPHA * sin(2. * M_PI * STROUHAL * (t * sim->dt - SIWNG_START));
+    } else {
+        sim->uMesh = 0.;
+    }
+    if ((PERT_START <= t * sim->dt) && (t * sim->dt <= PERT_START + PERT_DT)) {
+        sim->vMesh = 0.5 * sin(2. * M_PI * (t * sim->dt - PERT_START) / PERT_DT);
+    } else {
+        sim->vMesh = 0.;
+    }
 }
 
 

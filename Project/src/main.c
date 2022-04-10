@@ -17,9 +17,9 @@ void display_info(Sim_data *sim, char *mode) {
 
     printf("\n ============================ \e[1mLMECA2660 project in CFD\e[0m ============================\n");
 #   if USE_ADI
-    printf("\e[1m       Re = %.0lf    dx = %.3lf    dt = %.4lf    T simu = %.2lf   ADI enabled \e[0m\n\n", RE, sim->h, sim->dt, TSIM);
+    printf("\e[1m       Re = %.0lf    dx = %.3lf    dt = %.4lf    T simu = %.2lf   ADI enabled \e[0m\n\n", RE, sim->h, sim->dt, sim->tsim);
 #   else
-    printf("\e[1m       Re = %.0lf    dx = %.3lf    dt = %.4lf    T simu = %.2lf   ADI disabled \e[0m\n\n", RE, sim->h, sim->dt, TSIM);
+    printf("\e[1m       Re = %.0lf    dx = %.3lf    dt = %.4lf    T simu = %.2lf   ADI disabled \e[0m\n\n", RE, sim->h, sim->dt, sim->tsim);
 #   endif
     char description[] = {
         "        ╭──────────────────────────────────────────────────────────────╮\n"
@@ -69,7 +69,7 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
     int nIterations;
     int t = 0;
     int ndec1 = (int) ceil(log10(sim->nt + 1));
-    int ndec2 = (int) ceil(log10(TSIM + 1.));
+    int ndec2 = (int) ceil(log10(sim->tsim + 1.));
 
     // set_bd_conditions(sim, sim->U, sim->V);
     // set_ghost_points(sim);
@@ -79,22 +79,17 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
 
     for (t = 1; t <= sim->nt; t++) {
         
-        sim->t = t;
-        if (SIWNG_START < t * sim->dt) {
-            sim->uMesh = ALPHA * sin(2. * M_PI * STROUHAL * (t * sim->dt - SIWNG_START));
-        } else {
-            sim->uMesh = 0.;
-        }
-        if ((PERT_START <= t * sim->dt) && (t * sim->dt <= PERT_START + PERT_DT)) {
-            sim->vMesh = 0.5 * sin(2. * M_PI * (t * sim->dt - PERT_START) / PERT_DT);
-        } else {
-            sim->vMesh = 0.;
-        }
+        // in what order should these three blocks be ???
         
-        set_bd_conditions(sim, sim->U, sim->V);
-        set_ghost_points(sim);
+        sim->t = t;
+        set_mesh_velocity(sim);
         
         compute_convection(sim);
+
+        set_bd_conditions(sim, sim->U, sim->V);
+        set_bd_conditions(sim, sim->US, sim->VS);
+        set_ghost_points(sim);
+
 
 #       if USE_ADI
         predictor_step_u_adi(sim, adi);
@@ -109,12 +104,14 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
         // set_bd_conditions(sim, sim->U, sim->V);
         // set_ghost_points(sim);
 
-        swap_next_previous(sim);
-
         printProgress((double) t / (double) sim->nt, nIterations, t, sim->nt, sim->dt, ndec1, ndec2, start_exec);
         if ((t % SAVE_MODULO == 0) && (SAVE)) {
+            set_bd_conditions(sim, sim->U, sim->V); // satisfy the b.c. when saving the file 
+            set_ghost_points(sim);                  // are these usefull ? idk
             save_fields(sim, t);
         }
+
+        swap_next_previous(sim);
     }
 
     printf("\n\n");
@@ -124,11 +121,51 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
 
 int main(int argc, char *argv[]){
     // argv : -ksp_type fgmres -pc_type lu
+    
+    int tmp1;
+    int n = 40;
+    double dt = 0.002;
+    double tend = 10.;
+    double tmp2;
 
+    char *endptr;
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-n") == 0) {
+            if (argc > i+1) tmp1 = (int) strtol(argv[i+1], &endptr, 10);
+            if ((argc > i+1) && (*endptr == '\0')) {
+                i++;
+                n = tmp1;
+            } else {
+                printf("Could not read value for parameter [n]. It was set to 40 by default.\n");
+                n = 40;
+            }
+        } else if (strcmp(argv[i], "-dt") == 0) {
+            if (argc > i+1) tmp2 = (double) strtod(argv[i+1], &endptr);
+            if ((argc > i+1) && (*endptr == '\0')) {
+                i++;
+                dt = tmp2;
+            } else {
+                printf("Could not read value for parameter [dt]. It was set to 0.002 by default.\n");
+                dt = 0.002;
+            }
+        } else if (strcmp(argv[i], "-tend") == 0) {
+            if (argc > i+1) tmp2 = (double) strtod(argv[i+1], &endptr);
+            if ((argc > i+1) && (*endptr == '\0')) {
+                i++;
+                tend = tmp2;
+            } else {
+                printf("Could not read value for parameter [tend]. It was set to 10 by default.\n");
+                tend = 10.;
+            }
+        } 
+    }
+
+    argc = 3;
     PetscInitialize(&argc, &argv, 0, 0);
 
     Sim_data *simulation = (Sim_data *)malloc(sizeof(Sim_data));
-    init_Sim_data(simulation);
+    init_Sim_data(simulation, n, dt, tend);
     init_fields(simulation);
 
     Poisson_data *poisson = (Poisson_data *)malloc(sizeof(Poisson_data));

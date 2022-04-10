@@ -7,19 +7,19 @@
 #include <string.h>
 #include <time.h>
 
-#define N_ 40
+// #define N_ 40
 // #define NT 400
-#define DT 0.002
+// #define DT 0.002
 
 // Simulation parameters
 #define RE 500.            // Reynolds number of the simulation
-#define TSIM 20.           // Final time of the simulation
+// #define TSIM 10.           // Final time of the simulation
 
 // Oscillation parameters
 #define ALPHA 0.5          // Amplitude of the oscillation
 #define STROUHAL (1. / 3.) // Frequency of the oscillation
-#define SIWNG_START 2.   // Starting time of the oscillation
-#define PERT_START 10.     // Starting time of the perturbation
+#define SIWNG_START 200.   // Starting time of the oscillation
+#define PERT_START 200.     // Starting time of the perturbation
 #define PERT_DT 1.0        // Duration of the perturbation
 
 // Code parameters
@@ -27,7 +27,6 @@
 #define CONVECTION_MODE 2  // 0: advective form, 1: divergence form, 2: average of both
 #define SAVE 1             // 1 to save, 0 otherwise
 #define SAVE_MODULO 20     // save results every ... iteration
-#define TIME_MANUAL 1
 
 // Box measurements
 #define L_ 15
@@ -53,7 +52,7 @@ typedef struct {
     int nt, nx, ny, n, t;
     int size_u, size_v, size_p;
     int i_start[8], i_final[8], j_start[8], j_final[8];
-    double h, dt;
+    double h, dt, tsim;
     double uMesh, vMesh;
     
     double *u_data, *v_data, *p_data;
@@ -63,7 +62,7 @@ typedef struct {
 } Sim_data;
 
 
-void init_Sim_data(Sim_data *sim);
+void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input);
 void init_fields(Sim_data *sim);
 void save_fields(Sim_data *sim, int t);
 void free_Sim_data(Sim_data *sim);
@@ -74,5 +73,6 @@ void compute_convection(Sim_data *sim);
 void predictor_step(Sim_data *sim);
 void corrector_step(Sim_data *sim);
 void swap_next_previous(Sim_data *sim);
+void set_mesh_velocity(Sim_data *sim);
 
 #endif

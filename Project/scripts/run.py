@@ -52,17 +52,19 @@ def read_data_init():
     return params1, params2, params3, [df_p, df_u, df_v]
 
 
-def compute_psi(u, v):
+def compute_psi(u, v, t):
     psi = np.zeros((nx+1, ny+1))
+    uu = u - u_mesh[t]
+    vv = v - v_mesh[t]
 
     iwl, iwr = din*n+1, (din+lbox)*n+1
     jwb, jwa = dbot*n+1, (dbot+1)*n+1
 
-    psi[:iwl, 1:] = h * np.cumsum(-u[:iwl, 1:-1], axis=1)                 # block 1
-    psi[iwl:iwr, 1:jwb] = h * np.cumsum(-u[iwl:iwr, 1:jwb], axis=1)       # block 2
+    psi[:iwl, 1:] = h * np.cumsum(-uu[:iwl, 1:-1], axis=1)                 # block 1
+    psi[iwl:iwr, 1:jwb] = h * np.cumsum(-uu[iwl:iwr, 1:jwb], axis=1)       # block 2
     psi[iwl:iwr, jwa-1] = psi[iwl:iwr, dbot*n]                            # block 3 
-    psi[iwl:iwr, jwa:] = psi[iwl:iwr, jwa-1, np.newaxis] + h * np.cumsum(-u[iwl:iwr, jwa:-1], axis=1)
-    psi[iwr:, 1:] = h * np.cumsum(-u[iwr:, 1:-1], axis=1)  # block 4
+    psi[iwl:iwr, jwa:] = psi[iwl:iwr, jwa-1, np.newaxis] + h * np.cumsum(-uu[iwl:iwr, jwa:-1], axis=1)
+    psi[iwr:, 1:] = h * np.cumsum(-uu[iwr:, 1:-1], axis=1)  # block 4
     
     return psi
 
@@ -80,10 +82,7 @@ def read_block(dataframe_list):
     p_masked = np.ma.masked_array(p, mask_middle)
     w_masked = np.ma.masked_array(w, mask_middle)
 
-    psi = compute_psi(u, v)
-    psi = np.ma.masked_array(psi.T, mask_corner)
-
-    return p.T, u, v, w.T, p_masked.T, w_masked.T, psi
+    return p.T, u, v, w.T, p_masked.T, w_masked.T
 
 
 def find_bounds(filename):
@@ -133,7 +132,7 @@ def update(t):
     global p, u, v, w, p_masked, w_masked, psi
 
     if (t > 0):
-        p, u, v, w, p_masked, w_masked, psi = read_block(dataframes)
+        p, u, v, w, p_masked, w_masked = read_block(dataframes)
 
     animated_items = []
 
@@ -153,12 +152,15 @@ def update(t):
         for item in strm[0].collections:
             item.remove()
         
+        psi = compute_psi(u, v, t)
+        psi = np.ma.masked_array(psi.T, mask_corner)
+
         psi_min, psi_max = np.amin(psi), np.amax(psi)
         psi_avg, psi_dif = (psi_max + psi_min) / 2., psi_max - psi_min
         levels = np.linspace(psi_min + 0.01 * psi_dif, psi_max - 0.01 * psi_dif, nStreamLines)
         levels = levels - scaling * psi_dif / (2. * np.pi) * np.sin(2. * np.pi / psi_dif * (levels - psi_avg))
 
-        strm[0] = axs[0].contour(xx_, yy_, psi, colors=strm_color, alpha=strm_alpha, levels=levels)
+        strm[0] = axs[0].contour(xx_+delta_x[t], yy_+delta_y[t], psi, colors=strm_color, alpha=strm_alpha, levels=levels, linestyles="solid")
         animated_items.append(strm[0].collections)
     
     if kwargs["streak"]:
@@ -169,10 +171,12 @@ def update(t):
         
         for j, (line, x_particles, y_particles) in enumerate(zip(lines, streaklines_x, streaklines_y)):
             if t % cycle == 0:
-                x_particles[(t//cycle) % nParticles] = 0.
+                x_particles[(t//cycle) % nParticles] = 2 * kappa
                 y_particles[(t//cycle) % nParticles] = spots_y[j]
             mask = (0. <= x_particles) * (x_particles <= L) * (0. <= y_particles) * (y_particles <= H)
-            args = np.c_[x_particles[mask], y_particles[mask]]
+            
+            # evaluate the field at the right place: take the shift in consideration
+            args = np.c_[x_particles[mask] - delta_x[t], y_particles[mask] - delta_y[t]]
             
             x_particles[mask] += dt * u_interp(args)  # Euler explicite
             y_particles[mask] += dt * v_interp(args)  # Euler explicite
@@ -235,11 +239,17 @@ if __name__ == "__main__":
     # Oscillation parameters
     t_array = np.linspace(0., T, nt + 1)
     kappa = alpha / (2 * np.pi * strouhal)
-    delta_x = kappa * (1. - np.cos(2. * np.pi * strouhal * t_array))
-    delta_y = 0.5 * pert_dt / (2. * np.pi) * (1. - np.cos(2. * np.pi * (t_array - pert_start) / pert_dt))
+    delta_x = kappa * (1. - np.cos(2. * np.pi * strouhal * (t_array - swing_start)))
+    delta_y = 0.5 * pert_dt / (2. * np.pi) * (1. - np.cos(2. * np.pi * (t_array - pert_start) / pert_dt))    
+    u_mesh = alpha * np.sin(2. * np.pi * strouhal * (t_array * dt - swing_start))
+    v_mesh = 0.5 * np.sin(2. * np.pi * (t_array * dt - pert_start) / pert_dt)
+
     delta_x[t_array < swing_start] = 0.
     delta_y[~((pert_start < t_array) * (t_array < pert_start + pert_dt))] = 0.
-    
+    u_mesh[t_array < swing_start] = 0.
+    v_mesh[~((pert_start < t_array) * (t_array < pert_start + pert_dt))] = 0.
+
+
     # Mesh points
     xm, ym  = np.linspace(h/2., L-h/2., nx), np.linspace(h/2., H-h/2., ny)  # middle of cell : p value of MAC mesh
     x, y = np.linspace(0, L, nx + 1), np.linspace(0, H, ny + 1)  # corners of cell : w value of MAC mesh
@@ -248,7 +258,7 @@ if __name__ == "__main__":
     mask_corner = (din <= xx_) * (xx_ <= din+lbox) * (dbot <= yy_) * (yy_ <= dbot+1.)
 
     # Fields
-    p, u, v, w, p_masked, w_masked, psi = read_block(dataframes)
+    p, u, v, w, p_masked, w_masked = read_block(dataframes)
 
 
     #############################################################################################
@@ -268,7 +278,7 @@ if __name__ == "__main__":
 
     # streamlines and streaklines
     if kwargs["stream"]:
-        strm = [axs[0].contour(xx_, yy_, psi, colors=strm_color, alpha=0., levels=1)]
+        strm = [axs[0].contour(xx_, yy_, xx_*yy_, colors=strm_color, alpha=0., levels=1)] # on purpose
     if kwargs["streak"]:
         spots_y = np.linspace(H/(nStreakLines+1), H - H/(nStreakLines+1), nStreakLines)
         streaklines_x = [-np.ones(nParticles) for _ in range(nStreakLines)]
@@ -292,10 +302,10 @@ if __name__ == "__main__":
     time_text = axs[0].text(0.8,0.9, time_str.format(0), fontsize=ftSz2, transform=axs[0].transAxes, bbox=bbox_dic)
 
 
-    save = "none"
+    # save = "none"
     # save = "gif"
     # save = "mp4"
-    # save = "html"
+    save = "html"
 
     if save == "none":
         # init()
@@ -317,11 +327,11 @@ if __name__ == "__main__":
         anim.save(f"{path_anim}/flow.mp4", writer=writerMP4)
 
     elif save == "html":
-        caseNb = 1
+        caseNb = "4a"
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
         init()
         for t in tqdm(range(nt + 1)):
             update(t)
-            fig.savefig(f"{path_anim}/case_{caseNb:d}/frame_{t:05d}.png", format="png", bbox_inches='tight', pad_inches=0.02)
+            fig.savefig(f"{path_anim}/case_{caseNb}/frame_{t:05d}.png", format="png", bbox_inches='tight', pad_inches=0.02)
         
-        modify_html(f"{path_anim}/case_{caseNb:d}.html")
+        modify_html(f"{path_anim}/case_{caseNb}.html")

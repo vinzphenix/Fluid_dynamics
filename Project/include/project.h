@@ -13,20 +13,20 @@
 
 // Simulation parameters
 #define RE 500.            // Reynolds number of the simulation
-#define TSIM 5.           // Final time of the simulation
+#define TSIM 20.           // Final time of the simulation
 
 // Oscillation parameters
 #define ALPHA 0.5          // Amplitude of the oscillation
 #define STROUHAL (1. / 3.) // Frequency of the oscillation
-#define SIWNG_START 100.   // Starting time of the oscillation
-#define PERT_START 100.     // Starting time of the perturbation
+#define SIWNG_START 2.   // Starting time of the oscillation
+#define PERT_START 10.     // Starting time of the perturbation
 #define PERT_DT 1.0        // Duration of the perturbation
 
 // Code parameters
 #define USE_ADI 0          // 0: classic scheme, 1: solve using ADI method
 #define CONVECTION_MODE 2  // 0: advective form, 1: divergence form, 2: average of both
 #define SAVE 1             // 1 to save, 0 otherwise
-#define SAVE_MODULO 50     // save results every ... iteration
+#define SAVE_MODULO 20     // save results every ... iteration
 #define TIME_MANUAL 1
 
 // Box measurements

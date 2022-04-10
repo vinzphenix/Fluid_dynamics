@@ -123,7 +123,7 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
 
 
 int main(int argc, char *argv[]){
-    // argv : -ksp_type gmres -pc_type lu
+    // argv : -ksp_type fgmres -pc_type lu
 
     PetscInitialize(&argc, &argv, 0, 0);
 

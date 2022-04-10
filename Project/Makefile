@@ -1,6 +1,8 @@
+# Template from https://stackoverflow.com/questions/30573481/
+# "How to write a Makefile with separate source and header directories ?"
 
 INC_DIR := -Ilib_petsc/include
-LIB_DIR := -L/home/vincelinux/Documents/Fluid_dynamics/Project/lib_petsc/lib -Wl,-rpath=/home/vincelinux/Documents/Fluid_dynamics/Project/lib_petsc/lib
+LIB_DIR := -L/lib_petsc/lib -Wl,-rpath=/lib_petsc/lib
 LIB := -lpetsc
 
 SRC_DIR := src
@@ -39,28 +41,16 @@ $(BIN_DIR) $(OBJ_DIR):
 
 clean:
 	@$(RM) -rv $(OBJ_DIR)
+	@$(RM) cfd
+
+clean_txt:
+	rm results/simu_*.txt
 
 -include $(OBJ:.o=.d)
 
 
 
-
 # CXX_FLAGS := -O3 -Wall #-Werror #-g
 
-# #Compilation
 # all :
 # 	gcc -o cfd main.c project.c poisson.c adi.c -lm -lmpi $(CXX_FLAGS) $(LIB_DIR) $(LIB) $(INC_DIR)
-
-# run :
-# 	gcc -o cfd main.c project.c poisson.c adi.c -lm -lmpi $(CXX_FLAGS) $(LIB_DIR) $(LIB) $(INC_DIR)
-# 	./cfd -ksp_type fgmres -pc_type lu
-
-
-# #Delete of executable files
-# clean :
-# 	rm cdf
-
-# #Delete of results
-# clean_txt :
-# #	rm -vf results/*.txt results/P-* results/U-* results/V-* results/Reh-* results/Vtx-* results/Rehw-* results/Div-*
-# 	rm results/*.txt

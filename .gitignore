@@ -1,7 +1,10 @@
 hw
-lib_petsc
-deps
+cfd
+Project/lib_petsc
+Project/anim/**/*.png
+Project/anim/**/*.txt
 Project/data
+Project/results
 
 # Prerequisites
 *.d

@@ -5,6 +5,9 @@
         "time.h": "c",
         "stdio.h": "c",
         "string.h": "c",
-        "project.h": "c"
+        "project.h": "c",
+        "random": "c",
+        "cmath": "c",
+        "complex": "c"
     }
 }

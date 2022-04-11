@@ -47,18 +47,26 @@ void printProgress(double percentage, int res, int t, int nt, double dt, int nde
 
     time_t now;
     time(&now);
-    int exec_time = (int) (now - start_exec);
-    int hours = exec_time / 3600;
-    int seconds = exec_time % 3600;
-    int minutes = seconds / 60;
-    seconds = seconds % 60;
+    double exec_time = (double) (now - start_exec);
+    double time_left = exec_time * (nt - t) / t;
 
-    // int hours = 1;
-    // int minutes = 1;
-    // int seconds = 1;
+    // int hours = exec_time / 3600;
+    // int seconds = exec_time % 3600;
+    // int minutes = seconds / 60;
+    // seconds = seconds % 60;
 
-    printf("\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    %*d/%*d   t_sim = %*.3lf s     \e[92mexec: %02dh%02d:%02d\e[0m",
-           val, lpad, PBSTR, rpad, "", res, ndec1, t, ndec1, nt, ndec2+4, (double) t * dt, hours, minutes, seconds);
+    int seconds = ((int) exec_time) % 60;
+    int minutes = ((int) exec_time) / 60;
+
+    int s_left = ((int) time_left) % 60;
+    int m_left = ((int) time_left) / 60;
+
+    // printf("\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    %*d/%*d   t_sim = %*.3lf s     \e[92m[%02dh%02d:%02d\e[0m",
+    //        val, lpad, PBSTR, rpad, "", res, ndec1, t, ndec1, nt, ndec2+4, (double) t * dt, hours, minutes, seconds);
+
+    printf("\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    %*d/%*d   t_sim = %*.3lf s     \e[92m[%02d:%02d < %02d:%02d]\e[0m",
+           val, lpad, PBSTR, rpad, "", res, ndec1, t, ndec1, nt, ndec2+4, (double) t * dt, minutes, seconds, m_left, s_left);
+
     fflush(stdout);
 }
 
@@ -84,12 +92,11 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
         sim->t = t;
         set_mesh_velocity(sim);
         
-        compute_convection(sim);
-
         set_bd_conditions(sim, sim->U, sim->V);
         set_bd_conditions(sim, sim->US, sim->VS);
         set_ghost_points(sim);
 
+        compute_convection(sim);
 
 #       if USE_ADI
         predictor_step_u_adi(sim, adi);
@@ -106,8 +113,6 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
 
         printProgress((double) t / (double) sim->nt, nIterations, t, sim->nt, sim->dt, ndec1, ndec2, start_exec);
         if ((t % SAVE_MODULO == 0) && (SAVE)) {
-            set_bd_conditions(sim, sim->U, sim->V); // satisfy the b.c. when saving the file 
-            set_ghost_points(sim);                  // are these usefull ? idk
             save_fields(sim, t);
         }
 
@@ -120,8 +125,8 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
 
 
 int main(int argc, char *argv[]){
-    // argv : -ksp_type fgmres -pc_type lu
-    
+    // argv : ./cfd -ksp_type fgmres -pc_type lu -n 40 -dt 0.001 -tend 5.    
+
     int tmp1;
     int n = 40;
     double dt = 0.002;

@@ -19,8 +19,8 @@
 #define ALPHA 0.5          // Amplitude of the oscillation
 #define STROUHAL (1. / 3.) // Frequency of the oscillation
 #define SIWNG_START 200.   // Starting time of the oscillation
-#define PERT_START 200.     // Starting time of the perturbation
-#define PERT_DT 1.0        // Duration of the perturbation
+#define PERT_START 4.0     // Starting time of the perturbation
+#define PERT_DT 4.0        // Duration of the perturbation
 
 // Code parameters
 #define USE_ADI 0          // 0: classic scheme, 1: solve using ADI method

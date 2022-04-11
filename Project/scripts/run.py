@@ -1,3 +1,4 @@
+from os import umask
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -53,22 +54,25 @@ def read_data_init():
 
 
 def compute_psi(u, v, t):
+    # d(psi) = (+v) dx + (-u) dy
+
     psi = np.zeros((nx+1, ny+1))
-    uu = u - u_mesh[t]
-    vv = v - v_mesh[t]
+    # uu = u - u_mesh[t]
+    # vv = v - v_mesh[t]
 
     iwl, iwr = din*n+1, (din+lbox)*n+1
     jwb, jwa = dbot*n+1, (dbot+1)*n+1
 
-    psi[:iwl, 1:] = h * np.cumsum(-uu[:iwl, 1:-1], axis=1)                 # block 1
-    psi[iwl:iwr, 1:jwb] = h * np.cumsum(-uu[iwl:iwr, 1:jwb], axis=1)       # block 2
-    psi[iwl:iwr, jwa-1] = psi[iwl:iwr, dbot*n]                            # block 3 
-    psi[iwl:iwr, jwa:] = psi[iwl:iwr, jwa-1, np.newaxis] + h * np.cumsum(-uu[iwl:iwr, jwa:-1], axis=1)
-    psi[iwr:, 1:] = h * np.cumsum(-uu[iwr:, 1:-1], axis=1)  # block 4
+    psi[:iwl, 1:] = h * np.cumsum(-u[:iwl, 1:-1], axis=1)                 # block 1
+    psi[iwl:iwr, 1:jwb] = h * np.cumsum(-u[iwl:iwr, 1:jwb], axis=1)       # block 2
+    psi[iwl:iwr, jwa-1] = psi[iwl:iwr, dbot*n] + np.sum(-u[iwl-1, jwb:jwa]) * h       # block 3  # (-u_mesh[t]) * 1. 
+    psi[iwl:iwr, jwa:] = psi[iwl:iwr, jwa-1, np.newaxis] + h * np.cumsum(-u[iwl:iwr, jwa:-1], axis=1)
+    psi[iwr:, 1:] = h * np.cumsum(-u[iwr:, 1:-1], axis=1)  # block 4
     
     return psi
 
 
+wb = [0., 0.]
 def read_block(dataframe_list):
     df_p, df_u, df_v = dataframe_list
     
@@ -78,6 +82,8 @@ def read_block(dataframe_list):
     
     w = ((v[1:, :] - v[:-1, :]) - (u[:, 1:] - u[:, :-1])) / h  # dv/dx - du/dy --> values at corners
     w = 0.25 * (w[1:, 1:] + w[1:, :-1] + w[:-1, 1:] + w[:-1, :-1])  # average w on corners to get value in the middle
+    wb[0] = min(np.amin(w), wb[0])
+    wb[1] = max(np.amax(w), wb[1])
 
     p_masked = np.ma.masked_array(p, mask_middle)
     w_masked = np.ma.masked_array(w, mask_middle)
@@ -86,21 +92,38 @@ def read_block(dataframe_list):
 
 
 def find_bounds(filename):
-    min_value, max_value = np.inf, -np.inf
+    # min_value, max_value = np.inf, -np.inf
+    min_value, max_value = 0., 0.
     with open(filename, "r") as f:
         for line in f:
             value = float(line)
-            min_value = min(min_value, value)
-            max_value = max(max_value, value)
+            # min_value = min(min_value, value)
+            # max_value = max(max_value, value)
+            min_value = min(min_value, max(value, -100.))
+            max_value = max(max_value, min(value, 100.))
     return min_value, max_value
 
 
-def find_all_bounds():
-    bounds_p = find_bounds(filename_p)
-    bounds_u = find_bounds(filename_u)
-    bounds_v = find_bounds(filename_v)
+def find_all_bounds(do_p, do_u, do_v):
+    res = [(0., 0.) for _ in range(3)]
+    if do_p:
+        print("Computing bounds for p", end="", flush=True)
+        bounds_p = find_bounds(filename_p)
+        res[0] = bounds_p
+
+    if do_u:
+        print("\rComputing bounds for u", end="")
+        bounds_u = find_bounds(filename_u)
+        res[1] = bounds_u
+
+    if do_v:    
+        print("\rComputing bounds for v", end="")
+        bounds_v = find_bounds(filename_v)
+        res[2] = bounds_v
+    
+    print("\rComputing bounds finished")
     # bounds_w = find_bounds(f"{path_dir}/simu_w.txt")
-    return bounds_p, bounds_u, bounds_v  # , bounds_w
+    return res
 
 
 def init():
@@ -170,9 +193,9 @@ def update(t):
         cycle = int(np.ceil((L / 1.) / nParticles / dt)) # [temps pour traverser / nbre particules] = delai
         
         for j, (line, x_particles, y_particles) in enumerate(zip(lines, streaklines_x, streaklines_y)):
-            if t % cycle == 0:
-                x_particles[(t//cycle) % nParticles] = 2 * kappa
-                y_particles[(t//cycle) % nParticles] = spots_y[j]
+            # if t % cycle == 0:
+            x_particles[(t//cycle) % nParticles] = 2 * kappa
+            y_particles[(t//cycle) % nParticles] = spots_y[j]
             mask = (0. <= x_particles) * (x_particles <= L) * (0. <= y_particles) * (y_particles <= H)
             
             # evaluate the field at the right place: take the shift in consideration
@@ -226,14 +249,15 @@ if __name__ == "__main__":
     ####################################  -  SETUP DATA  -  ####################################
     
     params1, params2, params3, dataframes = read_data_init()
+    # (pmin, pmax), (umin, umax), (vmin, vmax) = find_all_bounds(True, False, False)
 
     nt, nx, ny, n, _ = params1
     T, dt, h, L, H, lbox, din, dbot = params2
     swing_start, pert_start, pert_dt, alpha, strouhal = params3
     
     cmap1, cmap2, cmap3, cmap4 = "Spectral_r", "bwr", "viridis", "turbo_r"
-    nStreamLines, scaling, strm_color, strm_alpha = 20, 0.75, "grey", 0.5
-    nStreakLines, nParticles, strk_lw, strk_color, strk_alpha = 4, 500, 3., "grey", 0.5
+    nStreamLines, scaling, strm_color, strm_alpha = 20, 0.50, "grey", 0.5
+    nStreakLines, nParticles, strk_lw, strk_color, strk_alpha = 2, 500, 3., "grey", 0.5
 
     
     # Oscillation parameters
@@ -241,8 +265,8 @@ if __name__ == "__main__":
     kappa = alpha / (2 * np.pi * strouhal)
     delta_x = kappa * (1. - np.cos(2. * np.pi * strouhal * (t_array - swing_start)))
     delta_y = 0.5 * pert_dt / (2. * np.pi) * (1. - np.cos(2. * np.pi * (t_array - pert_start) / pert_dt))    
-    u_mesh = alpha * np.sin(2. * np.pi * strouhal * (t_array * dt - swing_start))
-    v_mesh = 0.5 * np.sin(2. * np.pi * (t_array * dt - pert_start) / pert_dt)
+    u_mesh = alpha * np.sin(2. * np.pi * strouhal * (t_array - swing_start))
+    v_mesh = 0.5 * np.sin(2. * np.pi * (t_array - pert_start) / pert_dt)
 
     delta_x[t_array < swing_start] = 0.
     delta_y[~((pert_start < t_array) * (t_array < pert_start + pert_dt))] = 0.
@@ -266,9 +290,9 @@ if __name__ == "__main__":
     fig, axs = plt.subplots(2, 1, figsize=(12., 8.), constrained_layout=False, sharex="all", sharey="all")
 
     # pmin, pmax = np.amin(p), np.amax(p)
-    pmin, pmax = -2.25, 2.25
+    pmin, pmax = -6.75, 6.75
     # wmin, wmax = np.amin(w)/10., np.amax(w)/10.
-    wmin, wmax = -25., 25.
+    wmin, wmax = -31., 31.
 
     # pressure and vorticity fields
     pressure = axs[0].imshow(np.zeros_like(p), extent=(0, L, 0, H), vmin=pmin, vmax=pmax, cmap=cmap1, origin="lower")
@@ -283,7 +307,7 @@ if __name__ == "__main__":
         spots_y = np.linspace(H/(nStreakLines+1), H - H/(nStreakLines+1), nStreakLines)
         streaklines_x = [-np.ones(nParticles) for _ in range(nStreakLines)]
         streaklines_y = [spots_y[j]*np.ones(nParticles) for j in range(nStreakLines)]
-        lines = [axs[1].plot([], [], "-", marker=".", lw=strk_lw, color=strk_color, markersize=3,
+        lines = [axs[1].plot([], [], ls="", marker=".", lw=strk_lw, color=strk_color, markersize=3,
                              alpha=strk_alpha)[0] for _ in range(nStreakLines)]
 
     # Obstacle
@@ -302,10 +326,10 @@ if __name__ == "__main__":
     time_text = axs[0].text(0.8,0.9, time_str.format(0), fontsize=ftSz2, transform=axs[0].transAxes, bbox=bbox_dic)
 
 
-    # save = "none"
+    save = "none"
     # save = "gif"
     # save = "mp4"
-    save = "html"
+    # save = "html"
 
     if save == "none":
         # init()
@@ -327,7 +351,7 @@ if __name__ == "__main__":
         anim.save(f"{path_anim}/flow.mp4", writer=writerMP4)
 
     elif save == "html":
-        caseNb = "1"
+        caseNb = "2"
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
         init()
         for t in tqdm(range(nt + 1)):

@@ -26,7 +26,7 @@
 #define USE_ADI 0          // 0: classic scheme, 1: solve using ADI method
 #define CONVECTION_MODE 2  // 0: advective form, 1: divergence form, 2: average of both
 #define SAVE 1             // 1 to save, 0 otherwise
-#define SAVE_MODULO 20     // save results every ... iteration
+#define SAVE_MODULO 50     // save results every ... iteration
 
 // Box measurements
 #define L_ 15

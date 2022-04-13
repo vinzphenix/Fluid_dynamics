@@ -230,14 +230,16 @@ if __name__ == "__main__":
     x, y, xx, yy, delta_x, delta_y = sim.x, sim.y, sim.xx, sim.yy, sim.delta_x, sim.delta_y
 
 
-    dd = 10*h
+    dd = 5*h
     # mask_middle = (din < xxm) * (xxm < din+lbox) * (dbot < yym) * (yym < dbot+1)
     mask_corner = (din < xx) * (xx < din + lbox) * (dbot < yy) * (yy < dbot + 1.)
     mask_hard = (din - dd < xx) * (xx < din + lbox + dd) * (dbot - dd < yy) * (yy < dbot + 1. + dd)
 
-    # plot_vorticity([18., 19., 20.], cmap=cmap1)
+
+    # CAN ONLY DO ONE AT A TIME
+
+    plot_vorticity([18., 19., 20.], cmap=cmap1)
     # plot_streamlines([18., 19., 20.], cmap=cmap2)
     # plot_average_flow(10., cmap2, cmap1)
-    
     # plot_max_RE()
-    plot_drag_lift()
+    # plot_drag_lift()

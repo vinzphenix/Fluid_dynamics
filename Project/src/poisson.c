@@ -363,4 +363,3 @@ void test_poisson(Sim_data *sim, Poisson_data *poisson) {
     } 
     fclose(ptr);
 }
-

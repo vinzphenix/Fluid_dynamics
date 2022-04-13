@@ -16,11 +16,11 @@
 // #define TSIM 10.           // Final time of the simulation
 
 // Oscillation parameters
-#define ALPHA 0.5           // Amplitude of the horizonatal oscillation
+#define ALPHA 0.5           // Amplitude of the horizonatal oscillation VELOCITY
 #define STROUHAL (1. / 3.)  // Frequency of the horizontal oscillation
 #define SIWNG_START 0.    // Starting time of the horizontal oscillation
 
-#define KAPPA_Y 0.125       // Amplitude of the vertical perturbation
+#define KAPPA_Y 0.125       // Amplitude of the vertical perturbation POSITION
 #define STROUHAL_Y (1./2.)  // Frequency of the vertical perturbation
 #define PERT_START 100.0      // Starting time of the perturbation
 #define N_CYCLES 3          // Duration of the perturbation

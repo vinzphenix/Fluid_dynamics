@@ -170,7 +170,7 @@ void save_fields(Sim_data *sim, int t) {
         ptr = fopen(filename_params, "w");
         fprintf(ptr, "%d %d %d %d %d\n", sim->nt / SAVE_MODULO, sim->nx, sim->ny, sim->n, SAVE_MODULO);
         fprintf(ptr, "%lf %lf %lf %lf %d %d %d %d %d\n", RE, sim->tsim, sim->dt, sim->h, L_, H_, LBOX, D_IN, D_BOT);
-        fprintf(ptr, "%lf %lf %lf %lf %lf\n", SIWNG_START, PERT_START, PERT_DT, ALPHA, STROUHAL);
+        fprintf(ptr, "%lf %lf %lf %lf %lf %lf %d\n", ALPHA, STROUHAL, SIWNG_START, KAPPA_Y, STROUHAL_Y, PERT_START, N_CYCLES);
         fclose(ptr);
     }
     
@@ -407,8 +407,8 @@ void predictor_step(Sim_data *sim) {
     double **U = sim->U;
     double **V = sim->V;
 
-    double coef_1 = (sim->t = 1) ? -1. : -1.5;
-    double coef_2 = (sim->t = 1) ? +0. : +0.5;
+    double coef_1 = (sim->t == 0) ? -1. : -1.5;
+    double coef_2 = (sim->t == 0) ? +0. : +0.5;
     double alpha = 1. / (RE * sim->h * sim->h);
 
     int i_s, i_f, j_s, j_f;
@@ -516,17 +516,25 @@ void swap_next_previous(Sim_data *sim) {
 
 
 void set_mesh_velocity(Sim_data *sim) {
-    int t = sim->t;
-    if (SIWNG_START < t * sim->dt) {
-        sim->uMesh = ALPHA * sin(2. * M_PI * STROUHAL * (t * sim->dt - SIWNG_START));
+    // int t = sim->t;
+    double t_now = sim->dt * sim->t;
+    if (SIWNG_START < t_now) {
+        sim->uMesh = ALPHA * sin(2. * M_PI * STROUHAL * (t_now - SIWNG_START));
     } else {
         sim->uMesh = 0.;
     }
-    if ((PERT_START <= t * sim->dt) && (t * sim->dt <= PERT_START + PERT_DT)) {
-        sim->vMesh = 0.5 * sin(2. * M_PI * (t * sim->dt - PERT_START) / PERT_DT);
+
+    // 2. s   ->   vmesh = 0.5
+    if ((PERT_START <= t_now) && (t_now <= PERT_START + ((double) N_CYCLES / STROUHAL_Y))) {
+        sim->vMesh = KAPPA_Y * 2. * M_PI * STROUHAL_Y * sin(2. * M_PI * STROUHAL_Y * (t_now - PERT_START));
     } else {
         sim->vMesh = 0.;
     }
+    /*if ((PERT_START <= t_now) && (t_now <= PERT_START + 4.)) {
+        sim->vMesh = 0.5 * sin(2. * M_PI * (t_now - PERT_START) / 4.);
+    } else {
+        sim->vMesh = 0.;
+    }*/
 }
 
 

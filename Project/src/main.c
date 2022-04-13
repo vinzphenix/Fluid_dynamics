@@ -17,9 +17,9 @@ void display_info(Sim_data *sim, char *mode) {
 
     printf("\n ============================ \e[1mLMECA2660 project in CFD\e[0m ============================\n");
 #   if USE_ADI
-    printf("\e[1m       Re = %.0lf    dx = %.3lf    dt = %.4lf    T simu = %.2lf   ADI enabled \e[0m\n\n", RE, sim->h, sim->dt, sim->tsim);
+    printf("\e[1m       Re = %.0lf    dx = %.3lf    dt = %.4lf    T simu = %.2lf   ADI enabled \e[0m \n\n", RE, sim->h, sim->dt, sim->tsim);
 #   else
-    printf("\e[1m       Re = %.0lf    dx = %.3lf    dt = %.4lf    T simu = %.2lf   ADI disabled \e[0m\n\n", RE, sim->h, sim->dt, sim->tsim);
+    printf("\e[1m       Re = %.0lf    dx = %.3lf    dt = %.4lf    T simu = %.2lf   ADI disabled \e[0m \n\n", RE, sim->h, sim->dt, sim->tsim);
 #   endif
     char description[] = {
         "        ╭──────────────────────────────────────────────────────────────╮\n"
@@ -64,7 +64,7 @@ void printProgress(double percentage, int res, int t, int nt, double dt, int nde
     // printf("\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    %*d/%*d   t_sim = %*.3lf s     \e[92m[%02dh%02d:%02d\e[0m",
     //        val, lpad, PBSTR, rpad, "", res, ndec1, t, ndec1, nt, ndec2+4, (double) t * dt, hours, minutes, seconds);
 
-    printf("\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    %*d/%*d   t_sim = %*.3lf s     \e[92m[%02d:%02d < %02d:%02d]\e[0m",
+    printf("\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    %*d/%*d   t_sim = %*.3lf s     \e[92m[%02d:%02d < %02d:%02d] \e[0m ",
            val, lpad, PBSTR, rpad, "", res, ndec1, t, ndec1, nt, ndec2+4, (double) t * dt, minutes, seconds, m_left, s_left);
 
     fflush(stdout);
@@ -75,27 +75,17 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
     time_t start_exec;
 
     int nIterations;
-    int t = 0;
     int ndec1 = (int) ceil(log10(sim->nt + 1));
     int ndec2 = (int) ceil(log10(sim->tsim + 1.));
-
-    // set_bd_conditions(sim, sim->U, sim->V);
-    // set_ghost_points(sim);
     
-    save_fields(sim, t);
+    sim->t = 0;    
+    save_fields(sim, sim->t);
     time(&start_exec);
 
-    for (t = 1; t <= sim->nt; t++) {
+    while (sim->t < sim->nt) {
         
         // in what order should these three blocks be ???
-        
-        sim->t = t;
-        set_mesh_velocity(sim);
-        
-        set_bd_conditions(sim, sim->U, sim->V);
-        set_bd_conditions(sim, sim->US, sim->VS);
-        set_ghost_points(sim);
-
+                
         compute_convection(sim);
 
 #       if USE_ADI
@@ -105,18 +95,21 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
         predictor_step(sim);
 #       endif
 
+        sim->t = sim->t + 1;
+
+        set_mesh_velocity(sim);
+        set_bd_conditions(sim, sim->U, sim->V);   // sets u and v at t=(n+1)  # no influence on corrector step
+        set_bd_conditions(sim, sim->US, sim->VS);
+        set_ghost_points(sim);
+
         nIterations = poisson_solver(sim, poisson);
         corrector_step(sim);
-
-        // set_bd_conditions(sim, sim->U, sim->V);
-        // set_ghost_points(sim);
-
-        printProgress((double) t / (double) sim->nt, nIterations, t, sim->nt, sim->dt, ndec1, ndec2, start_exec);
-        if ((t % SAVE_MODULO == 0) && (SAVE)) {
-            save_fields(sim, t);
-        }
-
         swap_next_previous(sim);
+
+        printProgress((double) sim->t / (double) sim->nt, nIterations, sim->t, sim->nt, sim->dt, ndec1, ndec2, start_exec);
+        if ((sim->t % SAVE_MODULO == 0) && (SAVE)) {
+            save_fields(sim, sim->t);
+        }
     }
 
     printf("\n\n");
@@ -166,8 +159,8 @@ int main(int argc, char *argv[]){
         } 
     }
 
-    argc = 3;
-    PetscInitialize(&argc, &argv, 0, 0);
+    int argc_petsc = 3;
+    PetscInitialize(&argc_petsc, &argv, 0, 0);
 
     Sim_data *simulation = (Sim_data *)malloc(sizeof(Sim_data));
     init_Sim_data(simulation, n, dt, tend);

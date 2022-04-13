@@ -169,7 +169,7 @@ void save_fields(Sim_data *sim, int t) {
     if (t == 0) {
         ptr = fopen(filename_params, "w");
         fprintf(ptr, "%d %d %d %d %d\n", sim->nt / SAVE_MODULO, sim->nx, sim->ny, sim->n, SAVE_MODULO);
-        fprintf(ptr, "%lf %lf %lf %d %d %d %d %d\n", sim->tsim, sim->dt, sim->h, L_, H_, LBOX, D_IN, D_BOT);
+        fprintf(ptr, "%lf %lf %lf %lf %d %d %d %d %d\n", RE, sim->tsim, sim->dt, sim->h, L_, H_, LBOX, D_IN, D_BOT);
         fprintf(ptr, "%lf %lf %lf %lf %lf\n", SIWNG_START, PERT_START, PERT_DT, ALPHA, STROUHAL);
         fclose(ptr);
     }

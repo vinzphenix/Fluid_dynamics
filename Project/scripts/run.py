@@ -1,4 +1,3 @@
-from os import umask
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -33,9 +32,9 @@ def read_data_init():
         params3 = [float(x) for x in lines[2].split(" ")]
     
     nt, nx, ny, n, save_modulo = params1
-    params2[1] *= save_modulo  # dt multiplied since not all times are saved
+    params2[2] *= save_modulo  # dt multiplied since not all times are saved
 
-    for i in range(5, 8):
+    for i in range(6, 9):
         params2[i] = int(params2[i])
 
     global size_p, size_u, size_v
@@ -252,7 +251,7 @@ if __name__ == "__main__":
     # (pmin, pmax), (umin, umax), (vmin, vmax) = find_all_bounds(True, False, False)
 
     nt, nx, ny, n, _ = params1
-    T, dt, h, L, H, lbox, din, dbot = params2
+    RE, T, dt, h, L, H, lbox, din, dbot = params2
     swing_start, pert_start, pert_dt, alpha, strouhal = params3
     
     cmap1, cmap2, cmap3, cmap4 = "Spectral_r", "bwr", "viridis", "turbo_r"
@@ -326,10 +325,10 @@ if __name__ == "__main__":
     time_text = axs[0].text(0.8,0.9, time_str.format(0), fontsize=ftSz2, transform=axs[0].transAxes, bbox=bbox_dic)
 
 
-    save = "none"
+    # save = "none"
     # save = "gif"
     # save = "mp4"
-    # save = "html"
+    save = "html"
 
     if save == "none":
         # init()
@@ -343,7 +342,7 @@ if __name__ == "__main__":
     elif save == "gif":
         anim = FuncAnimation(fig, update, tqdm(range(nt+1)), interval=100, blit=False, init_func=init, repeat=False)
         writerGIF = PillowWriter(fps=15)
-        anim.save(f"{path_anim}/flow.gif", writer=writerGIF)
+        anim.save(f"{path_anim}/flow.gif", writer=writerGIF, dpi=100)
     
     elif save == "mp4":
         anim = FuncAnimation(fig, update, tqdm(range(nt+1)), interval=100, blit=False, init_func=init, repeat=False)
@@ -351,7 +350,7 @@ if __name__ == "__main__":
         anim.save(f"{path_anim}/flow.mp4", writer=writerMP4)
 
     elif save == "html":
-        caseNb = "2"
+        caseNb = "5"
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
         init()
         for t in tqdm(range(nt + 1)):

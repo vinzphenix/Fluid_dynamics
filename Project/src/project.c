@@ -7,7 +7,6 @@ char filename_params[50];
 char filename_u[50];
 char filename_v[50];
 char filename_p[50];
-// char filename_w[50];
 
 
 void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input) {
@@ -15,7 +14,6 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sprintf(filename_u, "%s/simu_u.txt", myPath);
     sprintf(filename_v, "%s/simu_v.txt", myPath);
     sprintf(filename_p, "%s/simu_p.txt", myPath);
-    // sprintf(filename_w, "%s/simu_w.txt", myPath);
     
     // Space discretization
     // sim->n = N_;
@@ -135,22 +133,6 @@ void init_fields(Sim_data *sim) {
         }
     }
 
-    /*// set u to 0 inside rectangle (to be sure it stays constant)
-    for (i = i_w_left; i < i_w_right + 1; i++) {
-        for (j = j_w_below; j < j_w_above + 1; j++) {
-            sim->u[i*k + j] = 0.;
-        }
-    }
-
-    // set u to 0 on left and right walls
-    for (j = j_w_below; j < j_w_above + 1; j++) {
-        i = i_w_left;
-        sim->u[i*k + j] = 0.;
-        
-        i = i_w_right;
-        sim->u[i*k + j] = 0.;
-    }*/
-
     // set ghost for u on upper and lower walls of rectangle
     for (i = i_w_left + 1; i < i_w_right; i++) {
         j = j_w_below;
@@ -184,7 +166,6 @@ void save_fields(Sim_data *sim, int t) {
         ptr_p = fopen(filename_p, "a");
     }
 
-
     for (i = 0; i < sim->size_u; i++) fprintf(ptr_u, FMT, sim->u_data[i]);  // pressure
     for (i = 0; i < sim->size_v; i++) fprintf(ptr_v, FMT, sim->v_data[i]);  // velocity x
     for (i = 0; i < sim->size_p; i++) fprintf(ptr_p, FMT, sim->p_data[i]);  // velocity y
@@ -199,9 +180,6 @@ void set_bd_conditions(Sim_data *sim, double **U, double **V) {
     int i, j;
     double coef;
     
-    // int k = sim->ny + 2;
-    // int l = sim->ny + 1;
-
     /*// Inflow boundary condition for u  // never changes
     for (j = 1; j <= sim->ny; j++) {   // Inflow uniform profile u
         U[0][j] = 1.;   // could do a special profile
@@ -363,43 +341,6 @@ void compute_convection(Sim_data *sim) {
 }
 
 
-void check_convection(Sim_data *sim) {
-    int i, j;
-    double x, y;
-    FILE *ptr = fopen("check_convection.txt", "w");
-
-    for (i = 0; i < sim->nx+1; i++) {
-        for (j = 0; j < sim->ny+2; j++) {
-            x = i * sim->h;
-            y = (j - 0.5) * sim->h;
-            fprintf(ptr, "%s %le %le %le %le\n", "u", x, y, sim->U[i][j], sim->US[i][j]);
-        }
-    }
-    for (i = 0; i < sim->nx+2; i++) {
-        for (j = 0; j < sim->ny+1; j++) {
-            x = (i - 0.5) * sim->h;
-            y = j * sim->h;
-            fprintf(ptr, "%s %le %le %le %le\n", "v", x, y, sim->V[i][j], sim->VS[i][j]);
-        }
-    }
-    for (i = 0; i < sim->nx+1; i++) {
-        for (j = 0; j < sim->ny+2; j++) {
-            x = i * sim->h;
-            y = (j - 0.5) * sim->h;
-            fprintf(ptr, "%c %le %le %le %le\n", 'X', x, y, sim->HX[i][j], sim->HX_[i][j]);
-        }
-    }
-    for (i = 0; i < sim->nx+2; i++) {
-        for (j = 0; j < sim->ny+1; j++) {
-            x = (i - 0.5) * sim->h;
-            y = j * sim->h;
-            fprintf(ptr, "%c %le %le %le %le\n", 'Y', x, y, sim->HY[i][j], sim->HY_[i][j]);
-        }
-    }
-    fclose(ptr);
-}
-
-
 void predictor_step(Sim_data *sim) {
     int i, j;
     double conv, pres, diff;
@@ -493,12 +434,6 @@ void corrector_step(Sim_data *sim) {
     for (i = 0, j = sim->size_p; i < sim->size_p; i++, j++) {
         sim->p_data[i] += sim->p_data[j];  // p = p + phi
     }
-
-    /*for (i = 0; i < sim->nx; i++) {
-        for (j = 0; j < sim->ny; j++) {
-            sim->P[i][j] += sim->PHI[i][j];
-        }
-    }*/
 }
 
 
@@ -516,25 +451,19 @@ void swap_next_previous(Sim_data *sim) {
 
 
 void set_mesh_velocity(Sim_data *sim) {
-    // int t = sim->t;
     double t_now = sim->dt * sim->t;
+    
     if (SIWNG_START < t_now) {
         sim->uMesh = ALPHA * sin(2. * M_PI * STROUHAL * (t_now - SIWNG_START));
     } else {
         sim->uMesh = 0.;
     }
 
-    // 2. s   ->   vmesh = 0.5
     if ((PERT_START <= t_now) && (t_now <= PERT_START + ((double) N_CYCLES / STROUHAL_Y))) {
         sim->vMesh = KAPPA_Y * 2. * M_PI * STROUHAL_Y * sin(2. * M_PI * STROUHAL_Y * (t_now - PERT_START));
     } else {
         sim->vMesh = 0.;
     }
-    /*if ((PERT_START <= t_now) && (t_now <= PERT_START + 4.)) {
-        sim->vMesh = 0.5 * sin(2. * M_PI * (t_now - PERT_START) / 4.);
-    } else {
-        sim->vMesh = 0.;
-    }*/
 }
 
 

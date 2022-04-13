@@ -81,7 +81,6 @@ def animate(i):
 
             # add new particle
             if j == 0 and i % 10 == 0:
-                print((i//10) % nParticles)
                 x_particles[(i // 10) % nParticles] = 0.
                 y_particles[(i // 10) % nParticles] = spots_y[j]
 

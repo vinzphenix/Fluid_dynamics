@@ -178,13 +178,6 @@ int main(int argc, char *argv[]){
     // MAIN PROCESS
 #   if TEST_POISSON
     test_poisson(simulation, poisson);
-#   elif TEST_TRIDIAGONAL
-    double a[5] = {0.0, 1.0,-1.1, 1.2,-1.3};
-    double b[5] = {5.0, 6.0, 7.0, 8.0, 9.0};
-    double c[5] = {1.0,-1.1, 1.2,-1.3, 0.0};
-    double q[5] = {1.0, 1.0, 1.0, 1.0, 1.0};
-    solve_thomas(5, a, b, c, q);
-    for (int i = 0; i < 5; i++) printf("q[%d] = %lf\n", i, q[i]);
 #   else
     display_info(simulation, "no");
     integrate_flow(simulation, poisson, adi_solver);

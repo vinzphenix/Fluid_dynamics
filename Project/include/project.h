@@ -44,7 +44,6 @@
 #define U0V0 4.
 
 
-#define TEST_TRIDIAGONAL 0
 #define TEST_POISSON 0
 #define FMT "%.5le\n"
 #define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"

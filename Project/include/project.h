@@ -20,16 +20,16 @@
 #define STROUHAL (1. / 3.)  // Frequency of the horizontal oscillation
 #define SIWNG_START 0.    // Starting time of the horizontal oscillation
 
-#define KAPPA_Y 0.125       // Amplitude of the vertical perturbation POSITION
-#define STROUHAL_Y (1./2.)  // Frequency of the vertical perturbation
-#define PERT_START 100.0      // Starting time of the perturbation
-#define N_CYCLES 3          // Duration of the perturbation
+#define KAPPA_Y 0.05       // Amplitude of the vertical perturbation POSITION
+#define STROUHAL_Y (1./3.)  // Frequency of the vertical perturbation
+#define PERT_START 0.0      // Starting time of the perturbation
+#define N_CYCLES 1          // Duration of the perturbation
 
 // Code parameters
 #define USE_ADI 0          // 0: classic scheme, 1: solve using ADI method
 #define CONVECTION_MODE 2  // 0: advective form, 1: divergence form, 2: average of both
 #define SAVE 1             // 1 to save, 0 otherwise
-#define SAVE_MODULO 20     // save results every ... iteration
+#define SAVE_MODULO 50     // save results every ... iteration
 
 // Box measurements
 #define L_ 15

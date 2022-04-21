@@ -171,12 +171,12 @@ def compute_drag_lift(p, u, v):
     drag_p, drag_f, lift_p, lift_f = 0., 0., 0., 0.
 
     drag_p += np.trapz(p[n*din-1, n*dbot:n*(dbot+1)], dx=h) - np.trapz(p[n*(din+lbox), n*dbot:n*(dbot+1)], dx=h)
-    drag_f += np.trapz(u[n*din:n*(din+lbox)+1, n*dbot] - u[n*din:n*(din+lbox)+1, n*dbot+1])
-    drag_f += np.trapz(u[n*din:n*(din+lbox)+1, n*(dbot+1)+1] - u[n*din:n*(din+lbox)+1, n*(dbot+1)])
+    drag_f += np.trapz(u[n*din:n*(din+lbox)+1, n*dbot] - u[n*din:n*(din+lbox)+1, n*dbot+1]) / sim.RE
+    drag_f += np.trapz(u[n*din:n*(din+lbox)+1, n*(dbot+1)+1] - u[n*din:n*(din+lbox)+1, n*(dbot+1)]) / sim.RE
 
     lift_p += np.trapz(p[n*din:n*(din+lbox), n*dbot-1], dx=h) - np.trapz(p[n*din:n*(din+lbox), n*(dbot+1)], dx=h)
-    lift_f += np.trapz(v[din*n, n*dbot:n*(dbot+1)+1] - v[din*n+1, n*dbot:n*(dbot+1)+1])
-    lift_f += np.trapz(v[(din+lbox)*n+1, n*dbot:n*(dbot+1)+1] - v[(din+lbox)*n, n*dbot:n*(dbot+1)+1])
+    lift_f += np.trapz(v[din*n, n*dbot:n*(dbot+1)+1] - v[din*n+1, n*dbot:n*(dbot+1)+1]) / sim.RE
+    lift_f += np.trapz(v[(din+lbox)*n+1, n*dbot:n*(dbot+1)+1] - v[(din+lbox)*n, n*dbot:n*(dbot+1)+1]) / sim.RE
 
     return drag_p, drag_f, lift_p, lift_f
 
@@ -184,7 +184,7 @@ def plot_drag_lift():
     drag_p, drag_f = np.zeros(nt+1), np.zeros(nt+1)
     lift_p, lift_f = np.zeros(nt+1), np.zeros(nt+1)
 
-    for idx in tqdm(range(nt//3 + 1)):
+    for idx in tqdm(range(nt + 1)):
         p, u, v, _, _, _ = read_block(sim)
         drag1, drag2, lift1, lift2 = compute_drag_lift(p, u, v)
         drag_p[idx], drag_f[idx] = drag1, drag2
@@ -238,8 +238,8 @@ if __name__ == "__main__":
 
     # CAN ONLY DO ONE AT A TIME
 
-    plot_vorticity([18., 19., 20.], cmap=cmap1)
+    # plot_vorticity([18., 19., 20.], cmap=cmap1)
     # plot_streamlines([18., 19., 20.], cmap=cmap2)
     # plot_average_flow(10., cmap2, cmap1)
     # plot_max_RE()
-    # plot_drag_lift()
+    plot_drag_lift()

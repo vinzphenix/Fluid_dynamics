@@ -329,10 +329,10 @@ if __name__ == "__main__":
     ##############################################################################################
     ###################################  -  SAVE & DISPLAY  -  ###################################
 
-    save = "none"
+    # save = "none"
     # save = "gif"
     # save = "mp4"
-    # save = "html"
+    save = "html"
 
     if save == "none":
         anim = FuncAnimation(fig, update, tqdm(range(nt+1)), interval=10, blit=False, init_func=lambda :None, repeat=False)
@@ -349,7 +349,7 @@ if __name__ == "__main__":
         anim.save(f"{path_anim}/flow.mp4", writer=writerMP4)
 
     elif save == "html":
-        caseNb = "3"
+        caseNb = "4"
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
         for t in tqdm(range(nt + 1)):
             update(t)

@@ -65,5 +65,7 @@ dkms.conf
 build/
 
 
-# Python
+# Hidden files
 __pycache__/
+.vscode
+

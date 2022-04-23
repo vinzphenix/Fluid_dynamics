@@ -19,9 +19,9 @@ UU/L    du/dt + u du/dx + v du/dy = -dp/dx - beta (T1-T0) g1 L / UU TH + (1/Re) 
 
 ------------------------------------------------------------------
 
-Re = UL/nu
-Pr = nu/alpha
-Gr = beta (T1-T0) g L^3 / nu^2 = beta (T1-T0) g L/UU Re^2
+Re = UL/nu                                                 -> 500
+Pr = nu/alpha                                              ->   1
+Gr = beta (T1-T0) g L^3 / nu^2 = beta (T1-T0) g L/UU Re^2  -> (10^7) 250k
 
 x = x/L
 y = y/L
@@ -31,8 +31,8 @@ p = p/(rho UU)
 
 TH = (T - T0) / (T1 - T0)
 
-1)  du/dt + u du/dx + v du/dy = -dp/dx                + (1/Re) (d^2u/dx^2 + d^2u/dy^2)
-2)  dv/dt + u dv/dx + v dv/dy = -dp/dy - Gr / Re^2 TH + (1/Re) (d^2v/dx^2 + d^2v/dy^2)
+1)  du/dt + u du/dx + v du/dy = -dp/dx                  + (1/Re) (d^2u/dx^2 + d^2u/dy^2)
+2)  dv/dt + u dv/dx + v dv/dy = -dp/dy - Gr / Re^2 (0,-1) TH + (1/Re) (d^2v/dx^2 + d^2v/dy^2)
 3)  dTH / dt + u dTH/dx + v dTH/dy = 1 / (Pr Re) (d^2TH/dx^2 + d^2TH/dy^2) + Ec / Re phi
 
 

@@ -15,7 +15,7 @@ def plot_vorticity(t_list, cmap):
     
     i = 0
     for t in tqdm(range(nt+1)):
-        p, u, v, w, _, w_masked = read_block(sim)
+        p, u, v, w, _, _ = read_block(sim)
         if t not in indices:
             continue
 

@@ -2,6 +2,9 @@
 #include "poisson.h"
 #include "adi.h"
 
+// TODO: add viscous dissipation
+// TODO: implement adi for temperature
+// TODO: implement streched grid
 
 void display_info(Sim_data *sim, char *mode) {
     /*
@@ -12,6 +15,7 @@ void display_info(Sim_data *sim, char *mode) {
      v_ = v / U0
      t_ = t / (Hbox/U0)
      p_ = (p-p_ref) / (rho U0^2)
+     T_ = (T - T0) / (T1 - T0)
      RE = U0 Hbox / nu
     */
 
@@ -85,8 +89,11 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
     while (sim->t < sim->nt) {
         
         // in what order should these three blocks be ???
-                
+        
         compute_convection(sim);
+#       if TEMPERATURE
+        compute_convection_temperature(sim);
+#       endif
 
 #       if USE_ADI
         predictor_step_u_adi(sim, adi);
@@ -101,6 +108,9 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
         set_bd_conditions(sim, sim->U, sim->V);   // sets u and v at t=(n+1)  # no influence on corrector step
         set_bd_conditions(sim, sim->US, sim->VS);
         set_ghost_points(sim);
+#       if TEMPERATURE
+        set_boundary_temperature(sim);
+#       endif
 
         nIterations = poisson_solver(sim, poisson);
         corrector_step(sim);

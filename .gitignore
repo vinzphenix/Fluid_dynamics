@@ -49,6 +49,7 @@ Project/results
 *.su
 *.idb
 *.pdb
+*.pyc
 
 # Kernel Module Compile Results
 *.mod*

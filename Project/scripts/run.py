@@ -14,12 +14,15 @@ class Simulation:
 
     def __init__(self, filenames):
 
-        params1, params2, params3, dataframes = read_data_init(filenames)
+        params1, params2, params3, params4, dataframes = read_data_init(filenames)
 
         self.nt, self.nx, self.ny, self.n, self.save_modulo = params1
         self.RE, self.T, self.dt, self.h, self.L, self.H, self.lbox, self.din, self.dbot = params2
         self.alpha, self.st, self.swing_start, self.kappa_y, self.st_y, self.pert_start, self.n_cycles = params3
-        self.df_p, self.df_u, self.df_v = dataframes
+        self.temperature, self.prandtl, self.grashof, self.tw_below, self.tw_above = params4
+
+        self.df_p, self.df_u, self.df_v = dataframes[:3]
+        self.df_T = dataframes[-1]
 
         self.t = np.linspace(0., self.T, self.nt + 1)
         self.kappa = self.alpha / (2. * np.pi * self.st)
@@ -67,16 +70,19 @@ plt.rcParams['font.family'] = 'monospace'
 
 def read_data_init(filenames):
     
-    filename_params, filename_p, filename_u, filename_v = filenames
+    filename_params, filename_p, filename_u, filename_v, filename_T = filenames
 
     with open(filename_params, "r") as f:
         lines = f.readlines()
         params1 = [int(x) for x in lines[0].split(" ")]
         params2 = [float(x) for x in lines[1].split(" ")]
         params3 = [float(x) for x in lines[2].split(" ")]
+        params4 = [float(x) for x in lines[3].split(" ")]
     
     nt, nx, ny, n, save_modulo = params1
     params2[2] *= save_modulo  # dt multiplied since not all times are saved
+    
+    params4[0] = int(params4[0])
 
     for i in range(6, 9):
         params2[i] = int(params2[i])
@@ -86,33 +92,54 @@ def read_data_init(filenames):
     df_p = pd.read_csv(filename_p, chunksize=size_p, header=None)
     df_u = pd.read_csv(filename_u, chunksize=size_u, header=None)
     df_v = pd.read_csv(filename_v, chunksize=size_v, header=None)
+    dfs = [df_p, df_u, df_v]
+
+    if params4[0] == 1:
+        dfs.append(pd.read_csv(filename_T, chunksize=size_p, header=None))
     
     # find bounds
     # t1 = perf_counter()
     # (pmin, pmax), (umin, umax), (vmin, vmax), (wmin, wmax) = find_all_bounds()
     # print(f"Time to find bound = {perf_counter() - t1:.3f} s")
 
-    return params1, params2, params3, [df_p, df_u, df_v]
+    return params1, params2, params3, params4, dfs
 
 
 # wb = [0., 0.]
-# def read_block(dataframe_list, nx, ny, h, mask_middle):
-def read_block(sim):
+def read_block(sim, needed={"p": True, "u": True, "v": True, "w": True, "T": True}):
     df_p, df_u, df_v = sim.df_p, sim.df_u, sim.df_v
+    ret_list = []
     
-    p = np.array(next(df_p)).reshape((sim.nx, sim.ny))
-    u = np.array(next(df_u)).reshape((sim.nx + 1, sim.ny + 2))
-    v = np.array(next(df_v)).reshape((sim.nx + 2, sim.ny + 1))
-    
-    w = ((v[1:, :] - v[:-1, :]) - (u[:, 1:] - u[:, :-1])) / sim.h  # dv/dx - du/dy --> values at corners
-    w_bis = 0.25 * (w[1:, 1:] + w[1:, :-1] + w[:-1, 1:] + w[:-1, :-1])  # average w on corners to get value in the middle
+    if needed.get("p", False):
+        p = np.array(next(df_p)).reshape((sim.nx, sim.ny))
+        ret_list.append(p)
+    if needed.get("u", False):
+        u = np.array(next(df_u)).reshape((sim.nx + 1, sim.ny + 2))
+        ret_list.append(u)
+    if needed.get("v", False):
+        v = np.array(next(df_v)).reshape((sim.nx + 2, sim.ny + 1))
+        ret_list.append(v)
+    if needed.get("w", False):
+        w = ((v[1:, :] - v[:-1, :]) - (u[:, 1:] - u[:, :-1])) / sim.h  # dv/dx - du/dy --> values at corners
+        ret_list.append(w)
+    if needed.get("T", False):
+        T = np.array(next(sim.df_T)).reshape((sim.nx, sim.ny)) if sim.temperature else None
+        ret_list.append(T)
+
     # wb[0] = min(np.amin(w), wb[0])
     # wb[1] = max(np.amax(w), wb[1])
 
-    p_masked = np.ma.masked_array(p.T, sim.mask_middle)
-    w_masked = np.ma.masked_array(w_bis.T, sim.mask_middle)
+    return ret_list
 
-    return p, u, v, w, p_masked, w_masked
+
+def apply_mask(sim, p, w, T):
+    
+    w_bis = 0.25 * (w[1:, 1:] + w[1:, :-1] + w[:-1, 1:] + w[:-1, :-1])  # average w on corners to get value in the middle
+    w_masked = np.ma.masked_array(w_bis.T, sim.mask_middle)
+    T_masked = np.ma.masked_array(T.T, sim.mask_middle) if sim.temperature else None
+    p_masked = np.ma.masked_array(p.T, sim.mask_middle)
+
+    return p_masked, w_masked, T_masked
 
 
 def compute_psi(sim, u):
@@ -173,7 +200,8 @@ def update(t):
     # global p, u, v, w, p_masked, w_masked, psi
 
     # if (t > 0):
-    p, u, v, w, p_masked, w_masked = read_block(sim)
+    p, u, v, w, T = read_block(sim, needed={"p": True, "u": True, "v": True, "w": True, "T":True})
+    p_masked, w_masked, T_masked = apply_mask(sim, p, w, T)
 
     animated_items = []
 
@@ -188,6 +216,12 @@ def update(t):
     vorticity.set_extent([sim.delta_x[t], sim.L + sim.delta_x[t], 0 + sim.delta_y[t], sim.H + sim.delta_y[t]])  # update position
     vorticity.set_data(w_masked)
     animated_items.append(vorticity)
+
+    if kwargs["temperature"]:
+        temperature.set_extent([sim.delta_x[t], sim.L + sim.delta_x[t], 0 + sim.delta_y[t], sim.H + sim.delta_y[t]])  # update position
+        temperature.set_data(T_masked)
+        animated_items.append(temperature)
+
 
     if kwargs["stream"] and t > 0:
         for item in strm[0].collections:
@@ -260,7 +294,7 @@ def modify_html(html_filename):
 
 if __name__ == "__main__":
 
-    kwargs = {"stream":True, "streak":False}
+    kwargs = {"stream":True, "streak":False, "temperature": True}
 
     path_dir = "../results"
     path_anim = "../anim"
@@ -269,10 +303,12 @@ if __name__ == "__main__":
     filename_p = f"{path_dir}/simu_p.txt"
     filename_u = f"{path_dir}/simu_u.txt"
     filename_v = f"{path_dir}/simu_v.txt"
-    
-    sim = Simulation([filename_params, filename_p, filename_u, filename_v])
-    
-    cmap1, cmap2, cmap3, cmap4 = "Spectral_r", "bwr", "viridis", "turbo_r"
+    filename_T = f"{path_dir}/simu_T.txt"    
+
+    sim = Simulation([filename_params, filename_p, filename_u, filename_v, filename_T])
+    kwargs["temperature"] = bool(sim.temperature)
+
+    cmap1, cmap2, cmap3, cmap4 = "Spectral_r", "bwr", "RdBu_r", "turbo_r"  # Spectral_r
     nStreamLines, scaling, strm_lw, strm_color, strm_alpha = 20, 0.50, 1.25, "grey", 0.25
     nStreakLines, nParticles, strk_lw, strk_color, strk_alpha = 2, 500, 3., "grey", 0.5
 
@@ -283,21 +319,29 @@ if __name__ == "__main__":
     L, H, din, dbot, lbox = sim.L, sim.H, sim.din, sim.dbot, sim.lbox
     xx, yy = sim.xx, sim.yy
 
+    n_plots = 3 if kwargs["temperature"] else 2
+    width, height = (10., 8.5) if kwargs["temperature"] else (12., 8.)
 
     #############################################################################################
     ######################################  -  FIGURE  -  #######################################
-    fig, axs = plt.subplots(2, 1, figsize=(12., 8.), constrained_layout=False, sharex="all", sharey="all")
+    fig, axs = plt.subplots(n_plots, 1, figsize=(width, height), constrained_layout=False, sharex="all", sharey="all")
 
     # pmin, pmax = np.amin(p), np.amax(p)
     pmin, pmax = -6.75, 6.75
     # wmin, wmax = np.amin(w)/10., np.amax(w)/10.
-    wmin, wmax = -31., 31.
+    wmin, wmax = -25., 25.
+    Tmin, Tmax = sim.tw_above, sim.tw_below
 
     # pressure and vorticity fields
     pressure = axs[0].imshow(np.zeros((nx, ny)), extent=(0, L, 0, H), vmin=pmin, vmax=pmax, cmap=cmap1, origin="lower")
     vorticity = axs[1].imshow(np.zeros((nx+1, ny+1)), extent=(0, L, 0, H), vmin=wmin, vmax=wmax, cmap=cmap2, origin="lower")
     cax_p, cax_w = make_colorbar_with_padding(axs[0]), make_colorbar_with_padding(axs[1])
     cbar_p, cbar_w = fig.colorbar(pressure, cax=cax_p), fig.colorbar(vorticity, cax=cax_w)
+    if kwargs["temperature"]:
+        temperature = axs[2].imshow(np.zeros((nx, ny)), extent=(0, L, 0, H), vmin=Tmin, vmax=Tmax, cmap=cmap3, origin="lower")
+        cax_T = make_colorbar_with_padding(axs[2])
+        cbar_T = fig.colorbar(temperature, cax=cax_T)
+        cax_T.set_yticks([-1. + i*0.5 for i in range(5)])
 
     # streamlines and streaklines
     if kwargs["stream"]:
@@ -321,9 +365,11 @@ if __name__ == "__main__":
         ax.set_aspect('equal')
     
     # Time text
+    position_text = (0.03,0.85) if n_plots == 3 else (0.02, 0.9)
+    fontsize = ftSz2 * 0.9 if n_plots == 3 else ftSz2
     time_str = "t = {:6.3f} [s]"
     bbox_dic = dict(boxstyle="round", fc="wheat", ec="none", alpha=0.85)
-    time_text = axs[0].text(0.8,0.9, time_str.format(0), fontsize=ftSz2, transform=axs[0].transAxes, bbox=bbox_dic)
+    time_text = axs[0].text(*position_text, time_str.format(0), fontsize=fontsize, transform=axs[0].transAxes, bbox=bbox_dic)
 
 
     ##############################################################################################
@@ -349,7 +395,7 @@ if __name__ == "__main__":
         anim.save(f"{path_anim}/flow.mp4", writer=writerMP4)
 
     elif save == "html":
-        caseNb = "4"
+        caseNb = "6"
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
         for t in tqdm(range(nt + 1)):
             update(t)

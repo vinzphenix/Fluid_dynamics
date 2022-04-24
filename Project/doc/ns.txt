@@ -1,8 +1,7 @@
+ffmpeg -framerate 20 -i ./case_6/frame_%05d.png -vcodec libx264 -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -crf 5 -r 25 -pix_fmt yuv420p out.mp4
+
 dT / dt + u * grad(T)
-
 d(T) / d(t L/U)  +  U/L u grad(T)  =  alpha / L^2 grad^2(T)
-
-
 T = T0 + TH * (T1 - T0)
 
 dTH/dt + u grad(TH) = 1 / (Pr RE) grad^2(TH)
@@ -28,7 +27,6 @@ y = y/L
 u = u/U
 t = t/(L/U)
 p = p/(rho UU)
-
 TH = (T - T0) / (T1 - T0)
 
 1)  du/dt + u du/dx + v du/dy = -dp/dx                  + (1/Re) (d^2u/dx^2 + d^2u/dy^2)

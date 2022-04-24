@@ -15,7 +15,7 @@ void computeRHS(Sim_data *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) 
     int r = rowStart;
 
 #if TEST_POISSON
-    // be carefull : (int_boundary fluxes) MUST BE EQUAL TO (int_domain) source term
+    // be carefull : (integral_boundary fluxes) MUST BE EQUAL TO (int_domain) source term (here 0.)
     for (i = 0; i < sim->nx; i++) {
         for (j = 0; j < sim->ny; j++, r++) {
             if ((j == 0)) {
@@ -36,20 +36,9 @@ void computeRHS(Sim_data *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) 
 
     for (i = 0; i < sim->nx; i++) {
         for (j = 0; j < sim->ny; j++) {
-            /*if ((i_w_left < i) && (i < i_w_right) && (j_w_below < j) && (j < j_w_above)) {  // this block should not be needded
-                rhs[r++] = 0.;
-                continue;
-            }*/
             rhs[r++] = (sim->US[i+1][j+1] - sim->US[i  ][j+1]) + (sim->VS[i+1][j+1] - sim->VS[i+1][j  ]); 
         }
     }
-
-    /*for (i = i_w_left+1; i < i_w_right; i++) {     // this block should not be needded
-        r = i * sim->ny + j_w_below + 1;
-        for (j = j_w_below+1; j < j_w_above; j++) {
-            rhs[r++] = 0.;
-        }
-    }*/
 #endif
 
     /*Do not forget that the solution for the Poisson equation is defined within a constant.

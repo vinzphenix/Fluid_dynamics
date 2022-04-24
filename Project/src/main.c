@@ -2,7 +2,6 @@
 #include "poisson.h"
 #include "adi.h"
 
-// TODO: add viscous dissipation
 // TODO: implement adi for temperature
 // TODO: implement streched grid
 
@@ -87,14 +86,14 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
     time(&start_exec);
 
     while (sim->t < sim->nt) {
-        
-        // in what order should these three blocks be ???
-        
+
+        // CONVECTION        
         compute_convection(sim);
-#       if TEMPERATURE
+#       if TEMP_MODE
         compute_convection_temperature(sim);
 #       endif
-
+        
+        // PREDICTOR STEP
 #       if USE_ADI
         predictor_step_u_adi(sim, adi);
         predictor_step_v_adi(sim, adi);
@@ -102,20 +101,29 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
         predictor_step(sim);
 #       endif
 
+        // UPDATE TIME AND BOUNDARY CONDITIONS
         sim->t = sim->t + 1;
-
         set_mesh_velocity(sim);
         set_bd_conditions(sim, sim->U, sim->V);   // sets u and v at t=(n+1)  # no influence on corrector step
         set_bd_conditions(sim, sim->US, sim->VS);
         set_ghost_points(sim);
-#       if TEMPERATURE
+#       if TEMP_MODE
         set_boundary_temperature(sim);
 #       endif
 
+        // SOLVE POISSON EQUATION
         nIterations = poisson_solver(sim, poisson);
+
+        // CORRECTOR STEP
         corrector_step(sim);
+#       if TEMP_MODE
+        corrector_step_temperature(sim);
+#       endif
+
+        // KEEP HISTORY OF HX, HY, HT
         swap_next_previous(sim);
 
+        // SAVE RESULTS
         printProgress((double) sim->t / (double) sim->nt, nIterations, sim->t, sim->nt, sim->dt, ndec1, ndec2, start_exec);
         if ((sim->t % SAVE_MODULO == 0) && (SAVE)) {
             save_fields(sim, sim->t);

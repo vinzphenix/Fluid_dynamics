@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from tqdm import tqdm
-from scipy.integrate import cumulative_trapezoid
 from scipy.interpolate import RegularGridInterpolator
 from time import perf_counter
 from matplotlib.animation import FuncAnimation, PillowWriter, FFMpegWriter
@@ -19,7 +18,7 @@ class Simulation:
         self.nt, self.nx, self.ny, self.n, self.save_modulo = params1
         self.RE, self.T, self.dt, self.h, self.L, self.H, self.lbox, self.din, self.dbot = params2
         self.alpha, self.st, self.swing_start, self.kappa_y, self.st_y, self.pert_start, self.n_cycles = params3
-        self.temperature, self.prandtl, self.grashof, self.tw_below, self.tw_above = params4
+        self.temperature, self.prandtl, self.grashof, self.tmin, self.tmax = params4
 
         self.df_p, self.df_u, self.df_v = dataframes[:3]
         self.df_T = dataframes[-1]
@@ -46,15 +45,6 @@ class Simulation:
         (self.xx, self.yy), (self.xxm, self.yym) = np.meshgrid(self.x, self.y), np.meshgrid(self.xm, self.ym)
         self.mask_middle = (self.din < self.xxm) * (self.xxm < self.din+self.lbox) * (self.dbot < self.yym) * (self.yym < self.dbot+1)
         self.mask_corner = (self.din <= self.xx) * (self.xx <= self.din+self.lbox) * (self.dbot <= self.yy) * (self.yy <= self.dbot+1)
-
-
-
-class PostProcess:
-
-    def __init__(self, colormaps, stream_params, streak_params):
-        self.colormaps = colormaps
-        self.nStreamLines, self.scaling, self.strm_color, self.strm_alpha = stream_params
-        self.nStreakLines, self.nParticles, self.strk_lw, self.strk_color, self.strk_alpha = streak_params
 
 
 ftSz1, ftSz2, ftSz3 = 20, 17, 15
@@ -94,7 +84,7 @@ def read_data_init(filenames):
     df_v = pd.read_csv(filename_v, chunksize=size_v, header=None)
     dfs = [df_p, df_u, df_v]
 
-    if params4[0] == 1:
+    if bool(params4[0]):
         dfs.append(pd.read_csv(filename_T, chunksize=size_p, header=None))
     
     # find bounds
@@ -197,9 +187,7 @@ def find_all_bounds(filename_p, filename_u, filename_v):
 
 
 def update(t):
-    # global p, u, v, w, p_masked, w_masked, psi
 
-    # if (t > 0):
     p, u, v, w, T = read_block(sim, needed={"p": True, "u": True, "v": True, "w": True, "T":True})
     p_masked, w_masked, T_masked = apply_mask(sim, p, w, T)
 
@@ -330,7 +318,8 @@ if __name__ == "__main__":
     pmin, pmax = -6.75, 6.75
     # wmin, wmax = np.amin(w)/10., np.amax(w)/10.
     wmin, wmax = -25., 25.
-    Tmin, Tmax = sim.tw_above, sim.tw_below
+    Tmin, Tmax = sim.tmin, sim.tmax
+    # Tmin, Tmax = 0., 0.22
 
     # pressure and vorticity fields
     pressure = axs[0].imshow(np.zeros((nx, ny)), extent=(0, L, 0, H), vmin=pmin, vmax=pmax, cmap=cmap1, origin="lower")
@@ -341,7 +330,7 @@ if __name__ == "__main__":
         temperature = axs[2].imshow(np.zeros((nx, ny)), extent=(0, L, 0, H), vmin=Tmin, vmax=Tmax, cmap=cmap3, origin="lower")
         cax_T = make_colorbar_with_padding(axs[2])
         cbar_T = fig.colorbar(temperature, cax=cax_T)
-        cax_T.set_yticks([-1. + i*0.5 for i in range(5)])
+        cax_T.set_yticks([Tmin + i * (Tmax - Tmin) / (5. - 1.) for i in range(5)])
 
     # streamlines and streaklines
     if kwargs["stream"]:
@@ -390,7 +379,7 @@ if __name__ == "__main__":
         anim.save(f"{path_anim}/flow.gif", writer=writerGIF, dpi=100)
     
     elif save == "mp4":
-        anim = FuncAnimation(fig, update, tqdm(range(nt+1)), interval=100, blit=False, init_func=lambda :None, repeat=False)
+        anim = FuncAnimation(fig, update, nt+1, interval=100, blit=False, repeat=False)
         writerMP4 = FFMpegWriter(fps=15)
         anim.save(f"{path_anim}/flow.mp4", writer=writerMP4)
 

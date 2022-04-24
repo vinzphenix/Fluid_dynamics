@@ -18,7 +18,7 @@
 // Oscillation parameters
 #define ALPHA 0.5           // Amplitude of the horizonatal oscillation VELOCITY
 #define STROUHAL (1. / 3.)  // Frequency of the horizontal oscillation
-#define SIWNG_START 10.    // Starting time of the horizontal oscillation
+#define SIWNG_START 25.    // Starting time of the horizontal oscillation
 
 #define KAPPA_Y 0.05       // Amplitude of the vertical perturbation POSITION
 #define STROUHAL_Y (1./3.)  // Frequency of the vertical perturbation
@@ -26,13 +26,14 @@
 #define N_CYCLES 1          // Duration of the perturbation
 
 // Temperature parameters
-#define TEMPERATURE 0       // Activate thermal coupling
-#define PR 1.               // Prandtl = nu / alpha
-#define GR 100000.          // Grashof = beta (T1-T0) g L^3 / nu^2
+#define NO_SLIP 1           // Walls at y = 0 and y = H
+#define TEMP_MODE 1         // Thermal mode, 0: no coupling, 1: external walls hot and cold, 2: rectangle heat source
+#define PR 0.7              // Prandtl = nu / alpha
+#define GR 1000000.         // Grashof = beta (T1-T0) g L^3 / nu^2  // 1000000
 #define NU 0.               // Nusselt
-#define TMIN -1.            // Temperature above
-#define TMAX 1.            // Temperature below
-#define NO_SLIP 1
+#define EC 0.               // Eckert
+#define TMIN -1.            // Min temperature
+#define TMAX 1.             // Max temperature
 
 // Code parameters
 #define USE_ADI 0          // 0: classic scheme, 1: solve using ADI method
@@ -82,10 +83,15 @@ void free_Sim_data(Sim_data *sim);
 void set_bd_conditions(Sim_data *sim, double **U, double **V);
 void set_ghost_points(Sim_data *sim);
 void set_boundary_temperature(Sim_data *sim);
+
 void compute_convection(Sim_data *sim);
 void compute_convection_temperature(Sim_data *sim);
+
 void predictor_step(Sim_data *sim);
+
 void corrector_step(Sim_data *sim);
+void corrector_step_temperature(Sim_data *sim);
+
 void swap_next_previous(Sim_data *sim);
 void set_mesh_velocity(Sim_data *sim);
 

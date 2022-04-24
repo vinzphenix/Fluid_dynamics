@@ -92,7 +92,7 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     }
 
 
-#   if TEMPERATURE
+#   if TEMP_MODE
     // Allocate T and set matrix access
     sim->T_data = (double *)calloc(3 * size_T, sizeof(double));
 
@@ -131,7 +131,7 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sim->j_start[6] = sim->j_start[2];            sim->j_final[6] = sim->j_final[2] - 1;
     sim->j_start[7] = sim->j_start[3];            sim->j_final[7] = sim->j_final[3] - 1;
 
-#   if TEMPERATURE
+#   if TEMP_MODE
     sim->i_start[8 ] = sim->i_start[0];            sim->i_final[8 ] = sim->i_final[0] + 1;
     sim->i_start[9 ] = sim->i_start[1] + 1;        sim->i_final[9 ] = sim->i_final[1];
     sim->i_start[10] = sim->i_start[2] + 1;        sim->i_final[10] = sim->i_final[2];     
@@ -154,7 +154,7 @@ void init_fields(Sim_data *sim) {
     int j_w_above = (D_BOT + 1) * sim->n;    // in rectangle
 
 
-    // set u to Uinf at beginning (0 is already good for v)
+    // set u to U_inf at the beginning (0 is already good for v)
     for (i = 0; i < sim->nx+1; i++) {
         for (j = 0; j < sim->ny+2; j++) {
             if ((sim->i_final[0] <= i) && (i < sim->i_start[3]) && (sim->j_final[1] <= j) && (j < sim->j_start[2])) {
@@ -171,7 +171,6 @@ void init_fields(Sim_data *sim) {
     for (i = i_w_left + 1; i < i_w_right; i++) {
         j = j_w_below;
         sim->U[i][j] = -0.2 * (sim->U[i][j-3] - 5.*sim->U[i][j-2] + 15.*sim->U[i][j-1] - 16 * 0.);
-
         j = j_w_above;
         sim->U[i][j] = -0.2 * (sim->U[i][j+3] - 5.*sim->U[i][j+2] + 15.*sim->U[i][j+1] - 16 * 0.);
     }
@@ -181,30 +180,41 @@ void init_fields(Sim_data *sim) {
     double eta;
     for (j = 1; j < sim->ny + 1; j++) {   // Inflow uniform profile u
         eta = (j-0.5) * sim->h / H_;
-        sim->U[0][j] = 6. * (1.) * eta * (1. - eta);  // Poiseuille
+        sim->U[0][j] = 6. * 1. * eta * (1. - eta);     // Poiseuille
         sim->US[0][j] = sim->U[0][j];                  // Poiseuille
     }
     for (i = 0; i < sim->nx + 1; i++) {
         j = 0;
         sim->U[i][j] = -0.2 * (sim->U[i][j+3] - 5.*sim->U[i][j+2] + 15.*sim->U[i][j+1] - 16 * 0.);
-
         j = sim->ny+1;
         sim->U[i][j] = -0.2 * (sim->U[i][j-3] - 5.*sim->U[i][j-2] + 15.*sim->U[i][j-1] - 16 * 0.);
     }
 #   endif
 
-#   if TEMPERATURE
-    double T_wall;
-    for (i = 1; i < sim->nx + 1; i++) {
-        
-        j = 0;
-        T_wall =  0.5 * (1. - tanh( ((i - 0.5) * sim->h - L_/2.) / 1.)) * TMAX;
-        sim->T[i][j] = -0.2 * (sim->T[i][j+3] - 5.*sim->T[i][j+2] + 15.*sim->T[i][j+1] - 16.*T_wall);
 
+#   if TEMP_MODE == 1
+    for (i = 1; i < sim->nx + 1; i++) {
+        j = 0;
+        sim->T[i][j] = -0.2 * (sim->T[i][j+3] - 5.*sim->T[i][j+2] + 15.*sim->T[i][j+1] - 16.*TMAX);
         j = sim->ny+1;
-        T_wall = 0.5 * (1. - tanh( ((i - 0.5) * sim->h - L_/2.) / 1.)) * TMIN;
-        sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16.*T_wall);
+        sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16.*TMIN);
     }
+    // T_wall =  0.5 * (1. - tanh( ((i - 0.5) * sim->h - L_/2.) / 1.)) * TMAX;
+
+#   elif TEMP_MODE == 2
+    for (i = sim->n * D_IN + 1; i < sim->n * (D_IN + LBOX) + 1; i++) {
+        j = sim->n * D_BOT + 1;  // lower wall of rectangle
+        sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16.*TMAX);
+        j = sim->n * (D_BOT + 1);  // upper wall of rectangle
+        sim->T[i][j] = -0.2 * (sim->T[i][j+3] - 5.*sim->T[i][j+2] + 15.*sim->T[i][j+1] - 16.*TMIN);
+    }
+
+    // i = sim->n * D_IN + 1;  // left wall of rectanle
+    // for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++)
+    //     sim->T[i][j] = -0.2 * (sim->T[i-3][j] - 5.*sim->T[i-2][j] + 15.*sim->T[i-1][j] - 16.*TMAX);
+    // i = sim->n * (D_IN + LBOX);  // right wall of rectanle
+    // for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++)
+    //     sim->T[i][j] = -0.2 * (sim->T[i+3][j] - 5.*sim->T[i+2][j] + 15.*sim->T[i+1][j] - 16.*TMAX);
 #   endif
 }
 
@@ -218,7 +228,7 @@ void save_fields(Sim_data *sim, int t) {
         fprintf(ptr, "%d %d %d %d %d\n", sim->nt / SAVE_MODULO, sim->nx, sim->ny, sim->n, SAVE_MODULO);
         fprintf(ptr, "%lf %lf %lf %lf %d %d %d %d %d\n", RE, sim->tsim, sim->dt, sim->h, L_, H_, LBOX, D_IN, D_BOT);
         fprintf(ptr, "%lf %lf %lf %lf %lf %lf %d\n", ALPHA, STROUHAL, SIWNG_START, KAPPA_Y, STROUHAL_Y, PERT_START, N_CYCLES);
-        fprintf(ptr, "%d %lf %lf %lf %lf\n", TEMPERATURE, PR, GR, TMAX, TMIN);
+        fprintf(ptr, "%d %lf %lf %lf %lf\n", TEMP_MODE, PR, GR, TMIN, TMAX);
         fclose(ptr);
     }
     
@@ -238,11 +248,11 @@ void save_fields(Sim_data *sim, int t) {
     for (i = 0; i < sim->size_v; i++) fprintf(ptr_v, FMT, sim->v_data[i]);  // velocity y
     for (i = 0; i < sim->size_p; i++) fprintf(ptr_p, FMT, sim->p_data[i]);  // pressure
 
-#   if TEMPERATURE
+#   if TEMP_MODE
     int j;
     for (i = 1; i < sim->nx + 1; i++) {
         for (j = 1; j < sim->ny + 1; j++) {
-            fprintf(ptr_T, FMT, sim->T[i][j]);  // temperature
+            fprintf(ptr_T, FMT, sim->T[i][j]);  // temperature (do not save ghosts)
         }
     }
 #   endif
@@ -259,8 +269,8 @@ void set_bd_conditions(Sim_data *sim, double **U, double **V) {
     double coef;
     
     /*// Inflow boundary condition for u  // never changes
-    for (j = 1; j <= sim->ny; j++) {   // Inflow uniform profile u
-        U[0][j] = 1.;   // could do a special profile
+    for (j = 1; j <= sim->ny; j++) {
+        U[0][j] = 1.;
     }*/
 
     // Outflow boundary condition for u
@@ -303,19 +313,22 @@ void set_ghost_points(Sim_data *sim) {
     double coef, w_last, w_left;
 
     // External walls
-#   if NO_SLIP  // (v = 0 and u = 0)
     for (i = 0; i < sim->nx + 1; i++) {
         j = 0;
-        sim->U[i][j] = -0.2 * (sim->U[i][j+3] - 5.*sim->U[i][j+2] + 15.*sim->U[i][j+1] - 16.*sim->uMesh);
+#       if NO_SLIP  // (v = 0) and (u = 0)
+            sim->U[i][j] = -0.2 * (sim->U[i][j+3] - 5.*sim->U[i][j+2] + 15.*sim->U[i][j+1] - 16.*sim->uMesh);
+#       else
+            sim->U[i][0] = sim->U[i][1];  // (v = 0 and w = 0 --> du/dy = 0)
+#       endif
+
         j = sim->ny+1;
-        sim->U[i][j] = -0.2 * (sim->U[i][j-3] - 5.*sim->U[i][j-2] + 15.*sim->U[i][j-1] - 16.*sim->uMesh);
+#       if NO_SLIP
+            sim->U[i][j] = -0.2 * (sim->U[i][j-3] - 5.*sim->U[i][j-2] + 15.*sim->U[i][j-1] - 16.*sim->uMesh);
+#       else
+            sim->U[i][j] = sim->U[i][j-1];
+#       endif
     }
-#   else  // (v = 0 and w = 0 --> du/dy = 0)
-    for (i = 0; i < sim->nx + 1; i++) {                // zero voriticty
-        sim->U[i][0] = sim->U[i][1];                   // below
-        sim->U[i][sim->ny + 1] = sim->U[i][sim->ny];   // above
-    }
-#   endif
+
 
     // Inflow boundary condition for v
     for (j = 1; j < sim->ny; j++) {  // trick with ghost for zero v at inflow
@@ -323,13 +336,16 @@ void set_ghost_points(Sim_data *sim) {
     }
     
     // Outflow boundary condition for v
+    // write into VS, and then copy back into V to avoid using updated values V(n+1) in the computation of V(n+1)
     i = sim->nx;
     coef = sim->dt / sim->h * (1. - sim->uMesh);
     for (j = 1; j < sim->ny; j++) {
         w_last = (sim->V[i+1][j] - sim->V[i  ][j]) - (sim->U[i  ][j+1] - sim->U[i  ][j]);
         w_left = (sim->V[i  ][j] - sim->V[i-1][j]) - (sim->U[i-1][j+1] - sim->U[i-1][j]);
-        sim->V[i+1][j] = (sim->V[i][j] + sim->U[i][j+1] - sim->U[i][j]) + w_last - coef * (w_last - w_left);
-        // [ v_(i+0.5,j) - v_(i-0.5,j) - u_(i,j+0.5) + u(i,j-0.5) ] / h = w_ij + dt uc / h * [ w_ij - w_(i-1, j) ]
+        sim->VS[i+1][j] = (sim->V[i][j] + sim->U[i][j+1] - sim->U[i][j]) + w_last - coef * (w_last - w_left);
+    }
+    for (j = 1; j < sim->ny; j++) {
+        sim->V[i+1][j] = sim->VS[i+1][j];
     }
 
 
@@ -354,36 +370,58 @@ void set_ghost_points(Sim_data *sim) {
 
 void set_boundary_temperature(Sim_data *sim) {
     int i, j;
-    double coef, T_wall;
+    double coef;
     coef = sim->dt / sim->h * (1. - sim->uMesh);
 
-    for (i = 1; i < sim->nx + 1; i++) {  // Above and below (DIRICHLET)        
-        j = 0;
-        T_wall = 0.5 * (1. - tanh( ((i - 0.5) * sim->h - L_/2.) / 1.)) * TMAX;
-        sim->T[i][j] = -0.2 * (sim->T[i][j+3] - 5.*sim->T[i][j+2] + 15.*sim->T[i][j+1] - 16. * T_wall);
+    for (i = 1; i < sim->nx + 1; i++) {
+        
+        j = 0;  // Below
+#       if TEMP_MODE == 1
+            sim->T[i][j] = -0.2 * (sim->T[i][j+3] - 5.*sim->T[i][j+2] + 15.*sim->T[i][j+1] - 16. * TMAX);
+#       elif TEMP_MODE == 2
+            sim->T[i][j] = sim->T[i][j+1];
+#       endif
 
-        j = sim->ny+1;
-        T_wall = 0.5 * (1. - tanh( ((i - 0.5) * sim->h - L_/2.) / 1.)) * TMIN;
-        sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16. * T_wall);
+        j = sim->ny+1;  // Above
+#       if TEMP_MODE == 1
+            sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16. * TMIN);
+#       elif TEMP_MODE == 2
+            sim->T[i][j] = sim->T[i][j-1];
+#       endif
     }
 
     for (j = 1; j < sim->ny + 1; j++) sim->T[0        ][j] = sim->T[1][j];                                         // inflow
     for (j = 1; j < sim->ny + 1; j++) sim->T[sim->nx+1][j] -= coef * (sim->T[sim->nx+1][j] - sim->T[sim->nx][j]);  // outflow (advected)
 
     i = sim->n * D_IN + 1;  // left wall of rectanle
-    for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++)
+    for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++) {
         sim->T[i][j] = sim->T[i-1][j];
-    
+    }
+
     i = sim->n * (D_IN + LBOX);  // right wall of rectanle
-    for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++)
+    for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++) {
         sim->T[i][j] = sim->T[i+1][j];
+    }
+    // if dirichlet applied on lateral walls of the box --> change special treatment in corrector step
+    // sim->T[i][j] = -0.2 * (sim->T[i+3][j] - 5.*sim->T[i+2][j] + 15.*sim->T[i+1][j] - 16.*TMAX);
+
 
     // ! Ghost points in the corners are overwritten
     for (i = sim->n * D_IN + 1; i < sim->n * (D_IN + LBOX) + 1; i++) {
+        
         j = sim->n * D_BOT + 1;  // lower wall of rectangle
-        sim->T[i][j] = sim->T[i][j-1];
+#       if TEMP_MODE == 1
+            sim->T[i][j] = sim->T[i][j-1];
+#       elif TEMP_MODE == 2
+            sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16.*TMAX);
+#       endif
+
         j = sim->n * (D_BOT + 1);  // upper wall of rectangle
-        sim->T[i][j] = sim->T[i][j+1];
+#       if TEMP_MODE == 1
+            sim->T[i][j] = sim->T[i][j+1];
+#       elif TEMP_MODE == 2        
+            sim->T[i][j] = -0.2 * (sim->T[i][j+3] - 5.*sim->T[i][j+2] + 15.*sim->T[i][j+1] - 16.*TMIN);
+#       endif
     }
 }
 
@@ -514,7 +552,6 @@ void compute_convection_temperature(Sim_data *sim) {
 
 void predictor_step(Sim_data *sim) {
     int i, j;
-    // double conv, pres, diff;
 
     double **U = sim->U;
     double **V = sim->V;
@@ -522,7 +559,7 @@ void predictor_step(Sim_data *sim) {
     double coef_1 = (sim->t == 0) ? -1. : -1.5;
     double coef_2 = (sim->t == 0) ? +0. : +0.5;
     double alpha = 1. / (RE * sim->h * sim->h);
-#   if TEMPERATURE
+#   if TEMP_MODE
     double beta = 0.5 * GR / (RE * RE);
 #   endif
 
@@ -537,22 +574,17 @@ void predictor_step(Sim_data *sim) {
 
         for (i = i_s;  i < i_f; i++) {
             for (j = j_s; j < j_f; j++) {
-                            
-                // conv = coef_1 * sim->HX[i][j] + coef_2 * sim->HX_[i][j];  
-                // pres = -(sim->P[i][j-1] - sim->P[i-1][j-1]) * sim->n; 
-                // diff = alpha * (U[i+1][j] + U[i-1][j] - 4*U[i][j] + U[i][j+1] + U[i][j-1]);  
 
                 sim->US[i][j] = U[i][j] + sim->dt * (
-                    + coef_1 * sim->HX[i][j] + coef_2 * sim->HX_[i][j]                     // (u du/dx + v du/dy) at t_n and t_(n-1)
-                    - (sim->P[i][j-1] - sim->P[i-1][j-1]) * sim->n                         // dp/dx
-                    + alpha * (U[i+1][j] + U[i-1][j] - 4*U[i][j] + U[i][j+1] + U[i][j-1])  // d2u/dx2 + d2u/dy2
+                    + coef_1 * sim->HX[i][j] + coef_2 * sim->HX_[i][j]                     // Convection
+                    - (sim->P[i][j-1] - sim->P[i-1][j-1]) * sim->n                         // Pressure gradient
+                    + alpha * (U[i+1][j] + U[i-1][j] - 4*U[i][j] + U[i][j+1] + U[i][j-1])  // Diffusion
                 );
             }
         }
     }
 
     // update v field
-    // double count1 = 0.; double count2 = 0.; double count3 = 0.; double count4 = 0.; double c5 = 0.;
     for (int block = 4; block < 8; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
@@ -561,29 +593,18 @@ void predictor_step(Sim_data *sim) {
 
         for (i = i_s;  i < i_f; i++) {
             for (j = j_s; j < j_f; j++) {
-                
-                // conv = coef_1 * sim->HY[i][j] + coef_2 * sim->HY_[i][j];  
-                // pres = -(sim->P[i-1][j] - sim->P[i-1][j-1]) * sim->n;  
-                // diff = alpha * (V[i+1][j] + V[i-1][j] - 4*V[i][j] + V[i][j+1] + V[i][j-1]);  
 
                 sim->VS[i][j] = V[i][j] + sim->dt * (
-                    + coef_1 * sim->HY[i][j] + coef_2 * sim->HY_[i][j]                    // (u dv/dx + v dv/dy) at t_n and t_(n-1)
-                    - (sim->P[i-1][j] - sim->P[i-1][j-1]) * sim->n                        // dp/dy
-                    + alpha * (V[i+1][j] + V[i-1][j] - 4*V[i][j] + V[i][j+1] + V[i][j-1]) // d2v/dx2 + d2v/dy2
-#                   if TEMPERATURE
+                    + coef_1 * sim->HY[i][j] + coef_2 * sim->HY_[i][j]                    // Convection
+                    - (sim->P[i-1][j] - sim->P[i-1][j-1]) * sim->n                        // Pressure gradient
+                    + alpha * (V[i+1][j] + V[i-1][j] - 4*V[i][j] + V[i][j+1] + V[i][j-1]) // Diffusion
+#                   if TEMP_MODE
                     + beta * (sim->T[i][j+1] + sim->T[i][j])  // AVG(T above, T below)
 #                   endif
                 );
-
-                // count1 += coef_1 * sim->HY[i][j] + coef_2 * sim->HY_[i][j];
-                // count2 += (sim->P[i-1][j] - sim->P[i-1][j-1]) * sim->n;
-                // count3 += alpha * (V[i+1][j] + V[i-1][j] - 4*V[i][j] + V[i][j+1] + V[i][j-1]);
-                // count4 += beta * (sim->T[i][j+1] + sim->T[i][j]);
-                // c5 += 1.;
             }
         }
     }
-    // printf("Count 1 = %7.3le  Count 2 = %7.3le  Count 3 = %7.3le  Count 4 = %7.3le\n", count1/c5, count2/c5, count3/c5, count4/c5);
 }
 
 
@@ -627,39 +648,68 @@ void corrector_step(Sim_data *sim) {
     for (i = 0, j = sim->size_p; i < sim->size_p; i++, j++) {
         sim->p_data[i] += sim->p_data[j];  // p = p + phi
     }
+}
 
-    // update T field
-#   if TEMPERATURE
+
+void corrector_step_temperature(Sim_data *sim) {
+    int i, j;
+    int i_s, i_f, j_s, j_f;
+
     double coef_1 = (sim->t == 0) ? -1. : -1.5;
     double coef_2 = (sim->t == 0) ? +0. : +0.5;
-    double diff = 1./(PR * RE) * 1. / (sim->h * sim->h);  // 1/(PR RE) * 1/h^2
+    double diff = 1. / (PR * RE) * 1. / (sim->h * sim->h);
+    
+    double diss = (EC / RE) * 1. / (sim->h * sim->h);
+    double dudx, cross, dvdy;
 
-    // compute laplacian of temperature
-    // use existing array PHI for this purpose -> index -1 since size of PHI smaller
-    for (i = 1; i < sim->nx + 1; i++) {
-        for (j = 1; j < sim->ny + 1; j++) {
-            sim->PHI[i-1][j-1] = sim->T[i+1][j] + sim->T[i-1][j] + sim->T[i][j+1] + sim->T[i][j-1] - 4. * sim->T[i][j];
+    // for (i = 1; i < sim->nx + 1; i++) {
+        // for (j = 1; j < sim->ny + 1; j++) {
+
+    // compute rhs of temperature equation (diffusion + viscous dissipation)
+    for (int block = 8; block < 12; block++) {
+        i_s = sim->i_start[block];
+        i_f = sim->i_final[block];
+        j_s = sim->j_start[block];
+        j_f = sim->j_final[block];
+
+        for (i = i_s; i < i_f; i++) {
+            for (j = j_s; j < j_f; j++) {
+                dudx = (sim->U[i][j] - sim->U[i-1][j]);  // denominator is dx (already in diss)
+                dvdy = (sim->V[i][j] - sim->V[i][j-1]);  // denominator is dy (already in diss)
+                cross = 0.25 * ((sim->U[i-1][j+1] + sim->U[i][j+1]) - (sim->U[i-1][j-1] + sim->U[i][j-1])    // denominator is 2*2dx
+                            + (sim->V[i+1][j-1] + sim->V[i+1][j]) - (sim->V[i-1][j-1] + sim->V[i-1][j]));  // denominator is 2*2dy
+                
+                sim->PHI[i-1][j-1] =     // use existing array PHI for this purpose -> index -1 since size of PHI smaller
+                    diff * (sim->T[i+1][j] + sim->T[i-1][j] + sim->T[i][j+1] + sim->T[i][j-1] - 4. * sim->T[i][j])
+                  + diss * (2. * (dudx * dudx + dvdy * dvdy) + cross * cross);
+            }
         }
     }
-    // ! Handle 4 points where ghost points were overwritten (corners of the rectangle)
+
+    // ! Handle 4 points where ghost points were overwritten (corners of the rectangle): there dT/dx = 0
     i = (D_IN) * sim->n;
     j = (D_BOT) * sim->n + 1;
-    sim->PHI[i-1][j-1] = sim->T[i-1][j] + sim->T[i][j+1] + sim->T[i][j-1] - 3. * sim->T[i][j]; // T[i+1] = T[i]
+    sim->PHI[i-1][j-1] += diff * (sim->T[i][j] - sim->T[i+1][j]);  // T[i+1][j] was the ghost for the temperature below the lower-left corner of the box
     j = (D_BOT + 1) * sim->n;
-    sim->PHI[i-1][j-1] = sim->T[i-1][j] + sim->T[i][j+1] + sim->T[i][j-1] - 3. * sim->T[i][j]; // T[i+1] = T[i]
-    
+    sim->PHI[i-1][j-1] += diff * (sim->T[i][j] - sim->T[i+1][j]);  // T[i+1][j] was the ghost for the temperature above the upper-left corner of the box
     i = (D_IN + LBOX) * sim->n + 1;
     j = (D_BOT) * sim->n + 1;
-    sim->PHI[i-1][j-1] = sim->T[i+1][j] + sim->T[i][j+1] + sim->T[i][j-1] - 3. * sim->T[i][j]; // T[i-1] = T[i]
+    sim->PHI[i-1][j-1] += diff * (sim->T[i][j] - sim->T[i-1][j]);  // T[i-1][j] was the ghost for the temperature below the lower-right corner of the box
     j = (D_BOT + 1) * sim->n;
-    sim->PHI[i-1][j-1] = sim->T[i+1][j] + sim->T[i][j+1] + sim->T[i][j-1] - 3. * sim->T[i][j]; // T[i-1] = T[i]
+    sim->PHI[i-1][j-1] += diff * (sim->T[i][j] - sim->T[i-1][j]);  // T[i-1][j] was the ghost for the temperature above the upper-right corner of the box
     
-    for (i = 1; i < sim->nx + 1; i++) {
-        for (j = 1; j < sim->ny + 1; j++) {
-            sim->T[i][j] += sim->dt * (coef_1 * sim->HT[i][j] + coef_2 * sim->HT_[i][j] + diff * sim->PHI[i-1][j-1]);
+    for (int block = 8; block < 12; block++) {
+        i_s = sim->i_start[block];
+        i_f = sim->i_final[block];
+        j_s = sim->j_start[block];
+        j_f = sim->j_final[block];
+
+        for (i = i_s; i < i_f; i++) {
+            for (j = j_s; j < j_f; j++) {
+                sim->T[i][j] += sim->dt * (coef_1 * sim->HT[i][j] + coef_2 * sim->HT_[i][j] + sim->PHI[i-1][j-1]);
+            }
         }
     }
-#   endif
 }
 
 
@@ -674,7 +724,7 @@ void swap_next_previous(Sim_data *sim) {
     sim->HY = sim->HY_;
     sim->HY_ = tmp;
 
-#   if TEMPERATURE
+#   if TEMP_MODE
     tmp = sim->HT;
     sim->HT = sim->HT_;
     sim->HT_ = tmp;
@@ -750,7 +800,7 @@ void free_Sim_data(Sim_data *sim) {
     free(sim->u_data); free(sim->U);
     free(sim->v_data); free(sim->V);
     free(sim->p_data); free(sim->P);
-#   if TEMPERATURE
+#   if TEMP_MODE
     free(sim->T_data); free(sim->T);
 #   endif
     free(sim);

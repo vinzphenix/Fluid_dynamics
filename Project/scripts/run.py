@@ -13,7 +13,7 @@ class Simulation:
 
     def __init__(self, filenames):
 
-        params1, params2, params3, params4, dataframes = read_data_init(filenames)
+        params1, params2, params3, params4, dataframes, diagnostics = read_data_init(filenames)
 
         self.nt, self.nx, self.ny, self.n, self.save_modulo = params1
         self.RE, self.T, self.dt, self.h, self.L, self.H, self.lbox, self.din, self.dbot = params2
@@ -23,6 +23,13 @@ class Simulation:
         self.df_p, self.df_u, self.df_v = dataframes[:3]
         self.df_T = dataframes[-1]
 
+
+        self.nt_simu = self.nt
+        self.dt_simu = self.dt
+        self.dt *= self.save_modulo
+        self.nt //= self.save_modulo
+        
+        self.t_simu = np.linspace(0., self.T, self.nt_simu + 1)
         self.t = np.linspace(0., self.T, self.nt + 1)
         self.kappa = self.alpha / (2. * np.pi * self.st)
         self.alpha_y = self.kappa_y * (2. * np.pi * self.st_y)
@@ -46,6 +53,13 @@ class Simulation:
         self.mask_middle = (self.din < self.xxm) * (self.xxm < self.din+self.lbox) * (self.dbot < self.yym) * (self.yym < self.dbot+1)
         self.mask_corner = (self.din <= self.xx) * (self.xx <= self.din+self.lbox) * (self.dbot <= self.yy) * (self.yy <= self.dbot+1)
 
+        self.reh = diagnostics[:, 0]
+        self.rew = diagnostics[:, 1]
+        self.drag_p = diagnostics[:, 2]
+        self.drag_f = diagnostics[:, 3]
+        self.lift_p = diagnostics[:, 4]
+        self.lift_f = diagnostics[:, 5]
+
 
 ftSz1, ftSz2, ftSz3 = 20, 17, 15
 plt.rcParams['font.family'] = 'monospace'
@@ -60,7 +74,7 @@ plt.rcParams['font.family'] = 'monospace'
 
 def read_data_init(filenames):
     
-    filename_params, filename_p, filename_u, filename_v, filename_T = filenames
+    filename_params, filename_p, filename_u, filename_v, filename_T, filename_stats = filenames
 
     with open(filename_params, "r") as f:
         lines = f.readlines()
@@ -69,9 +83,7 @@ def read_data_init(filenames):
         params3 = [float(x) for x in lines[2].split(" ")]
         params4 = [float(x) for x in lines[3].split(" ")]
     
-    nt, nx, ny, n, save_modulo = params1
-    params2[2] *= save_modulo  # dt multiplied since not all times are saved
-    
+    nt, nx, ny, n, save_modulo = params1    
     params4[0] = int(params4[0])
 
     for i in range(6, 9):
@@ -86,29 +98,33 @@ def read_data_init(filenames):
 
     if bool(params4[0]):
         dfs.append(pd.read_csv(filename_T, chunksize=size_p, header=None))
+
+    diagnostics = np.loadtxt(filename_stats)
     
     # find bounds
     # t1 = perf_counter()
     # (pmin, pmax), (umin, umax), (vmin, vmax), (wmin, wmax) = find_all_bounds()
     # print(f"Time to find bound = {perf_counter() - t1:.3f} s")
 
-    return params1, params2, params3, params4, dfs
+    return params1, params2, params3, params4, dfs, diagnostics
 
 
 # wb = [0., 0.]
-def read_block(sim, needed={"p": True, "u": True, "v": True, "w": True, "T": True}):
+def read_block(sim, needed={}):
     df_p, df_u, df_v = sim.df_p, sim.df_u, sim.df_v
     ret_list = []
     
     if needed.get("p", False):
         p = np.array(next(df_p)).reshape((sim.nx, sim.ny))
         ret_list.append(p)
-    if needed.get("u", False):
+    if needed.get("u", False) or needed.get("w", False):
         u = np.array(next(df_u)).reshape((sim.nx + 1, sim.ny + 2))
-        ret_list.append(u)
-    if needed.get("v", False):
+        if needed.get("u", False):
+            ret_list.append(u)
+    if needed.get("v", False) or needed.get("w", False):
         v = np.array(next(df_v)).reshape((sim.nx + 2, sim.ny + 1))
-        ret_list.append(v)
+        if needed.get("v", False):
+            ret_list.append(v)
     if needed.get("w", False):
         w = ((v[1:, :] - v[:-1, :]) - (u[:, 1:] - u[:, :-1])) / sim.h  # dv/dx - du/dy --> values at corners
         ret_list.append(w)
@@ -268,12 +284,14 @@ def make_colorbar_with_padding(ax):
     return(cax) 
 
 
-def modify_html(html_filename):
+def modify_html(caseNb):
+    html_filename = f"{path_anim}/case_{caseNb:d}.html"
+    line_nb = 152
     with open(html_filename, "r") as f:
         html_lines = f.readlines()
-        old_line = html_lines[185]
-        new_line = old_line[:15] + str(sim.nt+1) + ";\n"
-        html_lines[185] = new_line
+        old_line = html_lines[line_nb]
+        new_line = f"  call({caseNb:d}, {sim.nt+1:d})\n"
+        html_lines[line_nb] = new_line
 
     with open(html_filename, "w") as f:
         f.write("".join(html_lines))
@@ -291,9 +309,10 @@ if __name__ == "__main__":
     filename_p = f"{path_dir}/simu_p.txt"
     filename_u = f"{path_dir}/simu_u.txt"
     filename_v = f"{path_dir}/simu_v.txt"
-    filename_T = f"{path_dir}/simu_T.txt"    
+    filename_T = f"{path_dir}/simu_T.txt"
+    filename_stats = f"{path_dir}/simu_stats.txt"
 
-    sim = Simulation([filename_params, filename_p, filename_u, filename_v, filename_T])
+    sim = Simulation([filename_params, filename_p, filename_u, filename_v, filename_T, filename_stats])
     kwargs["temperature"] = bool(sim.temperature)
 
     cmap1, cmap2, cmap3, cmap4 = "Spectral_r", "bwr", "RdBu_r", "turbo_r"  # Spectral_r
@@ -315,11 +334,11 @@ if __name__ == "__main__":
     fig, axs = plt.subplots(n_plots, 1, figsize=(width, height), constrained_layout=False, sharex="all", sharey="all")
 
     # pmin, pmax = np.amin(p), np.amax(p)
-    pmin, pmax = -6.75, 6.75
+    pmin, pmax = -2.75, 2.75
     # wmin, wmax = np.amin(w)/10., np.amax(w)/10.
     wmin, wmax = -25., 25.
-    Tmin, Tmax = sim.tmin, sim.tmax
-    # Tmin, Tmax = 0., 0.22
+    # Tmin, Tmax = np.round(sim.tmin, 2), np.round(sim.tmax, 2)
+    Tmin, Tmax = -1., 1.
 
     # pressure and vorticity fields
     pressure = axs[0].imshow(np.zeros((nx, ny)), extent=(0, L, 0, H), vmin=pmin, vmax=pmax, cmap=cmap1, origin="lower")
@@ -384,10 +403,10 @@ if __name__ == "__main__":
         anim.save(f"{path_anim}/flow.mp4", writer=writerMP4)
 
     elif save == "html":
-        caseNb = "6"
+        caseNb = 5
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
         for t in tqdm(range(nt + 1)):
             update(t)
-            fig.savefig(f"{path_anim}/case_{caseNb}/frame_{t:05d}.png", format="png", bbox_inches='tight', pad_inches=0.02)
+            fig.savefig(f"{path_anim}/case_{caseNb:d}/frame_{t:05d}.png", format="png", bbox_inches='tight', pad_inches=0.02)
         
-        modify_html(f"{path_anim}/case_{caseNb}.html")
+        modify_html(caseNb)

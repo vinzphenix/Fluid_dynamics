@@ -15,7 +15,7 @@ def plot_vorticity(t_list, cmap):
     
     i = 0
     for t in tqdm(range(nt+1)):
-        p, u, v, w, _, _ = read_block(sim)
+        w, = read_block(sim, needed={"w": True})
         if t not in indices:
             continue
 
@@ -57,7 +57,7 @@ def plot_streamlines(t_list, cmap):
 
     i = 0
     for idx in tqdm(range(nt+1)):
-        p, u, v, w, _, _ = read_block(sim)
+        u, v = read_block(sim, needed={"u": True, "v": True})
         if idx not in indices:
             continue
         u = (u[:, 1:] + u[:, :-1]) / 2.
@@ -92,7 +92,7 @@ def plot_average_flow(t_start, cmap1, cmap2):
     v_avg = np.zeros((nx+2, ny+1))
 
     for idx in tqdm(range(nt + 1)):
-        p, u, v, w, p_masked, w_masked = read_block(sim)
+        p, u, v, w = read_block(sim, needed={"p": True, "u": True, "v": True, "w": True})
         
         if idx < idx_start:
             continue
@@ -142,21 +142,25 @@ def plot_average_flow(t_start, cmap1, cmap2):
     return
 
 
-def plot_max_RE():
-    reh = np.empty(nt + 1)
-    rew = np.empty(nt + 1)
-
-    for t in tqdm(range(nt+1)):
-        p, u, v, w, p_masked, w_masked = read_block(sim)
-        u = (u[:, 1:] + u[:, :-1]) / 2.
-        v = (v[1:, :] + v[:-1, :]) / 2.
-        reh[t] = np.amax(np.abs(u[~mask_corner.T]) + np.abs(v[~mask_corner.T])) * h * RE
-        rew[t] = np.amax(np.abs(w[~mask_corner.T])) * h * h * RE
-
+def plot_max_RE(compute=False):
     fig, ax = plt.subplots(1, 1, figsize=(10., 6.))
     fig.tight_layout()
-    ax.plot(sim.t, reh, marker=".", markersize=5, color='C0', label='RE_h')
-    ax.plot(sim.t, rew, marker=".", markersize=5, color='C1', label='RE_w')
+
+    if compute:
+        reh = np.empty(nt + 1)
+        rew = np.empty(nt + 1)
+        for t in tqdm(range(nt+1)):
+            u, v, w = read_block(sim, needed={"u": True, "v": True, "w": True})
+            u = (u[:, 1:] + u[:, :-1]) / 2.
+            v = (v[1:, :] + v[:-1, :]) / 2.
+            reh[t] = np.amax(np.abs(u[~mask_corner.T]) + np.abs(v[~mask_corner.T])) * h * RE
+            rew[t] = np.amax(np.abs(w[~mask_corner.T])) * h * h * RE
+
+        ax.plot(sim.t, reh, marker=".", markersize=5, color='C0', label='RE_h')
+        ax.plot(sim.t, rew, marker=".", markersize=5, color='C1', label='RE_w')
+
+    ax.plot(sim.t_simu, sim.reh, color='C0', label="Re_h")
+    ax.plot(sim.t_simu, sim.rew, color='C1', label="Re_w")
 
     ax.set_xlabel(r"$t U_{\infty} / H_{box}$", fontsize=ftSz2)
     ax.set_ylabel(r"$Re$", fontsize=ftSz2)
@@ -180,20 +184,43 @@ def compute_drag_lift(p, u, v):
 
     return drag_p, drag_f, lift_p, lift_f
 
-def plot_drag_lift():
-    drag_p, drag_f = np.zeros(nt+1), np.zeros(nt+1)
-    lift_p, lift_f = np.zeros(nt+1), np.zeros(nt+1)
-
-    for idx in tqdm(range(nt + 1)):
-        p, u, v, _, _, _ = read_block(sim)
-        drag1, drag2, lift1, lift2 = compute_drag_lift(p, u, v)
-        drag_p[idx], drag_f[idx] = drag1, drag2
-        lift_p[idx], lift_f[idx] = lift1, lift2
-
+def plot_drag_lift(compute=False):
     fig, axs = plt.subplots(2, 1, figsize=(10., 8.))
     fig.tight_layout()
-    axs[0].stackplot(sim.t, drag_p, drag_f, labels=['Pressure', 'Friction'])
-    axs[1].stackplot(sim.t, lift_p, lift_f, labels=['Pressure', 'Friction'])
+
+    # Using saved fields (not as good, because times sampled)
+    if compute:
+        drag_p, drag_f = np.zeros(nt+1), np.zeros(nt+1)
+        lift_p, lift_f = np.zeros(nt+1), np.zeros(nt+1)
+        
+        for idx in tqdm(range(nt + 1)):
+            p, u, v = read_block(sim, needed={"p": True, "u": True, "v": True})
+            drag1, drag2, lift1, lift2 = compute_drag_lift(p, u, v)
+            drag_p[idx], drag_f[idx] = 2*drag1, 2*drag2
+            lift_p[idx], lift_f[idx] = 2*lift1, 2*lift2
+        
+        axs[0].stackplot(sim.t, drag_p, drag_f, labels=['Pressure', 'Friction'])
+        axs[1].stackplot(sim.t, lift_p, lift_f, labels=['Pressure', 'Friction'])
+        axs[0].plot(sim.t, drag_p, 'o', color='C0', label='Pressure')
+        axs[0].plot(sim.t, drag_f, 'o', color='C1', label='Friction')
+        axs[0].plot(sim.t, drag_p+drag_f, 'o', color='black', label='Total')
+        axs[1].plot(sim.t, lift_p, 'o', color='C0', label='Pressure')
+        axs[1].plot(sim.t, lift_f, 'o', color='C1', label='Friction')
+        axs[1].plot(sim.t, lift_p+lift_f, 'o', color='black', label='Total')
+
+    st = 15
+    # drag_tot = sim.drag_p + sim.drag_f
+    # axs[0].plot(t_full, sim.drag_p[st:], color='C0', label='Pressure')
+    # axs[0].plot(t_full, sim.drag_f[st:], color='C1', label='Friction')
+    # axs[0].plot(t_full, drag_tot[st:], color='black', label='Total')
+    # lift_tot = sim.lift_p + sim.lift_f
+    # axs[1].plot(t_full, sim.lift_p[st:], color='C0', label='Pressure')
+    # axs[1].plot(t_full, sim.lift_f[st:], color='C1', label='Friction')
+    # axs[1].plot(t_full, lift_tot[st:], color='black', label='Total')
+
+    t_full = sim.t_simu[st:]
+    axs[0].stackplot(t_full, sim.drag_p[st:], sim.drag_f[st:], labels=['Pressure', 'Friction'])
+    axs[1].stackplot(t_full, sim.lift_p[st:], sim.lift_f[st:], labels=['Pressure', 'Friction'])
 
     axs[-1].set_xlabel(r"$t U_{\infty} / H_{box}$", fontsize=ftSz2)
     axs[0].set_ylabel(r"$Drag \;/\; (\rho U_{{\infty}}^2 H_{{box}}^2) $", fontsize=ftSz2)
@@ -209,6 +236,7 @@ def plot_drag_lift():
 # F / (rho U0^2 Hbox^2)
 
 
+
 if __name__ == "__main__":
 
     cmap1 = plt.get_cmap("coolwarm")
@@ -219,11 +247,13 @@ if __name__ == "__main__":
     path_anim = "../anim"
 
     filename_params = f"{path_dir}/simu_params.txt"
+    filename_stats = f"{path_dir}/simu_stats.txt"
     filename_p = f"{path_dir}/simu_p.txt"
     filename_u = f"{path_dir}/simu_u.txt"
     filename_v = f"{path_dir}/simu_v.txt"
+    filename_T = f"{path_dir}/simu_T.txt"
     
-    sim = Simulation([filename_params, filename_p, filename_u, filename_v])
+    sim = Simulation([filename_params, filename_p, filename_u, filename_v, filename_T, filename_stats])
 
     nt, nx, ny, n = sim.nt, sim.nx, sim.ny, sim.n
     T, h, L, H, din, dbot, lbox, RE = sim.T, sim.h, sim.L, sim.H, sim.din, sim.dbot, sim.lbox, sim.RE
@@ -239,7 +269,7 @@ if __name__ == "__main__":
     # CAN ONLY DO ONE AT A TIME
 
     # plot_vorticity([18., 19., 20.], cmap=cmap1)
-    # plot_streamlines([18., 19., 20.], cmap=cmap2)
-    # plot_average_flow(10., cmap2, cmap1)
+    # plot_streamlines([18., 19., 20.], cmap=cmap2)  # 0.2, 0.5, 1.
+    plot_average_flow(10., cmap2, cmap1)
     # plot_max_RE()
-    plot_drag_lift()
+    # plot_drag_lift()

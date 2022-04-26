@@ -6,7 +6,7 @@
 typedef struct {
     int m, n, size;
     double *a, *b, *c, *q;
-    double **Q_ux, **Q_uy, **Q_vx, **Q_vy;
+    double **Q_ux, **Q_vx, **Q_Tx;
 } ADI_data;
 
 

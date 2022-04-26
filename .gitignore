@@ -1,10 +1,17 @@
 hw
 cfd
 Project/lib_petsc
-Project/anim/**/*.png
-Project/anim/**/*.txt
+
 Project/data
 Project/results
+
+# Exclude animations (too heavy)
+Project/anim/**/*.txt
+Project/anim/**/*.png
+Project/anim/**/*.txt
+Project/anim/**/*.mp4
+Project/anim/**/*.html
+!case_1.html
 
 # Prerequisites
 *.d

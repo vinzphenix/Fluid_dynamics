@@ -93,7 +93,7 @@ int poisson_solver(Sim_data *sim, Poisson_data *data) {
 /*
 This function is called only once during the simulation, i.e. in initialize_poisson_solver.
 */
-void computeLaplacianMatrix_NO_IF(Sim_data *sim, Mat A, int rowStart, int rowEnd) {
+void computeLaplacianMatrixNOIF(Sim_data *sim, Mat A, int rowStart, int rowEnd) {
     int i, j, idx;
     int k = sim->ny;
     double alpha = sim->dt / (sim->h);

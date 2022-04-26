@@ -4,6 +4,7 @@
 
 char *myPath = "./results";
 char filename_params[50];
+char filename_stats[50];
 char filename_u[50];
 char filename_v[50];
 char filename_p[50];
@@ -12,6 +13,7 @@ char filename_T[50];
 
 void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input) {
     sprintf(filename_params, "%s/simu_params.txt", myPath);
+    sprintf(filename_stats, "%s/simu_stats.txt", myPath);
     sprintf(filename_u, "%s/simu_u.txt", myPath);
     sprintf(filename_v, "%s/simu_v.txt", myPath);
     sprintf(filename_p, "%s/simu_p.txt", myPath);
@@ -27,10 +29,12 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     // Time discretization
     // sim->dt = DT;
     // sim->tsim = TSIM;
+
+    double dtStable = fmin(FOURIER * RE * (sim->h) * (sim->h), CFL * sim->h / U0V0);
+
     sim->dt = dt_input;
     sim->tsim = tend_input;
     sim->nt = (int) ceil(sim->tsim / sim->dt);
-    double dtStable = fmin(FOURIER * RE * (sim->h) * (sim->h), CFL * sim->h / U0V0);
     printf("Current \u0394t = %.5lf  vs  %.5lf = \u0394t maximal\n", sim->dt, dtStable);
     
     sim->uMesh = 0.;
@@ -225,7 +229,7 @@ void save_fields(Sim_data *sim, int t) {
 
     if (t == 0) {
         ptr = fopen(filename_params, "w");
-        fprintf(ptr, "%d %d %d %d %d\n", sim->nt / SAVE_MODULO, sim->nx, sim->ny, sim->n, SAVE_MODULO);
+        fprintf(ptr, "%d %d %d %d %d\n", sim->nt, sim->nx, sim->ny, sim->n, SAVE_MODULO);
         fprintf(ptr, "%lf %lf %lf %lf %d %d %d %d %d\n", RE, sim->tsim, sim->dt, sim->h, L_, H_, LBOX, D_IN, D_BOT);
         fprintf(ptr, "%lf %lf %lf %lf %lf %lf %d\n", ALPHA, STROUHAL, SIWNG_START, KAPPA_Y, STROUHAL_Y, PERT_START, N_CYCLES);
         fprintf(ptr, "%d %lf %lf %lf %lf\n", TEMP_MODE, PR, GR, TMIN, TMAX);
@@ -257,11 +261,84 @@ void save_fields(Sim_data *sim, int t) {
     }
 #   endif
 
+    //close
     fclose(ptr_u);
     fclose(ptr_v);
     fclose(ptr_p);
     fclose(ptr_T);
  }
+
+
+void write_diagnostics(Sim_data *sim, int t) {
+    
+    int i, j, i1, i2, j1, j2;
+    double uij, vij, wij;
+    double reh = 0.;
+    double rew = 0.;
+    double drag_p = 0.;
+    double lift_p = 0.;
+    double drag_f = 0.;
+    double lift_f = 0.;
+
+
+    // Mesh reynolds numbers
+    for (i = 0; i < sim->nx+1; i++) {
+        for (j = 0; j < sim->ny+1; j++) {
+            uij = 0.5 * (sim->U[i][j+1] + sim->U[i][j]);
+            vij = 0.5 * (sim->V[i+1][j] + sim->V[i][j]);
+            reh = fmax(reh, fabs(uij) + fabs(vij));
+
+            wij = (sim->V[i+1][j] - sim->V[i][j]) - (sim->U[i][j+1] - sim->U[i][j]);
+            rew = fmax(rew, fabs(wij));
+        }
+    }
+
+    // Aerodynamic forces
+    i1 = D_IN * sim->n - 1;   i2 = (D_IN + LBOX) * sim->n;
+    j1 = D_BOT * sim->n - 1;  j2 = (D_BOT + 1) * sim->n;
+
+    j = j1;
+    drag_p += 0.5 * (sim->P[i1][j] - sim->P[i2][j]);
+    for (j++; j < j2; j++)
+        drag_p += sim->P[i1][j] - sim->P[i2][j];
+    drag_p += 0.5 * (sim->P[i1][j] - sim->P[i2][j]);
+
+    i = i1;
+    lift_p += 0.5 * (sim->P[i][j1] - sim->P[i][j2]);
+    for (i++; i < i2; i++)
+        lift_p += sim->P[i][j1] - sim->P[i][j2];
+    lift_p += 0.5 * (sim->P[i][j1] - sim->P[i][j2]);
+
+
+    i1 = D_IN * sim->n;   i2 = (D_IN + LBOX) * sim->n + 1;
+    j1 = D_BOT * sim->n;  j2 = (D_BOT + 1) * sim->n + 1;
+
+    j = j1;
+    lift_f += 0.5 * ((sim->V[i1][j] - sim->V[i1+1][j]) + (sim->V[i2][j] - sim->V[i2-1][j]));  // trapezoidal integration : first
+    for (j++; j < j2 - 1; j++)
+        lift_f += (sim->V[i1][j] - sim->V[i1+1][j]) + (sim->V[i2][j] - sim->V[i2-1][j]);      // [ -(dv/dx) left + (dv/dx) right ] * dy
+    lift_f += 0.5 * ((sim->V[i1][j] - sim->V[i1+1][j]) + (sim->V[i2][j] - sim->V[i2-1][j]));  // trapezoidal integration : last
+
+    i = i1;
+    drag_f += 0.5 * ((sim->U[i][j1] - sim->U[i][j1+1]) + (sim->U[i][j2] - sim->U[i][j2-1]));  // trapezoidal integration : first
+    for (i++; i < i2 - 1; i++)
+        drag_f += (sim->U[i][j1] - sim->U[i][j1+1]) + (sim->U[i][j2] - sim->U[i][j2-1]);      // [ -(du/dy) below + (du/dy) above ] * dx
+    drag_f += 0.5 * ((sim->U[i][j1] - sim->U[i][j1+1]) + (sim->U[i][j2] - sim->U[i][j2-1]));  // trapezoidal integration : last
+    
+    reh = reh * sim->h * RE;
+    rew = rew * sim->h * sim->h* RE;
+    drag_p = 2 * drag_p * sim->h;
+    drag_f = 2 * drag_f / RE;
+    lift_p = 2 * lift_p * sim->h;
+    lift_f = 2 * lift_f / RE;
+    // factor 2 because Cd = Fd / (0.5 * rho * u^2 * Hbox)
+    
+    FILE *ptr;
+    if (t == 0) ptr = fopen(filename_stats, "w");
+    else ptr = fopen(filename_stats, "a");
+    fprintf(ptr, "%le %le %le %le %le %le\n", reh, rew, drag_p, drag_f, lift_p, lift_f);
+    fclose(ptr);
+}
 
 
 void set_bd_conditions(Sim_data *sim, double **U, double **V) {
@@ -732,8 +809,8 @@ void swap_next_previous(Sim_data *sim) {
 }
 
 
-void set_mesh_velocity(Sim_data *sim) {
-    double t_now = sim->dt * sim->t;
+void set_mesh_velocity(Sim_data *sim, double t_now) {
+    // double t_now = sim->dt * sim->t;
     
     if (SIWNG_START < t_now) {
         sim->uMesh = ALPHA * sin(2. * M_PI * STROUHAL * (t_now - SIWNG_START));
@@ -755,42 +832,42 @@ void check_boundary(Sim_data *sim) {
     // set identity for upper and lower walls
     for (i = 0; i < sim->nx + 1; i++) {
         for (j = 0; j < sim->ny + 2; j += sim->ny+1) {
-            printf("u[%d][%d] = %lf \t us = %lf\n", i, j, sim->U[i][j], sim->US[i][j]);
+            printf("u[%d][%d] = %lf \t us = %lf --> Upper an lower\n", i, j, sim->U[i][j], sim->US[i][j]);
         }
     }
 
     // set identity for left and right walls
     for (j = 1; j < sim->ny + 1; j++) {
         for (i = 0; i < sim->nx+1; i += sim->nx) {
-            printf("u[%d][%d] = %lf \t us = %lf\n", i, j, sim->U[i][j], sim->US[i][j]);
+            printf("u[%d][%d] = %lf \t us = %lf --> Left and right\n", i, j, sim->U[i][j], sim->US[i][j]);
         }
     }
 
     // set identity for rectangle
     for (i = sim->n * D_IN; i < (D_IN + LBOX) * sim->n + 1; i++) {
         for (j = D_BOT * sim->n + 1; j < (D_BOT + 1) * sim->n + 1; j++) {
-            printf("u[%d][%d] = %lf \t us = %lf\n", i, j, sim->U[i][j], sim->US[i][j]);
+            printf("u[%d][%d] = %lf \t us = %lf --> Inside\n", i, j, sim->U[i][j], sim->US[i][j]);
         }
     }
 
     // set identity for upper and lower walls
     for (i = 0; i < sim->nx + 2; i++) {
         for (j = 0; j < sim->ny + 1; j += sim->ny) {
-            printf("v[%d][%d] = %lf \t vs = %lf\n", i, j, sim->V[i][j], sim->VS[i][j]);
+            printf("v[%d][%d] = %lf \t vs = %lf --> Upper an lower\n", i, j, sim->V[i][j], sim->VS[i][j]);
         }
     }
 
     // set identity for left and right walls
     for (j = 1; j < sim->ny; j++) {
         for (i = 0; i < sim->nx+2; i += sim->nx + 1) {
-            printf("v[%d][%d] = %lf \t vs = %lf\n", i, j, sim->V[i][j], sim->VS[i][j]);
+            printf("v[%d][%d] = %lf \t vs = %lf --> Left and right\n", i, j, sim->V[i][j], sim->VS[i][j]);
         }
     }
 
     // set identity for rectangle
     for (i = sim->n * D_IN + 1; i < (D_IN + LBOX) * sim->n + 1; i++) {
         for (j = D_BOT * sim->n; j < (D_BOT + 1) * sim->n + 1; j++) {
-            printf("v[%d][%d] = %lf \t vs = %lf\n", i, j, sim->V[i][j], sim->VS[i][j]);
+            printf("v[%d][%d] = %lf \t vs = %lf --> Inside\n", i, j, sim->V[i][j], sim->VS[i][j]);
         }
     }
 }

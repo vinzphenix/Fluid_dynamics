@@ -19,22 +19,26 @@
 // Oscillation parameters
 #define ALPHA 0.5           // Amplitude of the horizonatal oscillation VELOCITY
 #define STROUHAL (1. / 3.)  // Frequency of the horizontal oscillation
-#define SIWNG_START 20.    // Starting time of the horizontal oscillation
+#define SIWNG_START 200.    // Starting time of the horizontal oscillation
 
 #define KAPPA_Y 0.05       // Amplitude of the vertical perturbation POSITION
-#define STROUHAL_Y (1./3.)  // Frequency of the vertical perturbation
-#define PERT_START 20.0      // Starting time of the perturbation
+#define STROUHAL_Y (1./5.)  // Frequency of the vertical perturbation
+#define PERT_START 10.0      // Starting time of the perturbation
 #define N_CYCLES 1          // Duration of the perturbation
 
 // Temperature parameters
 #define NO_SLIP 0           // Walls at y = 0 and y = H
-#define TEMP_MODE 2         // Thermal mode, 0: no coupling, 1: external walls hot and cold, 2: rectangle heat source
-#define PR 2.              // Prandtl = nu / alpha
-#define GR 200000.         // Grashof = beta (T1-T0) g L^3 / nu^2  // 1000000
-#define NU 0.               // Nusselt
-#define EC 0.               // Eckert
-#define TMIN -1.            // Min temperature
-#define TMAX 0.75             // Max temperature
+#define TEMP_MODE 1         // Thermal mode 0: disabled, 1: enabled
+#define PR 0.7              // Prandtl = nu / alpha
+#define GR 500000.          // Grashof = beta (T1-T0) g L^3 / nu^2  // 1000000
+#define EC 0.02              // Eckert
+
+#define WALL_DIRICHLET 0         // external walls dirichlet (0: no flux, 1: dirichlet)
+#define BOX_LFT_RGT_DIRICHLET 0  // left and right sides of box dirichlet
+#define BOX_BOT_TOP_DIRICHLET 0  // top and bottom sides of box dirichlet
+#define TMIN -1.                 // Min temperature (upper external wall, upper wall of box)
+#define TMAX 1.                  // Max temperature (lower external wall, lower wall of box, lateral sides of box)
+
 
 // Code parameters
 #define USE_ADI 0           // 0: classic scheme, 1: solve using ADI method  // *boundary conditions ?

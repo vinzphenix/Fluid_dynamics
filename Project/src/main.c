@@ -18,7 +18,7 @@ void display_info(Sim_data *sim, char *mode) {
      RE = U0 Hbox / nu
     */
 
-    printf("\n =================================== \e[1mLMECA2660 project in CFD\e[0m ===================================\n");
+    printf("\n ==================================== \e[1mLMECA2660 project in CFD\e[0m ====================================\n");
     const char *adi_status = (USE_ADI == 1) ? "enabled" : "disabled";
     const char *tmp_status = (TEMP_MODE > 0) ? "enabled" : "disabled";
     printf("\e[1m       Re = %.0lf    dx = %.3lf    dt = %.4lf    T_simu = %.2lf   Temp %s   ADI %s \e[0m \n\n",

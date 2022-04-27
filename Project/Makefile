@@ -41,7 +41,7 @@ $(BIN_DIR) $(OBJ_DIR):
 
 clean:
 	@$(RM) -rv $(OBJ_DIR)
-	@$(RM) cfd
+	@$(RM) $(EXE)
 
 clean_txt:
 	rm results/simu_*.txt

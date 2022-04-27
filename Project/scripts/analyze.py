@@ -270,6 +270,6 @@ if __name__ == "__main__":
 
     # plot_vorticity([18., 19., 20.], cmap=cmap1)
     # plot_streamlines([18., 19., 20.], cmap=cmap2)  # 0.2, 0.5, 1.
-    plot_average_flow(10., cmap2, cmap1)
-    # plot_max_RE()
-    # plot_drag_lift()
+    # plot_average_flow(10., cmap2, cmap1)
+    plot_max_RE(compute=False)
+    plot_drag_lift(compute=False)

@@ -18,7 +18,7 @@ class Simulation:
         self.nt, self.nx, self.ny, self.n, self.save_modulo = params1
         self.RE, self.T, self.dt, self.h, self.L, self.H, self.lbox, self.din, self.dbot = params2
         self.alpha, self.st, self.swing_start, self.kappa_y, self.st_y, self.pert_start, self.n_cycles = params3
-        self.temperature, self.prandtl, self.grashof, self.tmin, self.tmax = params4
+        self.temperature, self.prandtl, self.grashof, self.eckert, self.tmin, self.tmax = params4
 
         self.df_p, self.df_u, self.df_v = dataframes[:3]
         self.df_T = dataframes[-1]
@@ -300,7 +300,7 @@ def modify_html(caseNb):
 
 if __name__ == "__main__":
 
-    kwargs = {"stream":True, "streak":False, "temperature": True}
+    kwargs = {"stream":True, "streak":False, "temperature": False}
 
     path_dir = "../results"
     path_anim = "../anim"
@@ -315,7 +315,7 @@ if __name__ == "__main__":
     sim = Simulation([filename_params, filename_p, filename_u, filename_v, filename_T, filename_stats])
     kwargs["temperature"] = bool(sim.temperature)
 
-    cmap1, cmap2, cmap3, cmap4 = "Spectral_r", "bwr", "RdBu_r", "turbo_r"  # Spectral_r
+    cmap1, cmap2, cmap3, cmap4 = "Spectral_r", "bwr", "RdBu_r", "turbo_r"  # OrRd
     nStreamLines, scaling, strm_lw, strm_color, strm_alpha = 20, 0.50, 1.25, "grey", 0.25
     nStreakLines, nParticles, strk_lw, strk_color, strk_alpha = 2, 500, 3., "grey", 0.5
 
@@ -337,19 +337,45 @@ if __name__ == "__main__":
     pmin, pmax = -2.75, 2.75
     # wmin, wmax = np.amin(w)/10., np.amax(w)/10.
     wmin, wmax = -25., 25.
-    # Tmin, Tmax = np.round(sim.tmin, 2), np.round(sim.tmax, 2)
-    Tmin, Tmax = -1., 1.
+    Tmin, Tmax = 0., 0.024
+    # print(Tmin, Tmax)
+    # Tmin, Tmax = -1., 1.
 
     # pressure and vorticity fields
     pressure = axs[0].imshow(np.zeros((nx, ny)), extent=(0, L, 0, H), vmin=pmin, vmax=pmax, cmap=cmap1, origin="lower")
     vorticity = axs[1].imshow(np.zeros((nx+1, ny+1)), extent=(0, L, 0, H), vmin=wmin, vmax=wmax, cmap=cmap2, origin="lower")
     cax_p, cax_w = make_colorbar_with_padding(axs[0]), make_colorbar_with_padding(axs[1])
     cbar_p, cbar_w = fig.colorbar(pressure, cax=cax_p), fig.colorbar(vorticity, cax=cax_w)
+    cax_p.set_ylabel(r"$\Delta p \: / \: \rho U^2$", fontsize=ftSz3)
+    cax_w.set_ylabel(r"$\omega \: H_{{box}} \: / \: U$", fontsize=ftSz3)
+    title_text = "$Re={:.0f}$".format(sim.RE)
+
+    title_fontsize = ftSz3
     if kwargs["temperature"]:
         temperature = axs[2].imshow(np.zeros((nx, ny)), extent=(0, L, 0, H), vmin=Tmin, vmax=Tmax, cmap=cmap3, origin="lower")
         cax_T = make_colorbar_with_padding(axs[2])
         cbar_T = fig.colorbar(temperature, cax=cax_T)
         cax_T.set_yticks([Tmin + i * (Tmax - Tmin) / (5. - 1.) for i in range(5)])
+        cax_T.set_ylabel(r"$(T - T_0)\: / \: \Delta T$", fontsize=ftSz3)
+
+        title_text += "    $Pr={:.1f}$".format(sim.prandtl)
+        title_fontsize *= 0.85
+        if sim.grashof > 0:
+            base10power_Gr = np.floor(np.log10(sim.grashof))
+            mantisse_Gr = sim.grashof / np.power(10, base10power_Gr)
+            title_text += "    $Gr={:.0f} \cdot 10^{{{:.0f}}}$".format(mantisse_Gr, base10power_Gr)
+        else:
+            title_text += "    $Gr=0$"
+
+        if sim.eckert > 0:
+            base10power_Ec = np.floor(np.log10(sim.eckert))
+            mantisse_Ec = sim.eckert / np.power(10, base10power_Ec)
+            title_text += "   $Ec={:.0f} \cdot 10^{{{:.0f}}}$".format(mantisse_Ec, base10power_Ec)
+
+    base10power_dt = np.floor(np.log10(sim.dt_simu))
+    mantisse_dt = sim.dt_simu / np.power(10, base10power_dt)
+    title_text += "    $h^* = {:.3f}$".format(sim.h) + "    $\Delta t^*= {:.1f}\cdot 10^{{{:.0f}}}$".format(mantisse_dt, base10power_dt)
+    axs[0].set_title(title_text, fontsize=title_fontsize)
 
     # streamlines and streaklines
     if kwargs["stream"]:
@@ -375,10 +401,10 @@ if __name__ == "__main__":
     # Time text
     position_text = (0.03,0.85) if n_plots == 3 else (0.02, 0.9)
     fontsize = ftSz2 * 0.9 if n_plots == 3 else ftSz2
-    time_str = "t = {:6.3f} [s]"
+    time_str = r"$t*$ = {:5.2f}"
     bbox_dic = dict(boxstyle="round", fc="wheat", ec="none", alpha=0.85)
     time_text = axs[0].text(*position_text, time_str.format(0), fontsize=fontsize, transform=axs[0].transAxes, bbox=bbox_dic)
-
+    
 
     ##############################################################################################
     ###################################  -  SAVE & DISPLAY  -  ###################################
@@ -389,7 +415,7 @@ if __name__ == "__main__":
     save = "html"
 
     if save == "none":
-        anim = FuncAnimation(fig, update, tqdm(range(nt+1)), interval=10, blit=False, init_func=lambda :None, repeat=False)
+        anim = FuncAnimation(fig, update, tqdm(range(nt//10+1)), interval=10, blit=False, init_func=lambda :None, repeat=False)
         plt.show()
     
     elif save == "gif":
@@ -403,7 +429,7 @@ if __name__ == "__main__":
         anim.save(f"{path_anim}/flow.mp4", writer=writerMP4)
 
     elif save == "html":
-        caseNb = 5
+        caseNb = 10
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
         for t in tqdm(range(nt + 1)):
             update(t)

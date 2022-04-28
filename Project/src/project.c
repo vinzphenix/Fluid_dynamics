@@ -11,7 +11,7 @@ char filename_p[50];
 char filename_T[50];
 
 
-void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input) {
+void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input, int save_modulo_input) {
     sprintf(filename_params, "%s/simu_params.txt", myPath);
     sprintf(filename_stats, "%s/simu_stats.txt", myPath);
     sprintf(filename_u, "%s/simu_u.txt", myPath);
@@ -20,23 +20,21 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sprintf(filename_T, "%s/simu_T.txt", myPath);
 
     // Space discretization
-    // sim->n = N_;
     sim->n = n_input;
     sim->nx = L_ * sim->n;
     sim->ny = H_ * sim->n;
     sim->h = 1. / ((double) sim->n);
 
     // Time discretization
-    // sim->dt = DT;
-    // sim->tsim = TSIM;
-
     double dtStable = fmin(FOURIER * RE * (sim->h) * (sim->h), CFL * sim->h / U0V0);
-
     sim->dt = dt_input;
     sim->tsim = tend_input;
     sim->nt = (int) ceil(sim->tsim / sim->dt);
     printf("Current \u0394t = %.5lf  vs  %.5lf = \u0394t maximal\n", sim->dt, dtStable);
+
+    sim->save_modulo = save_modulo_input;
     
+    // Obstacle initially not moving
     sim->uMesh = 0.;
     sim->vMesh = 0.;
 
@@ -232,7 +230,7 @@ void save_fields(Sim_data *sim, int t) {
 
     if (t == 0) {
         ptr = fopen(filename_params, "w");
-        fprintf(ptr, "%d %d %d %d %d\n", sim->nt, sim->nx, sim->ny, sim->n, SAVE_MODULO);
+        fprintf(ptr, "%d %d %d %d %d\n", sim->nt, sim->nx, sim->ny, sim->n, sim->save_modulo);
         fprintf(ptr, "%lf %lf %lf %lf %d %d %d %d %d\n", RE, sim->tsim, sim->dt, sim->h, L_, H_, LBOX, D_IN, D_BOT);
         fprintf(ptr, "%lf %lf %lf %lf %lf %lf %d\n", ALPHA, STROUHAL, SIWNG_START, KAPPA_Y, STROUHAL_Y, PERT_START, N_CYCLES);
         fprintf(ptr, "%d %lf %lf %lf %lf %lf\n", TEMP_MODE, PR, GR, EC, TMIN, TMAX);
@@ -344,7 +342,7 @@ void write_diagnostics(Sim_data *sim, int t) {
 }
 
 
-void set_bd_conditions(Sim_data *sim, double **U, double **V) {
+void set_bd_conditions(Sim_data *sim) {
     int i, j;
     double coef;
     
@@ -357,34 +355,44 @@ void set_bd_conditions(Sim_data *sim, double **U, double **V) {
     i = sim->nx;
     coef = sim->dt / sim->h * (1. - sim->uMesh);
     for (j = 1; j <= sim->ny; j++) {  // u is advected at velocity (1 - uMesh)
-        U[i][j] -= coef * (sim->U[i][j] - sim->U[i-1][j]);
+        sim->US[i][j] = sim->U[i][j] - coef * (sim->U[i][j] - sim->U[i-1][j]);
+        sim->U[i][j] = sim->US[i][j];
     }
 
 #   if NO_SLIP  // if slip: v=0 at all times
     // Channel walls: condition for v
     for (i = 0; i < sim->nx + 2; i++) { // no-through flow
-        V[i][0] = sim->vMesh;             // below
-        V[i][sim->ny] = sim->vMesh;       // above
+        sim->VS[i][0] = sim->vMesh;             // below
+        sim->VS[i][sim->ny] = sim->vMesh;       // above
+        
+        sim->V[i]][0] = sim->VS[i][0];
+        sim->V[i][sim->ny] = sim->VS[i][sim->ny];
     }
 #   endif
 
 
     i = D_IN * sim->n;  // Left wall of rectangle (u)
-    for (j = D_BOT * sim->n + 1; j <= (D_BOT + 1) * sim->n; j++)
-        U[i][j] = sim->uMesh;
+    for (j = D_BOT * sim->n + 1; j <= (D_BOT + 1) * sim->n; j++) {
+        sim->US[i][j] = sim->uMesh;
+        sim->U[i][j] = sim->US[i][j];
+    }
     
     i = (D_IN + LBOX) * sim->n; // Right wall of rectangle (u)
-    for (j = D_BOT * sim->n + 1; j <= (D_BOT + 1) * sim->n; j++)
-        U[i][j] = sim->uMesh;
+    for (j = D_BOT * sim->n + 1; j <= (D_BOT + 1) * sim->n; j++) {
+        sim->US[i][j] = sim->uMesh;
+        sim->U[i][j] = sim->US[i][j];
+    }
 
 
     for (i = D_IN * sim->n + 1; i < (D_IN + LBOX) * sim->n; i++) {                
         
         j = D_BOT * sim->n;  // lower wall of the rectangle
-        V[i][j] = sim->vMesh;
+        sim->VS[i][j] = sim->vMesh;
+        sim->V[i][j] = sim->VS[i][j];
 
         j = (D_BOT + 1) * sim->n;  // upper wall of the rectangle
-        V[i][j] = sim->vMesh;
+        sim->VS[i][j] = sim->vMesh;
+        sim->V[i][j] = sim->VS[i][j];
     }
 }
 
@@ -417,12 +425,13 @@ void set_ghost_points(Sim_data *sim) {
     
     // Outflow boundary condition for v
     // write into VS, and then copy back into V to avoid using updated values V(n+1) in the computation of V(n+1)
-    i = sim->nx;
-    coef = sim->dt / sim->h * (1. - sim->uMesh);
+    i = sim->nx;  // before last i_index of v_ij
+    coef = sim->dt * (1. - sim->uMesh);
     for (j = 1; j < sim->ny; j++) {
-        w_last = (sim->V[i+1][j] - sim->V[i  ][j]) - (sim->U[i  ][j+1] - sim->U[i  ][j]);
-        w_left = (sim->V[i  ][j] - sim->V[i-1][j]) - (sim->U[i-1][j+1] - sim->U[i-1][j]);
-        sim->VS[i+1][j] = (sim->V[i][j] + sim->U[i][j+1] - sim->U[i][j]) + w_last - coef * (w_last - w_left);
+        w_last = ((sim->V[i+1][j] - sim->V[i  ][j]) - (sim->U[i  ][j+1] - sim->U[i  ][j])) / sim->h;
+        w_left = ((sim->V[i  ][j] - sim->V[i-1][j]) - (sim->U[i-1][j+1] - sim->U[i-1][j])) / sim->h;
+        sim->VS[i+1][j] = (sim->V[i][j] + sim->U[i][j+1] - sim->U[i][j]) + sim->h * w_last - coef * (w_last - w_left);
+        // [(sim->VS[i+1][j] - sim->V[i][j]) - (sim->U[i][j+1] - sim->U[i][j])/h - w_last ]/dt = -uc * (w_last - w_left) / dx;
     }
     for (j = 1; j < sim->ny; j++) {
         sim->V[i+1][j] = sim->VS[i+1][j];
@@ -643,7 +652,7 @@ void predictor_step(Sim_data *sim) {
 
     double coef_1 = (sim->t == 0) ? -1. : -1.5;
     double coef_2 = (sim->t == 0) ? +0. : +0.5;
-    double alpha = 1. / (RE * sim->h * sim->h);
+    double nu_h2 = 1. / (RE * sim->h * sim->h);
 #   if TEMP_MODE
     double beta = 0.5 * GR / (RE * RE);  // 0.5 here to prepare the average in the "for" loop
 #   endif
@@ -663,7 +672,7 @@ void predictor_step(Sim_data *sim) {
                 sim->US[i][j] = U[i][j] + sim->dt * (
                     + coef_1 * sim->HX[i][j] + coef_2 * sim->HX_[i][j]                     // Convection
                     - (sim->P[i][j-1] - sim->P[i-1][j-1]) * sim->n                         // Pressure gradient
-                    + alpha * (U[i+1][j] + U[i-1][j] - 4*U[i][j] + U[i][j+1] + U[i][j-1])  // Diffusion
+                    + nu_h2 * (U[i+1][j] + U[i-1][j] - 4*U[i][j] + U[i][j+1] + U[i][j-1])  // Diffusion
                 );
             }
         }
@@ -682,9 +691,9 @@ void predictor_step(Sim_data *sim) {
                 sim->VS[i][j] = V[i][j] + sim->dt * (
                     + coef_1 * sim->HY[i][j] + coef_2 * sim->HY_[i][j]                    // Convection
                     - (sim->P[i-1][j] - sim->P[i-1][j-1]) * sim->n                        // Pressure gradient
-                    + alpha * (V[i+1][j] + V[i-1][j] - 4*V[i][j] + V[i][j+1] + V[i][j-1]) // Diffusion
+                    + nu_h2 * (V[i+1][j] + V[i-1][j] - 4*V[i][j] + V[i][j+1] + V[i][j-1]) // Diffusion
 #                   if TEMP_MODE
-                    + beta * (sim->T[i][j+1] + sim->T[i][j])  // AVG(T above, T below)
+                    + beta * (sim->T[i][j+1] + sim->T[i][j])  // AVG(T above, T below)  // + sign because g has negative y component
 #                   endif
                 );
             }

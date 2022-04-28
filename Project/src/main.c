@@ -59,9 +59,9 @@ void printProgress(double percentage, int res, int t, int nt, double dt, int nde
     // seconds = seconds % 60;
 
     double seconds = fmod(exec_time, 60.);
-    double minutes = exec_time / 60.;
+    double minutes = floor(exec_time / 60.);
     double s_left = fmod(time_left, 60.);
-    double m_left = time_left / 60.;
+    double m_left = floor(time_left / 60.);
 
     // printf("\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    %*d/%*d   t_sim = %*.3lf s     \e[92m[%02dh%02d:%02d\e[0m",
     //        val, lpad, PBSTR, rpad, "", res, ndec1, t, ndec1, nt, ndec2+4, (double) t * dt, hours, minutes, seconds);
@@ -103,8 +103,7 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
         // UPDATE TIME AND BOUNDARY CONDITIONS
         sim->t = sim->t + 1;
         set_mesh_velocity(sim, sim->t * sim->dt);
-        set_bd_conditions(sim, sim->U, sim->V);   // sets u and v at t=(n+1)  # no influence on corrector step
-        set_bd_conditions(sim, sim->US, sim->VS);
+        set_bd_conditions(sim);   // sets u and v at t=(n+1)  # no influence on corrector step
         set_ghost_points(sim);
 #       if TEMP_MODE
         set_boundary_temperature(sim);
@@ -128,7 +127,7 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
         if (sim->t == 1) clock_gettime(CLOCK_REALTIME, &start_exec);  // don't take first iteration into account, since much much longer
         printProgress((double) sim->t / (double) sim->nt, nIterations, sim->t, sim->nt, sim->dt, ndec1, ndec2, start_exec);
         write_diagnostics(sim, sim->t);
-        if ((sim->t % SAVE_MODULO == 0) && (SAVE)) {
+        if ((sim->t % sim->save_modulo == 0) && (SAVE)) {
             save_fields(sim, sim->t);
         }
     }
@@ -145,6 +144,7 @@ int main(int argc, char *argv[]){
     int n = 40;
     double dt = 0.002;
     double tend = 10.;
+    int save_every = 50;
     double tmp2;
 
     char *endptr;
@@ -177,14 +177,24 @@ int main(int argc, char *argv[]){
                 printf("Could not read value for parameter [tend]. It was set to 10 by default.\n");
                 tend = 10.;
             }
-        } 
+        } else if (strcmp(argv[i], "-save") == 0) {
+            if (argc > i+1) tmp1 = (int) strtol(argv[i+1], &endptr, 10);
+            if ((argc > i+1) && (*endptr == '\0')) {
+                i++;
+                save_every = tmp1;
+            } else {
+                printf("Could not read value for parameter [save]. It was set to 50 by default.\n");
+                save_every = 50;
+            }
+
+        }
     }
 
     int argc_petsc = 3;
     PetscInitialize(&argc_petsc, &argv, 0, 0);
 
     Sim_data *simulation = (Sim_data *)malloc(sizeof(Sim_data));
-    init_Sim_data(simulation, n, dt, tend);
+    init_Sim_data(simulation, n, dt, tend, save_every);
     init_fields(simulation);
 
     clock_t start = clock();

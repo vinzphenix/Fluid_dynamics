@@ -223,8 +223,10 @@ def plot_drag_lift(compute=False):
     axs[1].stackplot(t_full, sim.lift_p[st:], sim.lift_f[st:], labels=['Pressure', 'Friction'])
 
     axs[-1].set_xlabel(r"$t U_{\infty} / H_{box}$", fontsize=ftSz2)
-    axs[0].set_ylabel(r"$Drag \;/\; (\rho U_{{\infty}}^2 H_{{box}}^2) $", fontsize=ftSz2)
-    axs[1].set_ylabel(r"$Lift \;/\; (\rho U_{{\infty}}^2 H_{{box}}^2) $", fontsize=ftSz2)
+    axs[0].set_ylabel(r"$C_d$", fontsize=ftSz2)
+    axs[1].set_ylabel(r"$C_l$", fontsize=ftSz2)
+    # axs[0].set_ylabel(r"$Drag \;/\; (\rho U_{{\infty}}^2 H_{{box}}^2) $", fontsize=ftSz2)
+    # axs[1].set_ylabel(r"$Lift \;/\; (\rho U_{{\infty}}^2 H_{{box}}^2) $", fontsize=ftSz2)
     for ax in axs:
         ax.legend(fontsize=ftSz3)
         ax.grid(ls=':')

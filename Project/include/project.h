@@ -8,27 +8,24 @@
 #include <time.h>
 
 
-// #define N_ 40
-// #define NT 400
-// #define DT 0.002
-// #define TSIM 10.           // Final time of the simulation
-
 // Simulation parameters
 #define RE 500.            // Reynolds number of the simulation
+
 
 // Oscillation parameters
 #define ALPHA 0.5           // Amplitude of the horizonatal oscillation VELOCITY
 #define STROUHAL (1. / 3.)  // Frequency of the horizontal oscillation
-#define SIWNG_START 200.    // Starting time of the horizontal oscillation
+#define SIWNG_START 100.    // Starting time of the horizontal oscillation
 
 #define KAPPA_Y 0.05       // Amplitude of the vertical perturbation POSITION
-#define STROUHAL_Y (1./5.)  // Frequency of the vertical perturbation
-#define PERT_START 10.0      // Starting time of the perturbation
+#define STROUHAL_Y (1./3.)  // Frequency of the vertical perturbation
+#define PERT_START 100.      // Starting time of the perturbation
 #define N_CYCLES 1          // Duration of the perturbation
+
 
 // Temperature parameters
 #define NO_SLIP 0           // Walls at y = 0 and y = H
-#define TEMP_MODE 1         // Thermal mode 0: disabled, 1: enabled
+#define TEMP_MODE 0         // Thermal mode 0: disabled, 1: enabled
 #define PR 0.7              // Prandtl = nu / alpha
 #define GR 500000.          // Grashof = beta (T1-T0) g L^3 / nu^2  // 1000000
 #define EC 0.02              // Eckert
@@ -44,7 +41,7 @@
 #define USE_ADI 0           // 0: classic scheme, 1: solve using ADI method  // *boundary conditions ?
 #define CONVECTION_MODE 2   // 0: advective form, 1: divergence form, 2: average of both
 #define SAVE 1              // 1 to save, 0 otherwise
-#define SAVE_MODULO 50      // save results every ... iteration
+// #define SAVE_MODULO 50      // save results every ... iteration
 
 // Box measurements
 #define L_ 15
@@ -61,6 +58,8 @@
 
 #define TEST_POISSON 0
 #define FMT "%.5le\n"
+
+// Progress bar
 #define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
 #define PBWIDTH 60
 
@@ -71,6 +70,7 @@ typedef struct {
     int i_start[12], i_final[12], j_start[12], j_final[12];
     double h, dt, tsim;
     double uMesh, vMesh;
+    int save_modulo;
     
     double *u_data, *v_data, *p_data, *T_data;
     double **U, **US, **HX, **HX_;
@@ -80,14 +80,14 @@ typedef struct {
 } Sim_data;
 
 
-void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input);
+void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input, int save_modulo_input);
 void init_fields(Sim_data *sim);
 void save_fields(Sim_data *sim, int t);
 void write_diagnostics(Sim_data *sim, int t);
 void free_Sim_data(Sim_data *sim);
 void check_boundary(Sim_data *sim);
 
-void set_bd_conditions(Sim_data *sim, double **U, double **V);
+void set_bd_conditions(Sim_data *sim);
 void set_ghost_points(Sim_data *sim);
 void set_boundary_temperature(Sim_data *sim);
 

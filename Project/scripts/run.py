@@ -316,7 +316,7 @@ if __name__ == "__main__":
     kwargs["temperature"] = bool(sim.temperature)
 
     cmap1, cmap2, cmap3, cmap4 = "Spectral_r", "bwr", "RdBu_r", "turbo_r"  # OrRd
-    nStreamLines, scaling, strm_lw, strm_color, strm_alpha = 20, 0.50, 1.25, "grey", 0.25
+    nStreamLines, scaling, strm_lw, strm_color, strm_alpha = 22, 0.60, 1.25, "grey", 0.25
     nStreakLines, nParticles, strk_lw, strk_color, strk_alpha = 2, 500, 3., "grey", 0.5
 
     # Fields
@@ -429,7 +429,7 @@ if __name__ == "__main__":
         anim.save(f"{path_anim}/flow.mp4", writer=writerMP4)
 
     elif save == "html":
-        caseNb = 10
+        caseNb = 2
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
         for t in tqdm(range(nt + 1)):
             update(t)

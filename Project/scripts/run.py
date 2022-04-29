@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import os
 
 from tqdm import tqdm
 from scipy.interpolate import RegularGridInterpolator
@@ -8,6 +9,10 @@ from time import perf_counter
 from matplotlib.animation import FuncAnimation, PillowWriter, FFMpegWriter
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+ftSz1, ftSz2, ftSz3 = 20, 17, 15
+plt.rcParams['font.family'] = 'monospace'
+
 
 class Simulation:
 
@@ -17,7 +22,7 @@ class Simulation:
 
         self.nt, self.nx, self.ny, self.n, self.save_modulo = params1
         self.RE, self.T, self.dt, self.h, self.L, self.H, self.lbox, self.din, self.dbot = params2
-        self.alpha, self.st, self.swing_start, self.kappa_y, self.st_y, self.pert_start, self.n_cycles = params3
+        self.alpha, self.st, self.swing_start, self.kappa_y, self.st_y, self.pert_start, self.smooth, self.n_cycles = params3
         self.temperature, self.prandtl, self.grashof, self.eckert, self.tmin, self.tmax = params4
 
         self.df_p, self.df_u, self.df_v = dataframes[:3]
@@ -36,9 +41,12 @@ class Simulation:
         self.pert_dt = self.n_cycles / self.st_y
 
         self.delta_x = self.kappa * (1. - np.cos(2. * np.pi * self.st * (self.t - self.swing_start)))
-        self.delta_y = self.kappa_y * (1. - np.cos(2. * np.pi * self.st_y * (self.t - self.pert_start)))    
         self.u_mesh = self.alpha * np.sin(2. * np.pi * self.st * (self.t - self.swing_start))
-        self.v_mesh = self.alpha_y * np.sin(2. * np.pi * self.st_y * (self.t - self.pert_start))
+        
+        g1 = np.exp((self.pert_start - self.t) / self.smooth)
+        g2 = np.exp((self.t - self.pert_start - self.pert_dt) / self.smooth)
+        self.delta_y = self.kappa_y * (1. - np.cos(2. * np.pi * self.st_y * (self.t - self.pert_start))) * (1. - g1) * (1. - g2)
+        self.v_mesh = self.alpha_y * np.sin(2. * np.pi * self.st_y * (self.t - self.pert_start)) * g1 / self.smooth * (-g2) / self.smooth
 
         self.delta_x[self.t < self.swing_start] = 0.
         self.delta_y[~((self.pert_start < self.t) * (self.t < self.pert_start + self.pert_dt))] = 0.
@@ -59,17 +67,6 @@ class Simulation:
         self.drag_f = diagnostics[:, 3]
         self.lift_p = diagnostics[:, 4]
         self.lift_f = diagnostics[:, 5]
-
-
-ftSz1, ftSz2, ftSz3 = 20, 17, 15
-plt.rcParams['font.family'] = 'monospace'
-
-# path_dir = "../results"
-# path_anim = "../anim"
-# filename_params = f"{path_dir}/simu_params.txt"
-# filename_p = f"{path_dir}/simu_p.txt"
-# filename_u = f"{path_dir}/simu_u.txt"
-# filename_v = f"{path_dir}/simu_v.txt"
 
 
 def read_data_init(filenames):
@@ -198,7 +195,6 @@ def find_all_bounds(filename_p, filename_u, filename_v):
         res[2] = bounds_v
     
     print("\rComputing bounds finished")
-    # bounds_w = find_bounds(f"{path_dir}/simu_w.txt")
     return res
 
 
@@ -284,13 +280,13 @@ def make_colorbar_with_padding(ax):
     return(cax) 
 
 
-def modify_html(caseNb):
-    html_filename = f"{path_anim}/case_{caseNb:d}.html"
+def modify_html():
+    html_filename = f"{path_anim:s}.html"
     line_nb = 152
     with open(html_filename, "r") as f:
         html_lines = f.readlines()
         old_line = html_lines[line_nb]
-        new_line = f"  call({caseNb:d}, {sim.nt+1:d})\n"
+        new_line = f"  call('{case_name:s}', {sim.nt+1:d})\n"
         html_lines[line_nb] = new_line
 
     with open(html_filename, "w") as f:
@@ -301,16 +297,17 @@ def modify_html(caseNb):
 if __name__ == "__main__":
 
     kwargs = {"stream":True, "streak":False, "temperature": False}
+    
+    case_name = "vertical"  # case_1
+    path_res = "../results/" + case_name
+    path_anim = "../anim/" + case_name
 
-    path_dir = "../results"
-    path_anim = "../anim"
-
-    filename_params = f"{path_dir}/simu_params.txt"
-    filename_p = f"{path_dir}/simu_p.txt"
-    filename_u = f"{path_dir}/simu_u.txt"
-    filename_v = f"{path_dir}/simu_v.txt"
-    filename_T = f"{path_dir}/simu_T.txt"
-    filename_stats = f"{path_dir}/simu_stats.txt"
+    filename_params = f"{path_res}/simu_params.txt"
+    filename_p = f"{path_res}/simu_p.txt"
+    filename_u = f"{path_res}/simu_u.txt"
+    filename_v = f"{path_res}/simu_v.txt"
+    filename_T = f"{path_res}/simu_T.txt"
+    filename_stats = f"{path_res}/simu_stats.txt"
 
     sim = Simulation([filename_params, filename_p, filename_u, filename_v, filename_T, filename_stats])
     kwargs["temperature"] = bool(sim.temperature)
@@ -429,10 +426,12 @@ if __name__ == "__main__":
         anim.save(f"{path_anim}/flow.mp4", writer=writerMP4)
 
     elif save == "html":
-        caseNb = 2
+        # path_frames = f"{path_anim}/{case_name:s}/"
+        os.makedirs(path_anim + "/", exist_ok=True)
+
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
         for t in tqdm(range(nt + 1)):
             update(t)
-            fig.savefig(f"{path_anim}/case_{caseNb:d}/frame_{t:05d}.png", format="png", bbox_inches='tight', pad_inches=0.02)
+            fig.savefig(f"{path_anim:s}/frame_{t:05d}.png", format="png", bbox_inches='tight', pad_inches=0.02)
         
-        modify_html(caseNb)
+        modify_html()

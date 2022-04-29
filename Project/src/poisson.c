@@ -269,7 +269,7 @@ void computeLaplacianMatrix(Sim_data *sim, Mat A, int rowStart, int rowEnd) {
     One point from Phi must then be set to an abritrary constant.*/
     MatSetValue(A, 0, 1, 0., INSERT_VALUES);
     MatSetValue(A, 0, k, 0., INSERT_VALUES);
-    MatSetValue(A, 0, 0, 1., INSERT_VALUES);
+    MatSetValue(A, 0, 0, alpha, INSERT_VALUES);
 }
 
 /*To call during the initialization of your solver, before the begin of the time loop*/

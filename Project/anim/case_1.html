@@ -132,7 +132,7 @@ css/font-awesome.min.css">
   /* Instantiate the Animation class. */
   /* The IDs given should match those used in the template above. */
   // number = 1;
-  function call(number, size) {
+  function call(case_name, size) {
     var img_id = "_anim_imgebc3dd08825141768f701dd7e94b3871";
     var slider_id = "_anim_sliderebc3dd08825141768f701dd7e94b3871";
     var loop_select_id = "_anim_loop_selectebc3dd08825141768f701dd7e94b3871";
@@ -140,7 +140,7 @@ css/font-awesome.min.css">
     var frames = new Array(size);
 
     for (var i = 0; i < size; i++) {
-      frames[i] = `case_${number}/frame_` + ("00000" + i).slice(-5) + ".png";
+      frames[i] = case_name + "/frame_" + ("00000" + i).slice(-5) + ".png";
     }
 
 
@@ -150,7 +150,7 @@ css/font-awesome.min.css">
       animebc3dd08825141768f701dd7e94b3871 = new Animation(frames, img_id, slider_id, 50, loop_select_id);
     }, 0);
   }
-  call(1, 501)
+  call("case_1/", 501)
 </script>
 
 <div class="animation" align="center">

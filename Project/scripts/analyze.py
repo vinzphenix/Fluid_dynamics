@@ -245,15 +245,14 @@ if __name__ == "__main__":
     cmap2 = plt.get_cmap("bwr")
     cmap3 = plt.get_cmap("Spectral_r")
 
-    path_dir = "../results"
-    path_anim = "../anim"
+    path_res = "../results/" + "vertical"
 
-    filename_params = f"{path_dir}/simu_params.txt"
-    filename_stats = f"{path_dir}/simu_stats.txt"
-    filename_p = f"{path_dir}/simu_p.txt"
-    filename_u = f"{path_dir}/simu_u.txt"
-    filename_v = f"{path_dir}/simu_v.txt"
-    filename_T = f"{path_dir}/simu_T.txt"
+    filename_params = f"{path_res}/simu_params.txt"
+    filename_stats = f"{path_res}/simu_stats.txt"
+    filename_p = f"{path_res}/simu_p.txt"
+    filename_u = f"{path_res}/simu_u.txt"
+    filename_v = f"{path_res}/simu_v.txt"
+    filename_T = f"{path_res}/simu_T.txt"
     
     sim = Simulation([filename_params, filename_p, filename_u, filename_v, filename_T, filename_stats])
 

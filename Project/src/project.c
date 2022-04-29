@@ -2,22 +2,25 @@
 #include "project.h"
 #include "adi.h"
 
-char *myPath = "./results";
 char filename_params[50];
 char filename_stats[50];
 char filename_u[50];
 char filename_v[50];
 char filename_p[50];
 char filename_T[50];
+char filename_u_avg[50];
+char filename_v_avg[50];
 
+void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input, int save_modulo_input, const char *myPath) {
 
-void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input, int save_modulo_input) {
-    sprintf(filename_params, "%s/simu_params.txt", myPath);
-    sprintf(filename_stats, "%s/simu_stats.txt", myPath);
-    sprintf(filename_u, "%s/simu_u.txt", myPath);
-    sprintf(filename_v, "%s/simu_v.txt", myPath);
-    sprintf(filename_p, "%s/simu_p.txt", myPath);
-    sprintf(filename_T, "%s/simu_T.txt", myPath);
+    sprintf(filename_params, "%ssimu_params.txt", myPath);
+    sprintf(filename_stats, "%ssimu_stats.txt", myPath);
+    sprintf(filename_u, "%ssimu_u.txt", myPath);
+    sprintf(filename_v, "%ssimu_v.txt", myPath);
+    sprintf(filename_p, "%ssimu_p.txt", myPath);
+    sprintf(filename_T, "%ssimu_T.txt", myPath);
+    sprintf(filename_u_avg, "%ssimu_u_avg.txt", myPath);
+    sprintf(filename_v_avg, "%ssimu_v_avg.txt", myPath);
 
     // Space discretization
     sim->n = n_input;
@@ -27,7 +30,7 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
 
     // Time discretization
     double dtStable = fmin(FOURIER * RE * (sim->h) * (sim->h), CFL * sim->h / U0V0);
-    sim->dt = dt_input;
+    sim->dt = (dt_input == 0.) ? dtStable : dt_input;
     sim->tsim = tend_input;
     sim->nt = (int) ceil(sim->tsim / sim->dt);
     printf("Current \u0394t = %.5lf  vs  %.5lf = \u0394t maximal\n", sim->dt, dtStable);
@@ -48,10 +51,9 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sim->size_T = size_T;
     
 
-    int n_vectors = 4;
-
     // Allocate u and set matrix access
-    sim->u_data = (double *)calloc(n_vectors * size_u, sizeof(double));
+    sim->u_data = (double *)calloc(5 * size_u, sizeof(double));
+    sim->u_avg = sim->u_data + 4 * size_u;
 
     sim->U = (double **)malloc(4*(sim->nx + 1) * sizeof(double *));
     sim->US  = sim->U + 1 * (sim->nx + 1);
@@ -67,7 +69,8 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
 
 
     // Allocate v and set matrix access
-    sim->v_data = (double *)calloc(n_vectors * size_v, sizeof(double));
+    sim->v_data = (double *)calloc(5 * size_v, sizeof(double));
+    sim->v_avg = sim->v_data + 4 * size_v;
     
     sim->V = (double **)malloc(4 * (sim->nx + 2) * sizeof(double *));
     sim->VS  = sim->V + 1 * (sim->nx + 2);
@@ -231,9 +234,9 @@ void save_fields(Sim_data *sim, int t) {
     if (t == 0) {
         ptr = fopen(filename_params, "w");
         fprintf(ptr, "%d %d %d %d %d\n", sim->nt, sim->nx, sim->ny, sim->n, sim->save_modulo);
-        fprintf(ptr, "%lf %lf %lf %lf %d %d %d %d %d\n", RE, sim->tsim, sim->dt, sim->h, L_, H_, LBOX, D_IN, D_BOT);
-        fprintf(ptr, "%lf %lf %lf %lf %lf %lf %d\n", ALPHA, STROUHAL, SIWNG_START, KAPPA_Y, STROUHAL_Y, PERT_START, N_CYCLES);
-        fprintf(ptr, "%d %lf %lf %lf %lf %lf\n", TEMP_MODE, PR, GR, EC, TMIN, TMAX);
+        fprintf(ptr, "%le %le %.10le %le %d %d %d %d %d\n", RE, sim->tsim, sim->dt, sim->h, L_, H_, LBOX, D_IN, D_BOT);
+        fprintf(ptr, "%le %le %le %le %le %le %le %d\n", ALPHA, STROUHAL, SIWNG_START, KAPPA_Y, STROUHAL_Y, PERT_START, SMOOTH, N_CYCLES);
+        fprintf(ptr, "%d %le %le %le %le %le\n", TEMP_MODE, PR, GR, EC, TMIN, TMAX);
         fclose(ptr);
     }
     
@@ -270,7 +273,7 @@ void save_fields(Sim_data *sim, int t) {
  }
 
 
-void write_diagnostics(Sim_data *sim, int t) {
+void compute_diagnostics(Sim_data *sim, int t) {
     
     int i, j, i1, i2, j1, j2;
     double uij, vij, wij;
@@ -280,6 +283,21 @@ void write_diagnostics(Sim_data *sim, int t) {
     double lift_p = 0.;
     double drag_f = 0.;
     double lift_f = 0.;
+    FILE *ptr;
+
+    // Update averaged fields (from iteration t=0 to t=nt included)
+    for (i = 0; i < sim->size_u; i++) sim->u_avg[i] += sim->u_data[i];
+    for (i = 0; i < sim->size_v; i++) sim->v_avg[i] += sim->v_data[i];
+    
+    if (t == sim->nt) {  // save last iteration
+        ptr = fopen(filename_u_avg, "w");
+        for (i = 0; i < sim->size_u; i++) fprintf(ptr, "%.10le\n", sim->u_avg[i] / (sim->nt + 1));
+        fclose(ptr);
+
+        ptr = fopen(filename_v_avg, "w");
+        for (i = 0; i < sim->size_v; i++) fprintf(ptr, "%.10le\n", sim->v_avg[i] / (sim->nt + 1));
+        fclose(ptr);
+    }
 
 
     // Mesh reynolds numbers
@@ -333,8 +351,7 @@ void write_diagnostics(Sim_data *sim, int t) {
     lift_p = 2 * lift_p * sim->h;
     lift_f = 2 * lift_f / RE;
     // factor 2 because Cd = Fd / (0.5 * rho * u^2 * Hbox)
-    
-    FILE *ptr;
+
     if (t == 0) ptr = fopen(filename_stats, "w");
     else ptr = fopen(filename_stats, "a");
     fprintf(ptr, "%le %le %le %le %le %le\n", reh, rew, drag_p, drag_f, lift_p, lift_f);
@@ -858,6 +875,7 @@ void swap_next_previous(Sim_data *sim) {
 
 void set_mesh_velocity(Sim_data *sim, double t_now) {
     // double t_now = sim->dt * sim->t;
+    double pert_end = PERT_START + ((double) N_CYCLES / STROUHAL_Y);
     
     if (SIWNG_START < t_now) {
         sim->uMesh = ALPHA * sin(2. * M_PI * STROUHAL * (t_now - SIWNG_START));
@@ -867,6 +885,17 @@ void set_mesh_velocity(Sim_data *sim, double t_now) {
 
     if ((PERT_START <= t_now) && (t_now <= PERT_START + ((double) N_CYCLES / STROUHAL_Y))) {
         sim->vMesh = KAPPA_Y * 2. * M_PI * STROUHAL_Y * sin(2. * M_PI * STROUHAL_Y * (t_now - PERT_START));
+
+        if (SMOOTH > 1e-3) {  // otherwise, no smoothing
+            double f, g1, g2, dg1, dg2;  // f is position, g1 and g2 are smoothing functions at start and end, dg1 and dg2 are derivatives
+            f = KAPPA_Y * (1. - cos(2. * M_PI * STROUHAL_Y * (t_now - PERT_START)));
+            g1 = 1. - exp((PERT_START - t_now) / SMOOTH);
+            g2 = 1. - exp((t_now - pert_end) / SMOOTH);
+            dg1 = 1 / SMOOTH * exp((PERT_START - t_now) / SMOOTH);
+            dg2 = -1. / SMOOTH * exp((t_now - pert_end) / SMOOTH);
+            sim->vMesh = sim->vMesh * g1 * g2 + f * (dg1 * g2 + g1 * dg2);
+        }
+
     } else {
         sim->vMesh = 0.;
     }

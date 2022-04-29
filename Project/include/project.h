@@ -6,6 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 
 // Simulation parameters
@@ -17,10 +20,11 @@
 #define STROUHAL (1. / 3.)  // Frequency of the horizontal oscillation
 #define SIWNG_START 100.    // Starting time of the horizontal oscillation
 
-#define KAPPA_Y 0.05       // Amplitude of the vertical perturbation POSITION
+#define KAPPA_Y 0.15       // Amplitude of the vertical perturbation POSITION
 #define STROUHAL_Y (1./3.)  // Frequency of the vertical perturbation
-#define PERT_START 100.      // Starting time of the perturbation
-#define N_CYCLES 1          // Duration of the perturbation
+#define PERT_START 2.      // Starting time of the perturbation
+#define N_CYCLES 100          // Duration of the perturbation
+#define SMOOTH 3.           // Delay to reach 63% of the desired amplitude of the vertical oscillation (0 to disable)
 
 
 // Temperature parameters
@@ -44,7 +48,7 @@
 // #define SAVE_MODULO 50      // save results every ... iteration
 
 // Box measurements
-#define L_ 15
+#define L_ 16
 #define H_ 5
 #define LBOX 5
 #define D_IN 3
@@ -58,6 +62,7 @@
 
 #define TEST_POISSON 0
 #define FMT "%.5le\n"
+#define ABORT_MSG(s) printf("%s\n%s\n", s, "Program aborted.")
 
 // Progress bar
 #define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
@@ -73,6 +78,7 @@ typedef struct {
     int save_modulo;
     
     double *u_data, *v_data, *p_data, *T_data;
+    double *u_avg, *v_avg;
     double **U, **US, **HX, **HX_;
     double **V, **VS, **HY, **HY_;
     double **P, **PHI;
@@ -80,10 +86,10 @@ typedef struct {
 } Sim_data;
 
 
-void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input, int save_modulo_input);
+void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input, int save_modulo_input, const char *myPath);
 void init_fields(Sim_data *sim);
 void save_fields(Sim_data *sim, int t);
-void write_diagnostics(Sim_data *sim, int t);
+void compute_diagnostics(Sim_data *sim, int t);
 void free_Sim_data(Sim_data *sim);
 void check_boundary(Sim_data *sim);
 

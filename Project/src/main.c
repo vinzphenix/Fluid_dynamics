@@ -82,7 +82,7 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
     
     sim->t = 0;    
     save_fields(sim, sim->t);
-    write_diagnostics(sim, sim->t);
+    compute_diagnostics(sim, sim->t);
 
     while (sim->t < sim->nt) {
 
@@ -123,11 +123,13 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
         // KEEP HISTORY OF HX, HY, HT
         swap_next_previous(sim);
 
-        // SAVE RESULTS
+        // PROGRESS BAR
         if (sim->t == 1) clock_gettime(CLOCK_REALTIME, &start_exec);  // don't take first iteration into account, since much much longer
         printProgress((double) sim->t / (double) sim->nt, nIterations, sim->t, sim->nt, sim->dt, ndec1, ndec2, start_exec);
-        write_diagnostics(sim, sim->t);
-        if ((sim->t % sim->save_modulo == 0) && (SAVE)) {
+
+        // SAVE RESULTS
+        compute_diagnostics(sim, sim->t);
+        if ((SAVE) && (sim->save_modulo > 0) && (sim->t % sim->save_modulo == 0)) {
             save_fields(sim, sim->t);
         }
     }
@@ -138,86 +140,135 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
 
 
 int main(int argc, char *argv[]){
-    // argv : ./cfd -ksp_type fgmres -pc_type lu -n 40 -dt 0.001 -tend 5.    
+    // argv : ./cfd -ksp_type fgmres -pc_type lu -n 40 -dt 0.002 -tend 5. -save 50 -dir case_1
+    // -ksp_type : solver used by PETSC to solve the poisson equation of the two-step method
+    // -pc_type  : pre-conditionner of the PETSC solver
+    // -n        : number of spatial steps per distance H_box (must be >= 5)
+    // -dt       : time step, automatically computed with CFL if set to 0.
+    // -tend     : final time of the simulation
+    // -save     : save the fields u, v, p, T every ... iterations, 0 to never save
+    // -dir      : sub-directory in which the files are saved (inside the directory "myPath")
 
-    int tmp1;
+
+    /**
+     * Handle the flags received in the command line
+     */
     int n = 40;
+    int save_every = 50;
     double dt = 0.002;
     double tend = 10.;
-    int save_every = 50;
-    double tmp2;
 
+    char myPath[50] = "./results/";
     char *endptr;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-n") == 0) {
-            if (argc > i+1) tmp1 = (int) strtol(argv[i+1], &endptr, 10);
-            if ((argc > i+1) && (*endptr == '\0')) {
+            if (argc > i+1) n = (int) strtol(argv[i+1], &endptr, 10);
+            if ((argc > i+1) && (*endptr == '\0') && (n >= 5)) {
                 i++;
-                n = tmp1;
+            } else if (n < 5) {
+                ABORT_MSG("Parameter [n] should be at least 5 !");
             } else {
-                printf("Could not read value for parameter [n]. It was set to 40 by default.\n");
-                n = 40;
+                ABORT_MSG("Could not read value for parameter [n] !");
             }
         } else if (strcmp(argv[i], "-dt") == 0) {
-            if (argc > i+1) tmp2 = (double) strtod(argv[i+1], &endptr);
-            if ((argc > i+1) && (*endptr == '\0')) {
+            if (argc > i+1) dt = (double) strtod(argv[i+1], &endptr);
+            if ((argc > i+1) && (*endptr == '\0') && (dt >= 0.)) {
                 i++;
-                dt = tmp2;
+            } else if (dt < 0.){
+                ABORT_MSG("[dt] must be > 0., or 0. for automatic setting based on CFL !");
             } else {
-                printf("Could not read value for parameter [dt]. It was set to 0.002 by default.\n");
-                dt = 0.002;
+                ABORT_MSG("Could not read value for parameter [dt] !");
             }
         } else if (strcmp(argv[i], "-tend") == 0) {
-            if (argc > i+1) tmp2 = (double) strtod(argv[i+1], &endptr);
-            if ((argc > i+1) && (*endptr == '\0')) {
+            if (argc > i+1) tend = (double) strtod(argv[i+1], &endptr);
+            if ((argc > i+1) && (*endptr == '\0') && (tend > 0.)) {
                 i++;
-                tend = tmp2;
+            } else if (tend <= 0.) {
+                ABORT_MSG("[tend] must be > 0. !");
             } else {
-                printf("Could not read value for parameter [tend]. It was set to 10 by default.\n");
-                tend = 10.;
+                ABORT_MSG("Could not read value for parameter [tend] !\n");
             }
         } else if (strcmp(argv[i], "-save") == 0) {
-            if (argc > i+1) tmp1 = (int) strtol(argv[i+1], &endptr, 10);
+            if (argc > i+1) save_every = (int) strtol(argv[i+1], &endptr, 10);
             if ((argc > i+1) && (*endptr == '\0')) {
                 i++;
-                save_every = tmp1;
+            } else if (save_every < 0) {
+                ABORT_MSG("[save] must be >= 0 !");
             } else {
-                printf("Could not read value for parameter [save]. It was set to 50 by default.\n");
-                save_every = 50;
+                ABORT_MSG("Could not read value for parameter [save]");
             }
-
+        } else if (strcmp(argv[i], "-dir") == 0) {
+            if (argc > i+1) {
+                struct stat st = {0};
+                char res;
+                
+                strcat(myPath, argv[i+1]);
+                if (myPath[strlen(myPath)-1] != '/')
+                    strcat(myPath, "/");
+                
+                if (stat(myPath, &st) == -1) {
+                    mkdir(myPath, 0700);
+                } else {
+                    printf("The directory %s already exists. Do you want to overwrite it ? [y] or [n]: ", argv[i+1]);
+                    if ((scanf("%c", &res) == 1) && (res == 'y')){
+                        continue;
+                    } else {
+                        printf("Aborting the program\n");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+            } else {
+                printf("Could not read value for parameter [dir]. Writing files in parent directory.\n");
+            }
         }
     }
 
-    int argc_petsc = 3;
+    /**
+     * Built-in initializing function of PETSC
+     */
+    int argc_petsc = 3;  // PETSC is not concerned by the other arguments
     PetscInitialize(&argc_petsc, &argv, 0, 0);
 
+    /**
+     * Initialize the simulation and the fields at t=0
+     */
     Sim_data *simulation = (Sim_data *)malloc(sizeof(Sim_data));
-    init_Sim_data(simulation, n, dt, tend, save_every);
+    init_Sim_data(simulation, n, dt, tend, save_every, myPath);
     init_fields(simulation);
 
-    clock_t start = clock();
+    /**
+     * Initialize the poisson solver and create the laplacian matrix of the system
+     */
+    // clock_t start = clock();
     Poisson_data *poisson = (Poisson_data *)malloc(sizeof(Poisson_data));
     initialize_poisson_solver(simulation, poisson);
-    printf("Time to create Matrix = %.3f s\n", (double) (clock() - start) / CLOCKS_PER_SEC);
+    // printf("Time to create Matrix = %.3f s\n", (double) (clock() - start) / CLOCKS_PER_SEC);
 
+    /**
+     * Initialize the ADI solver if needed. The boundary conditions are not correct yet.
+     * TODO: make it right.
+     */
     ADI_data *adi_solver = (ADI_data *)malloc(sizeof(ADI_data));
 #   if USE_ADI
     init_adi_solver(simulation, adi_solver);
 #   endif
 
 
-    // MAIN PROCESS
+    /**
+     * MAIN PROCESS
+     */
 #   if TEST_POISSON
     test_poisson(simulation, poisson);
 #   else
-    display_info(simulation, "no");
+    display_info(simulation, "reduced");  // "full"
     integrate_flow(simulation, poisson, adi_solver);
 #   endif
 
 
-    // Free memory
+    /**
+     * FREE THE MEMORY
+     */
     free_Sim_data(simulation);
     free_poisson_solver(poisson);
 #   if USE_ADI

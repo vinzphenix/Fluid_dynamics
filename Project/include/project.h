@@ -18,11 +18,11 @@
 // Oscillation parameters
 #define ALPHA 0.5           // Amplitude of the horizonatal oscillation VELOCITY
 #define STROUHAL (1. / 3.)  // Frequency of the horizontal oscillation
-#define SIWNG_START 100.    // Starting time of the horizontal oscillation
+#define SIWNG_START 0.    // Starting time of the horizontal oscillation
 
 #define KAPPA_Y 0.15       // Amplitude of the vertical perturbation POSITION
 #define STROUHAL_Y (1./3.)  // Frequency of the vertical perturbation
-#define PERT_START 2.      // Starting time of the perturbation
+#define PERT_START 50.      // Starting time of the perturbation
 #define N_CYCLES 100          // Duration of the perturbation
 #define SMOOTH 3.           // Delay to reach 63% of the desired amplitude of the vertical oscillation (0 to disable)
 
@@ -45,10 +45,11 @@
 #define USE_ADI 0           // 0: classic scheme, 1: solve using ADI method  // *boundary conditions ?
 #define CONVECTION_MODE 2   // 0: advective form, 1: divergence form, 2: average of both
 #define SAVE 1              // 1 to save, 0 otherwise
+#define START_AVG 5.
 // #define SAVE_MODULO 50      // save results every ... iteration
 
 // Box measurements
-#define L_ 16
+#define L_ 15
 #define H_ 5
 #define LBOX 5
 #define D_IN 3
@@ -75,7 +76,7 @@ typedef struct {
     int i_start[12], i_final[12], j_start[12], j_final[12];
     double h, dt, tsim;
     double uMesh, vMesh;
-    int save_modulo;
+    int save_modulo, start_avg_idx;
     
     double *u_data, *v_data, *p_data, *T_data;
     double *u_avg, *v_avg;

@@ -36,6 +36,7 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     printf("Current \u0394t = %.5lf  vs  %.5lf = \u0394t maximal\n", sim->dt, dtStable);
 
     sim->save_modulo = save_modulo_input;
+    sim->start_avg_idx = ceil(START_AVG / sim->dt);
     
     // Obstacle initially not moving
     sim->uMesh = 0.;
@@ -286,16 +287,19 @@ void compute_diagnostics(Sim_data *sim, int t) {
     FILE *ptr;
 
     // Update averaged fields (from iteration t=0 to t=nt included)
-    for (i = 0; i < sim->size_u; i++) sim->u_avg[i] += sim->u_data[i];
-    for (i = 0; i < sim->size_v; i++) sim->v_avg[i] += sim->v_data[i];
+    if (t >= sim->start_avg_idx) {
+        for (i = 0; i < sim->size_u; i++) sim->u_avg[i] += sim->u_data[i];
+        for (i = 0; i < sim->size_v; i++) sim->v_avg[i] += sim->v_data[i];
+    }
     
-    if (t == sim->nt) {  // save last iteration
+    if (t == sim->nt) {  // save at last iteration
         ptr = fopen(filename_u_avg, "w");
-        for (i = 0; i < sim->size_u; i++) fprintf(ptr, "%.10le\n", sim->u_avg[i] / (sim->nt + 1));
+        for (i = 0; i < sim->size_u; i++) fprintf(ptr, "%.10le\n", sim->u_avg[i] / (sim->nt - sim->start_avg_idx + 1));
         fclose(ptr);
+        // ceil(20. / sim->dt)
 
         ptr = fopen(filename_v_avg, "w");
-        for (i = 0; i < sim->size_v; i++) fprintf(ptr, "%.10le\n", sim->v_avg[i] / (sim->nt + 1));
+        for (i = 0; i < sim->size_v; i++) fprintf(ptr, "%.10le\n", sim->v_avg[i] / (sim->nt - sim->start_avg_idx + 1));
         fclose(ptr);
     }
 

@@ -80,33 +80,38 @@ def plot_streamlines(t_list, cmap):
     return
 
 
-def plot_average_flow(t_start, cmap1, cmap2):
+def plot_average_flow(cmap1, cmap2, compute=False, t_start=10.):
+
     fig, axs = plt.subplots(2, 1, figsize=(10., 8.), sharex="all", sharey="all")
     fig.tight_layout()
     caxs = [make_colorbar_with_padding(axs[i]) for i in range(2)]
 
-    idx_start = np.argmin(np.abs(sim.t - t_start))
+    if compute:
+        idx_start = np.argmin(np.abs(sim.t - t_start))
 
-    p_avg = np.zeros((nx, ny))
-    u_avg = np.zeros((nx+1, ny+2))
-    v_avg = np.zeros((nx+2, ny+1))
+        p_avg = np.zeros((nx, ny))
+        u_avg = np.zeros((nx+1, ny+2))
+        v_avg = np.zeros((nx+2, ny+1))
 
-    for idx in tqdm(range(nt + 1)):
-        p, u, v, w = read_block(sim, needed={"p": True, "u": True, "v": True, "w": True})
-        
-        if idx < idx_start:
-            continue
-        
-        p_avg += p
-        u_avg += u
-        v_avg += v
+        for idx in (range(nt + 1)):
+            p, u, v, w = read_block(sim, needed={"p": True, "u": True, "v": True, "w": True})
+            # print(np.amax(np.abs((u[:, 1:] + u[:, :-1]) / 2.) + np.abs((v[1:, :] + v[:-1, :]) / 2.)))
+            if idx < idx_start:
+                continue
+            p_avg += p
+            u_avg += u
+            v_avg += v
 
-    p_avg /= (nt+1 - idx_start)
-    u_avg /= (nt+1 - idx_start)
-    v_avg /= (nt+1 - idx_start)
+        p_avg /= (nt+1 - idx_start)
+        u_avg /= (nt+1 - idx_start)
+        v_avg /= (nt+1 - idx_start)
+        w = ((v_avg[1:, :] - v_avg[:-1, :]) - (u_avg[:, 1:] - u_avg[:, :-1])) / sim.h
+        w = np.ma.masked_array(w.T, mask_corner)
 
-    w = ((v_avg[1:, :] - v_avg[:-1, :]) - (u_avg[:, 1:] - u_avg[:, :-1])) / sim.h
-    w = np.ma.masked_array(w.T, mask_corner)
+    else:  # Using values computed during simulation
+        u_avg, v_avg = sim.u_avg, sim.v_avg
+        w = ((v_avg[1:, :] - v_avg[:-1, :]) - (u_avg[:, 1:] - u_avg[:, :-1])) / sim.h
+        w = np.ma.masked_array(w.T, mask_corner)
 
     u_avg = (u_avg[:, 1:] + u_avg[:, :-1]) / 2.
     v_avg = (v_avg[1:, :] + v_avg[:-1, :]) / 2.
@@ -115,16 +120,17 @@ def plot_average_flow(t_start, cmap1, cmap2):
     # psi = axs[0].contour(x, y, u_sum.T, 10, cmap=cmap)
     # cbar1 = fig.colorbar(psi, cax=caxs[0])
     speed = np.hypot(u_avg.T, v_avg.T)
-    axs[0].streamplot(x, y, u_avg.T, v_avg.T, density=1.25, color=speed, cmap=cmap1)
-    caxs[0].axis('off')
+    strm = axs[0].streamplot(x, y, u_avg.T, v_avg.T, density=1.25, color=speed, cmap=cmap1)
+    cbar1 = fig.colorbar(strm.lines, cax=caxs[0])
+    cbar1.ax.set_ylabel(r"$\|\: (u,\, v) \:\|$", fontsize=ftSz2)
 
     # VORTICITY
     wmin, wmax = np.amin(w[~mask_hard]), np.amax(w[~mask_hard])
-    wmax = max(np.abs(wmin), np.abs(wmax))
-    levels = np.linspace(wmin, wmax, 20)
-
+    # wmax = max(np.abs(wmin), np.abs(wmax))  # weird
+    levels = np.linspace(wmin, wmax, 50)
     ct = axs[1].contour(x, y, w, levels=levels, cmap=cmap2)
-    cbar = fig.colorbar(ct, cax=caxs[1], ticks=np.round(np.linspace(levels[0], levels[-1], 7)))
+    cbar2 = fig.colorbar(ct, cax=caxs[1], ticks=np.round(np.linspace(levels[0], levels[-1], 7)))
+    cbar2.ax.set_ylabel(r"$\omega$", fontsize=ftSz2)
 
     # LABELS
     bbox_dic = dict(boxstyle="round", fc="wheat", ec="none", alpha=0.85)
@@ -253,8 +259,11 @@ if __name__ == "__main__":
     filename_u = f"{path_res}/simu_u.txt"
     filename_v = f"{path_res}/simu_v.txt"
     filename_T = f"{path_res}/simu_T.txt"
-    
-    sim = Simulation([filename_params, filename_p, filename_u, filename_v, filename_T, filename_stats])
+    filename_u_avg = f"{path_res}/simu_u_avg.txt"
+    filename_v_avg = f"{path_res}/simu_v_avg.txt"
+
+    sim = Simulation([filename_params, filename_p, filename_u, filename_v, filename_T,
+                      filename_stats, filename_u_avg, filename_v_avg], analyze=True)
 
     nt, nx, ny, n = sim.nt, sim.nx, sim.ny, sim.n
     T, h, L, H, din, dbot, lbox, RE = sim.T, sim.h, sim.L, sim.H, sim.din, sim.dbot, sim.lbox, sim.RE
@@ -271,6 +280,6 @@ if __name__ == "__main__":
 
     # plot_vorticity([18., 19., 20.], cmap=cmap1)
     # plot_streamlines([18., 19., 20.], cmap=cmap2)  # 0.2, 0.5, 1.
-    # plot_average_flow(10., cmap2, cmap1)
-    plot_max_RE(compute=False)
-    plot_drag_lift(compute=False)
+    plot_average_flow(cmap2, cmap1, compute=False, t_start=5.)
+    # plot_max_RE(compute=False)
+    # plot_drag_lift(compute=False)

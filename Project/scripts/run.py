@@ -16,9 +16,12 @@ plt.rcParams['font.family'] = 'monospace'
 
 class Simulation:
 
-    def __init__(self, filenames):
+    def __init__(self, filenames, analyze=False):
 
-        params1, params2, params3, params4, dataframes, diagnostics = read_data_init(filenames)
+        if analyze:
+            params1, params2, params3, params4, dataframes, diagnostics, self.u_avg, self.v_avg = read_data_init(filenames, analyze)
+        else:
+            params1, params2, params3, params4, dataframes = read_data_init(filenames)
 
         self.nt, self.nx, self.ny, self.n, self.save_modulo = params1
         self.RE, self.T, self.dt, self.h, self.L, self.H, self.lbox, self.din, self.dbot = params2
@@ -61,17 +64,18 @@ class Simulation:
         self.mask_middle = (self.din < self.xxm) * (self.xxm < self.din+self.lbox) * (self.dbot < self.yym) * (self.yym < self.dbot+1)
         self.mask_corner = (self.din <= self.xx) * (self.xx <= self.din+self.lbox) * (self.dbot <= self.yy) * (self.yy <= self.dbot+1)
 
-        self.reh = diagnostics[:, 0]
-        self.rew = diagnostics[:, 1]
-        self.drag_p = diagnostics[:, 2]
-        self.drag_f = diagnostics[:, 3]
-        self.lift_p = diagnostics[:, 4]
-        self.lift_f = diagnostics[:, 5]
+        if analyze:
+            self.reh = diagnostics[:, 0]
+            self.rew = diagnostics[:, 1]
+            self.drag_p = diagnostics[:, 2]
+            self.drag_f = diagnostics[:, 3]
+            self.lift_p = diagnostics[:, 4]
+            self.lift_f = diagnostics[:, 5]
 
 
-def read_data_init(filenames):
+def read_data_init(filenames, analyze=False):
     
-    filename_params, filename_p, filename_u, filename_v, filename_T, filename_stats = filenames
+    filename_params, filename_p, filename_u, filename_v, filename_T, filename_stats, filename_u_avg, filename_v_avg = filenames
 
     with open(filename_params, "r") as f:
         lines = f.readlines()
@@ -96,14 +100,18 @@ def read_data_init(filenames):
     if bool(params4[0]):
         dfs.append(pd.read_csv(filename_T, chunksize=size_p, header=None))
 
-    diagnostics = np.loadtxt(filename_stats)
+    if analyze:
+        diagnostics = np.loadtxt(filename_stats)
+        u_avg = np.array(pd.read_csv(filename_u_avg, header=None)).reshape(nx+1, ny+2)
+        v_avg = np.array(pd.read_csv(filename_v_avg, header=None)).reshape(nx+2, ny+1)
+        return params1, params2, params3, params4, dfs, diagnostics, u_avg, v_avg
     
+    else:
+        return params1, params2, params3, params4, dfs
     # find bounds
     # t1 = perf_counter()
     # (pmin, pmax), (umin, umax), (vmin, vmax), (wmin, wmax) = find_all_bounds()
     # print(f"Time to find bound = {perf_counter() - t1:.3f} s")
-
-    return params1, params2, params3, params4, dfs, diagnostics
 
 
 # wb = [0., 0.]
@@ -280,12 +288,11 @@ def make_colorbar_with_padding(ax):
     return(cax) 
 
 
-def modify_html():
+def create_html():
     html_filename = f"{path_anim:s}.html"
     line_nb = 152
-    with open(html_filename, "r") as f:
+    with open(html_ref, "r") as f:
         html_lines = f.readlines()
-        old_line = html_lines[line_nb]
         new_line = f"  call('{case_name:s}', {sim.nt+1:d})\n"
         html_lines[line_nb] = new_line
 
@@ -301,6 +308,7 @@ if __name__ == "__main__":
     case_name = "vertical"  # case_1
     path_res = "../results/" + case_name
     path_anim = "../anim/" + case_name
+    html_ref = "../anim/case_1.html"  # copy and create new html with a different path to images
 
     filename_params = f"{path_res}/simu_params.txt"
     filename_p = f"{path_res}/simu_p.txt"
@@ -308,8 +316,11 @@ if __name__ == "__main__":
     filename_v = f"{path_res}/simu_v.txt"
     filename_T = f"{path_res}/simu_T.txt"
     filename_stats = f"{path_res}/simu_stats.txt"
+    filename_u_avg = f"{path_res}/simu_u_avg.txt"
+    filename_v_avg = f"{path_res}/simu_v_avg.txt"
 
-    sim = Simulation([filename_params, filename_p, filename_u, filename_v, filename_T, filename_stats])
+    sim = Simulation([filename_params, filename_p, filename_u, filename_v, filename_T,
+                      filename_stats, filename_u_avg, filename_v_avg], analyze=False)
     kwargs["temperature"] = bool(sim.temperature)
 
     cmap1, cmap2, cmap3, cmap4 = "Spectral_r", "bwr", "RdBu_r", "turbo_r"  # OrRd
@@ -430,8 +441,8 @@ if __name__ == "__main__":
         os.makedirs(path_anim + "/", exist_ok=True)
 
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
-        for t in tqdm(range(nt + 1)):
+        for t in tqdm(range(nt//20 + 1)):
             update(t)
             fig.savefig(f"{path_anim:s}/frame_{t:05d}.png", format="png", bbox_inches='tight', pad_inches=0.02)
         
-        modify_html()
+        create_html()

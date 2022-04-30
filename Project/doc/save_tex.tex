@@ -1,0 +1,222 @@
+\documentclass[11 pt]{article}
+\usepackage{structure}
+
+
+\title{LMECA2660 - Project\\ Simulating 2D flow around an oscillating obstacle}
+\author{DEGROOFF Vincent \quad -- \quad NOMA : 09341800}
+\date{Friday, 6 may 2022}
+
+\begin{document}
+
+\maketitle
+
+\section{Problem statement}
+
+In this project, we are asked to solve the Navier-Stokes equations for incompressible flows in 2 dimensions, passed a rectangular obstacle. The geometry of the problem is described with more details in figure \ref{fig:domain}.
+
+%%%%%%%%%%%%
+\begin{figure}[h!tp]
+\centering
+\input{Figures/schema.tikz}
+\caption{Description of the case studied. (Image courtesy of Pierre Balty)}
+\label{fig:domain}
+\end{figure}
+%%%%%%%%%%%%
+
+In the rest of this document, we will only work with dimensionless variables. Hence, it might be useful to precise the choice of nondimensionalization. Dimensionless quantities are noted here with an asterisk superscript, the position vector is $\mathbf{x} = (x,y)$ and the velocity vector is $\mathbf{v} = (u, v)$.
+\begin{equation}
+    \begin{split}
+        \mathbf{x^*} &= \frac{\mathbf{x}}{H_{box}}
+    \end{split}
+    \qquad
+    \begin{split}
+        \mathbf{v^*} &= \frac{\mathbf{v}}{U_{\infty}}
+    \end{split}
+    \qquad
+    \begin{split}
+        t^* = \frac{t U_{\infty}}{H_{box}} \\
+    \end{split}
+    \qquad
+    \begin{split}
+        p^* = \frac{p-p_{ref}}{\rho U_{\infty}^2}
+    \end{split}
+    \qquad
+    \begin{split}
+        T^* = \frac{T - T_{ref}}{\Delta T}
+    \end{split}
+    \label{eq:adimChoice}
+\end{equation}
+
+We can also define dimensionless numbers, using physical properties of the fluid: its kinematic viscosity $\nu$, its thermal diffusivity $\alpha$, its heat capacity $c_p$, its density $\rho_0$, and its the volumetric thermal expansion coefficient $\beta=\frac{1}{\rho_0} \left(\pdv{\rho}{T}\right)_p$ where $g$ is the gravitational acceleration.
+\begin{equation}
+    Re = \frac{U_{\infty} H_{box}}{\nu} \qquad\quad
+    Pr = \frac{\nu}{\alpha} \qquad\quad
+    Gr = \frac{\beta \Delta T g H_{box}^3}{\nu^2} \qquad\quad
+    Ec = \frac{U_{\infty}}{c_p \Delta T}
+    %beta (T1-T0) g L/UU Re^2
+    \label{eq:adimNumbers}
+\end{equation}
+
+We can now state the Navier-Stokes equations in dimensionless form, using the Boussinesq approximation. From this point in the document, we will drop this asterisk for the sake of readability.
+
+\begin{align}
+    \pdv{u}{x} + \pdv{v}{y} &= 0  && \text{Cons. of mass}\label{eq:nsMass}\\
+    \pdv{u}{t} + u\pdv{u}{x} + v\pdv{u}{y} &= -\pdv{p}{x} + \frac{1}{Re} \left( \pdv[2]{u}{x} + \pdv[2]{u}{y} \right) && \text{Cons. of momentum in } \mathbf{e_{x}}\label{eq:nsMomX}\\
+    \pdv{v}{t} + u\pdv{v}{x} + v\pdv{v}{y} &= -\pdv{p}{y} + \frac{1}{Re} \left( \pdv[2]{v}{x} + \pdv[2]{v}{y} \right) + \frac{Gr}{Re^2} T && \text{Cons. of momentum in } \mathbf{e_{y}}\label{eq:nsMomY}\\
+    \pdv{T}{t} + u\pdv{T}{x} + v\pdv{T}{y} &= \frac{1}{Re \, Pr} \left( \pdv[2]{T}{x} + \pdv[2]{T}{y} \right) + \frac{Ec}{Re} \phi && \text{Cons. of energy} \label{eq:nsEnergy}
+\end{align}
+
+Where $\phi$, the viscous dissipation is defined as follows:
+\begin{align}
+    \phi = 2 \mu \; \mathbf{d:d} = 2 \left[\left(\pdv{u}{x}\right)^2 + \left(\pdv{v}{y} \right)^2\right] + \left(\pdv{u}{y} + \pdv{v}{x}\right)^2 \qquad \text{with} \qquad \mathbf{d} = \frac{1}{2} \left[\left(\nabla u\right) + \left(\nabla u\right)^T \right] \label{eq:dissipation}
+\end{align}
+
+
+\section{Model of the obstacle oscillation}
+The rectangular obstacle stays at its initial position in the $x$ direction until a time $t_0$, where its starts oscillating horizontally. The same happens in the $y$ direction, where the threshold time $=\Tilde{t}_0$.
+
+The dimensionless position of the obstacle is then given by:
+\begin{equation}
+\begin{aligned}
+    x_{mesh}(t) - x_{mesh}(t_0) &= \kappa \Big[1 - \cos{\Big(2\pi S_t (t - t_0)\Big)} \Big] && t_0 \leq t\\
+    y_{mesh}(t) - y_{mesh}(\tilde t_0) &= \tilde \kappa \Big[1 - \cos{\Big(2\pi \tilde S_t (t - \tilde t_0)\Big)} \Big] && \tilde t_0 \leq t
+\end{aligned}
+\end{equation}
+
+However, in our model, we need to impose the velocity as boundary condition:
+\begin{equation}
+\begin{aligned}
+    u_{mesh}(t) &= \kappa (2\pi S_t) \sin{\big(2\pi S_t (t - t_0)\big)} = \alpha \sin{\big(2\pi S_t (t - t_0)\big)} && t_0 \leq t\\
+    v_{mesh}(t) &= \tilde \kappa (2\pi \tilde S_t ) \sin{\big(2\pi \tilde S_t (t - \tilde t_0)\big)} = \tilde \alpha \sin{\big(2\pi \tilde S_t (t - \tilde t_0)\big)} && \tilde t_0 \leq t
+\end{aligned}
+\end{equation}
+
+Since the displacement in $\mathbf{e_y}$ is typically used to produce a perturbation, it stops after one period. 
+
+The numerical values chosen for the Strouhal number $S_t$ and the velocity amplitude $\kappa$ are
+\begin{equation}
+    S_t = \sfrac{1}{3} \qquad \tilde S_t = S_t \qquad \alpha = \sfrac{1}{2} \qquad \tilde \alpha = \sfrac{\alpha}{10}
+\end{equation}
+
+
+\section{Boundary conditions}
+(1) The inflow velocity has an horizontal component, with a uniform profile, and no vertical component. (2) The lateral boundaries will be considered as inviscid, with a no-through flow condition and zero vorticity, except stated otherwise. (3) No-through flow and no-slip conditions are enforced at the obstacle boundaries. (4) At the outflow, we try to mimic a transparent boundary condition, by advecting the fields $u$, $\omega$ and $T$ at a velocity $u_c = 1-u_{mesh}$. (5) Except at the outflow, the boundary conditions for temperature will be either adiabatic or Dirichlet.
+
+To be more precise, a summary of these boundary conditions is presented in table \ref{tab:boundary}.
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{@{\extracolsep{\stretch{1}}}*{4}{c}@{}}
+    \toprule
+    Location & First condition & Second condition & Temperature condition\\
+    \midrule
+    Inflow & $u=1$ & $v=0$ & $\pdv{T}{x} = 0$\\[8pt]
+    Lateral walls & $u=1$ (or $u=0$) & $v=0$ & $\pdv{T}{y} = 0\;$ or $\;T=T_{wall}$\\[8pt]
+    Obstacle wall & $u=0$ & $v=0$ & $\pdv{T}{n} = 0\;$ or $\;T=T_{wall}$\\[8pt]
+    Outflow & $\pdv{u}{t} + u_c \pdv{u}{x} = 0$ & $\pdv{\omega}{t} + u_c \pdv{\omega}{x} = 0$ & $\pdv{T}{t} + u_c \pdv{T}{x} = 0$ \\
+    \bottomrule
+    \end{tabularx}
+    \caption{Boundary conditions of the dimensionless fields.}
+    \label{tab:boundary}
+\end{table}
+
+\section{Numerical solver}
+The Navier-stokes equations shown in \eqref{eq:nsMass}-\eqref{eq:nsEnergy} are integrated in time using a two-step projection scheme that ensures a divergence-free velocity field $\bv$. The fields $u$, $v$, $p$, $\omega$ and $T$ are discretized using the staggered MAC mesh which is represented in figure \ref{fig:macMesh}. In this project, we use a uniform grid with $\Delta x = \Delta y = h$, but a non-uniform grid with stretching would be more adapted. It would allow us to have a coarser mesh where nothing happens (outside the boundary layer and outside the vortex shedding).
+
+When a boundary condition must be applied at some position $\mathbf{x}$ where a field is not defined, we define \textit{ghost points} outside the domain that approximate the condition using Taylor series.
+
+\begin{figure}[H]
+    \centering
+    \includesvg[width=\textwidth]{Figures/mac_mesh.svg}
+    \caption{Staggered MAC mesh near a rectangular corner of the domain $\Omega$. The ghost points are more transparent than regular points.}
+    \label{fig:macMesh}
+\end{figure}
+
+
+Concerning the time integration, the convective term is integrated using the explicit and second order Adams-Bashforth scheme (explicit Euler scheme for the first time step), while the diffusive term is handled using the explicit and first order Euler scheme. The solver proposed can also handle the diffusive term for $\bv$ with a Crank-Nicolson scheme. This is done with an ADI method in order to only solve tri-diagonal systems. However, the current implementation of boundary conditions is not assured to be second order.
+
+First, we compute the convective terms $\bH = (H_x, H_y)$ that discretize $(\boldsymbol\nabla \bv) \cdot (\bv - \bv_{mesh})$, and $H_T$ discretizing $(\boldsymbol \nabla T) \cdot (\bv - \bv_{mesh})$. Second, we perform a predictor step to obtain an intermediate field denoted $\mathbf{v}^*$. Third, we solve the Poisson equation for $\Phi$, using the PETSC library\cite{petsc-web-page}. Finally, we obtain the next iterates once the corrector step is completed. This procedure is detailed in equations \eqref{eq:predictor} - \eqref{eq:corrector}.
+
+\begin{align}
+    \frac{\bv^* - \bv^n}{\Delta t} &= \frac{-1}{2} \left(3\,\bH^n - \bH^{n-1}\right) - \boldsymbol{\nabla} p^n + \frac{1}{Re} \nabla^2 \bv^n - \frac{Gr}{Re^2} \frac{\mathbf{g}}{\left\|\mathbf{g}\right\|} T^n \label{eq:predictor} \\[10pt]
+    \nabla^2\Phi &= \frac{1}{\Delta t} \; \nabla \cdot \bv^*\\[10pt]
+    \frac{\bv^{n+1} - \bv^*}{\Delta t} &= -\boldsymbol{\nabla} \Phi\\[10pt]
+    p^{n+1} &= p^n + \Phi\\[10pt]
+    T^{n+1} &= \frac{-1}{2} \left(3\, H_T^n - H_T^{n-1}\right) + \frac{1}{Re\, Pr} \nabla^2 T^n + \frac{Ec}{Re} \phi^n \label{eq:corrector}
+\end{align}
+
+The convection contribution can be computed using either the advective form or the divergence form, respectively:
+\begin{equation}
+    \bH = (\boldsymbol\nabla \bv) \cdot (\bv - \bv_{mesh}) \qquad \text{or} \qquad \bH = \boldsymbol\nabla \cdot \big(\bv \, (\bv - \bv_{mesh}) \big)
+\end{equation}
+It was chosen to take the average of both.
+
+To ensure the stability of the scheme, the \textit{Fourier number} and the \textit{Courant-Friedrichs-Lewy number} were respectively set to \footnote{Recall that the variables $\Delta t$, $h$, $u$ and $v$ are dimensionless, so that $r$ and $CFL$ are also.}
+\begin{equation}
+    r = \frac{\Delta t}{Re \, h^2} = 0.2 \qquad\qquad CFL = \frac{(|u|+|v|) \Delta t}{h} = 0.7
+\end{equation}
+where the velocity $(|u|+|v|)$ was estimated to $4$.
+
+
+\section{Simulations without temperature coupling}
+Different cases are considered:
+\begin{enumerate}[topsep=0pt]
+    \setlength\itemsep{0pt}
+    \item The obstacle stays at rest. The flow is steady, but unstable.
+    \item The obstacle oscillates vertically during one period, starting at $\tilde t_0 = 0$, to break the symmetry and obtain an unsteady flow.
+    \item The obstacle oscillates horizontally, starting at $t_0=0$.
+    \item The obstacle oscillates horizontally, starting at $t_0=0$. But we also add a vertical perturbation of one period, starting at $\tilde t_0=0$ to initiate an asymmetrical vortex shedding.
+\end{enumerate}
+
+\subsection{Vorticity}
+
+\subsection{Streamlines of the steady flow}
+
+\subsection{Averaging the unsteady flow}
+
+
+\section{Simulations with temperature coupling}
+\subsection{Warm obstacle}
+
+\subsection{No-slip walls with fixed temperature}
+
+\subsection{Heat generation through viscous dissipation}
+
+\newpage
+\begin{align*}
+    D &= \bigintss_{y^-}^{y^+} \Big[p(x^-, y) - p(x^+, y)\Big] \diff y + \frac{1}{Re} \bigintss_{x^-}^{x^+} \left[ \left.\pdv{u}{y}\right|_{(x, y^+)} - \left.\pdv{u}{y}\right|_{(x, y^-)} \right] \diff x\\
+    L &= \bigintss_{x^-}^{x^+} \Big[p(x, y^-) - p(x, y^+)\Big] \diff x + \frac{1}{Re} \bigintss_{y^-}^{y^+} \left[ \left.\pdv{v}{x}\right|_{(x^+, y)} - \left.\pdv{v}{x}\right|_{(x^-, y)} \right] \diff y
+\end{align*}
+
+\nocite{*}
+\printbibliography
+
+\end{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{figure}[H]
+    \centering
+
+    \includesvg[width=0.95\textwidth]{Figures/problem.svg}
+    \caption{Solution of the transport equation of a Gaussian at three equally spaced times. The parameters of this simulation are $L=\SI{1}{\m}$, $c=\SI{1}{\m\per\s}$, $U = 1$, $N=128$, $\Delta t=\SI{7.812e-3}{\s}$.}
+    \label{fig:problem}
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[H]
+    \centering
+    \begin{tabularx}{\textwidth}{@{\extracolsep{\stretch{1}}}*{4}{c}@{}}
+    \toprule
+    Scheme & $c_g^*$ as a function of $kh$ & $k_m h / \pi$ & minimum value\\
+    \midrule
+    E2 & $\cos(kh)$ & $0.5$ & $-1$\\[8pt]
+    E4 & $\left[4\cos{(kh)} - \cos{(2kh)}\right]/3$ & $0.572$ & $-1.666$\\[8 pt]
+    E6 & $\left[15\cos{(kh)} - 6\cos{(2kh)} + \cos{(3kh)}\right]/10$ & $0.616$ & $-2.2$\\[8pt]
+    I4 & $3\left[1+2\cos{(kh)}\right] / \left[2 + \cos{(kh)}\right]^2$ & $0.666$ & $-3$\\[8pt]
+    I6 & {$\frac{\left[28\sin{(kh)} + \sin{(2kh)}\right] \sin{(kh)} + \left[3+2\cos{(kh)}\right] \left[14\cos{(kh)} + \cos{(2kh)}\right]}{3\;\left[3 + 2\cos{(kh)}\right]^2}$} & $0.721$ & $-4.333$\\[8pt]
+    \bottomrule
+    \end{tabularx}
+    \caption{Group velocity of the different schemes.}
+    \label{tab:group}
+\end{table}

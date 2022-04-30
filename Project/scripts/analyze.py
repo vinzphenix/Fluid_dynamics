@@ -251,7 +251,8 @@ if __name__ == "__main__":
     cmap2 = plt.get_cmap("bwr")
     cmap3 = plt.get_cmap("Spectral_r")
 
-    path_res = "../results/" + "vertical"
+    # path_res = "F://LMECA2660/results/" + "stuff"
+    path_res = "../results/" + "eckert"
 
     filename_params = f"{path_res}/simu_params.txt"
     filename_stats = f"{path_res}/simu_stats.txt"
@@ -280,6 +281,6 @@ if __name__ == "__main__":
 
     # plot_vorticity([18., 19., 20.], cmap=cmap1)
     # plot_streamlines([18., 19., 20.], cmap=cmap2)  # 0.2, 0.5, 1.
-    plot_average_flow(cmap2, cmap1, compute=False, t_start=5.)
-    # plot_max_RE(compute=False)
+    # plot_average_flow(cmap2, cmap1, compute=False, t_start=5.)
+    plot_max_RE(compute=False)
     # plot_drag_lift(compute=False)

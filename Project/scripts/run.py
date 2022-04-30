@@ -46,10 +46,13 @@ class Simulation:
         self.delta_x = self.kappa * (1. - np.cos(2. * np.pi * self.st * (self.t - self.swing_start)))
         self.u_mesh = self.alpha * np.sin(2. * np.pi * self.st * (self.t - self.swing_start))
         
-        g1 = np.exp((self.pert_start - self.t) / self.smooth)
-        g2 = np.exp((self.t - self.pert_start - self.pert_dt) / self.smooth)
+        g1 = np.exp((self.pert_start - self.t) / self.smooth) if self.smooth > 1e-6 else 0.
+        g2 = np.exp((self.t - self.pert_start - self.pert_dt) / self.smooth) if self.smooth > 1e-6 else 0.
         self.delta_y = self.kappa_y * (1. - np.cos(2. * np.pi * self.st_y * (self.t - self.pert_start))) * (1. - g1) * (1. - g2)
-        self.v_mesh = self.alpha_y * np.sin(2. * np.pi * self.st_y * (self.t - self.pert_start)) * g1 / self.smooth * (-g2) / self.smooth
+        if self.smooth > 1e-6:
+            self.v_mesh = self.alpha_y * np.sin(2. * np.pi * self.st_y * (self.t - self.pert_start)) * g1 / self.smooth * (-g2) / self.smooth
+        else:
+            self.v_mesh = self.alpha_y * np.sin(2. * np.pi * self.st_y * (self.t - self.pert_start))
 
         self.delta_x[self.t < self.swing_start] = 0.
         self.delta_y[~((self.pert_start < self.t) * (self.t < self.pert_start + self.pert_dt))] = 0.
@@ -305,7 +308,7 @@ if __name__ == "__main__":
 
     kwargs = {"stream":True, "streak":False, "temperature": False}
     
-    case_name = "vertical"  # case_1
+    case_name = "high_re"  # case_1
     path_res = "../results/" + case_name
     path_anim = "../anim/" + case_name
     html_ref = "../anim/case_1.html"  # copy and create new html with a different path to images
@@ -324,7 +327,7 @@ if __name__ == "__main__":
     kwargs["temperature"] = bool(sim.temperature)
 
     cmap1, cmap2, cmap3, cmap4 = "Spectral_r", "bwr", "RdBu_r", "turbo_r"  # OrRd
-    nStreamLines, scaling, strm_lw, strm_color, strm_alpha = 22, 0.60, 1.25, "grey", 0.25
+    nStreamLines, scaling, strm_lw, strm_color, strm_alpha = 24, 0.70, 1.25, "grey", 0.25
     nStreakLines, nParticles, strk_lw, strk_color, strk_alpha = 2, 500, 3., "grey", 0.5
 
     # Fields
@@ -344,10 +347,10 @@ if __name__ == "__main__":
     # pmin, pmax = np.amin(p), np.amax(p)
     pmin, pmax = -2.75, 2.75
     # wmin, wmax = np.amin(w)/10., np.amax(w)/10.
-    wmin, wmax = -25., 25.
-    Tmin, Tmax = 0., 0.024
-    # print(Tmin, Tmax)
-    # Tmin, Tmax = -1., 1.
+    wmin, wmax = -22., 22.
+    # Tmin, Tmax = find_bounds(filename_T)
+    Tmin, Tmax = -1., 1.
+    # Tmin, Tmax = 0., 0.016
 
     # pressure and vorticity fields
     pressure = axs[0].imshow(np.zeros((nx, ny)), extent=(0, L, 0, H), vmin=pmin, vmax=pmax, cmap=cmap1, origin="lower")
@@ -441,7 +444,7 @@ if __name__ == "__main__":
         os.makedirs(path_anim + "/", exist_ok=True)
 
         fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
-        for t in tqdm(range(nt//20 + 1)):
+        for t in tqdm(range(nt + 1)):
             update(t)
             fig.savefig(f"{path_anim:s}/frame_{t:05d}.png", format="png", bbox_inches='tight', pad_inches=0.02)
         

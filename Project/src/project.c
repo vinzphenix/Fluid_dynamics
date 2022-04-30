@@ -386,7 +386,7 @@ void set_bd_conditions(Sim_data *sim) {
         sim->VS[i][0] = sim->vMesh;             // below
         sim->VS[i][sim->ny] = sim->vMesh;       // above
         
-        sim->V[i]][0] = sim->VS[i][0];
+        sim->V[i][0] = sim->VS[i][0];
         sim->V[i][sim->ny] = sim->VS[i][sim->ny];
     }
 #   endif

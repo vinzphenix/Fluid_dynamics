@@ -12,27 +12,27 @@
 
 
 // Simulation parameters
-#define RE 500.            // Reynolds number of the simulation
+#define RE 2000.            // Reynolds number of the simulation
 
 
 // Oscillation parameters
-#define ALPHA 0.5           // Amplitude of the horizonatal oscillation VELOCITY
+#define ALPHA 0.5           // Amplitude of the horizontal oscillation VELOCITY
 #define STROUHAL (1. / 3.)  // Frequency of the horizontal oscillation
-#define SIWNG_START 0.    // Starting time of the horizontal oscillation
+#define SIWNG_START 100.    // Starting time of the horizontal oscillation
 
-#define KAPPA_Y 0.15       // Amplitude of the vertical perturbation POSITION
+#define KAPPA_Y 0.02387    // Amplitude of the vertical perturbation POSITION  0.02387  0.15
 #define STROUHAL_Y (1./3.)  // Frequency of the vertical perturbation
-#define PERT_START 50.      // Starting time of the perturbation
-#define N_CYCLES 100          // Duration of the perturbation
-#define SMOOTH 3.           // Delay to reach 63% of the desired amplitude of the vertical oscillation (0 to disable)
+#define N_CYCLES 1          // Duration of the perturbation
+#define SMOOTH 0.           // Delay to reach 63% of the desired amplitude of the vertical oscillation (0 to disable)
+#define PERT_START 100.       // Starting time of the perturbation
 
 
 // Temperature parameters
 #define NO_SLIP 0           // Walls at y = 0 and y = H
 #define TEMP_MODE 0         // Thermal mode 0: disabled, 1: enabled
-#define PR 0.7              // Prandtl = nu / alpha
-#define GR 500000.          // Grashof = beta (T1-T0) g L^3 / nu^2  // 1000000
-#define EC 0.02              // Eckert
+#define PR 1.              // Prandtl = nu / alpha
+#define GR 100000.          // Grashof = beta (T1-T0) g L^3 / nu^2  // 1000000
+#define EC 0.              // Eckert
 
 #define WALL_DIRICHLET 0         // external walls dirichlet (0: no flux, 1: dirichlet)
 #define BOX_LFT_RGT_DIRICHLET 0  // left and right sides of box dirichlet
@@ -45,7 +45,7 @@
 #define USE_ADI 0           // 0: classic scheme, 1: solve using ADI method  // *boundary conditions ?
 #define CONVECTION_MODE 2   // 0: advective form, 1: divergence form, 2: average of both
 #define SAVE 1              // 1 to save, 0 otherwise
-#define START_AVG 5.
+#define START_AVG 20.
 // #define SAVE_MODULO 50      // save results every ... iteration
 
 // Box measurements

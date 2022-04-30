@@ -1,6 +1,7 @@
 hw
 cfd
 Project/lib_petsc
+deps
 
 Project/data
 Project/results

@@ -4,6 +4,7 @@ Project/lib_petsc
 deps
 
 Project/data
+Project/figures
 Project/results
 
 # Exclude animations (too heavy)
@@ -67,6 +68,18 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+
+# Latex
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.gz
+*.log
+*.out
+*.xml
+svg-inkscape/
 
 
 # No build

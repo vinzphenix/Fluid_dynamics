@@ -225,14 +225,14 @@ void predictor_step_u_adi(Sim_data *sim, ADI_data *adi) {
 
     double **U = sim->U;
 
-    double coef_1 = (sim->t == 0) ? -1. : -1.5;
-    double coef_2 = (sim->t == 0) ? +0. : +0.5;
+    double coef_1 = (sim->first_iteration) ? -1. : -1.5;
+    double coef_2 = (sim->first_iteration) ? +0. : +0.5;
     double r_half = 0.5 * (sim->dt) / (RE * sim->h * sim->h);
     double conv, pres, diff;
     
     // Solve system implicit in X (reversed indices for Q_ux)
     k = sim->nx + 1;
-    set_mesh_velocity(sim, (sim->t) * sim->dt);
+    set_mesh_velocity(sim, sim->tnow);
     set_system_ux(sim, adi, k);
 
     for (int block = 0; block < 4; block++) {
@@ -258,7 +258,7 @@ void predictor_step_u_adi(Sim_data *sim, ADI_data *adi) {
 
     // Solve system implicit in Y
     k = sim->ny + 2;
-    set_mesh_velocity(sim, (sim->t + 1.) * sim->dt);
+    set_mesh_velocity(sim, sim->tnow + sim->dt);
     set_system_uy(sim, adi, k);
 
     for (int block = 0; block < 4; block++) {
@@ -310,8 +310,8 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
 
     double **V = sim->V;
 
-    double coef_1 = (sim->t == 0) ? -1. : -1.5;
-    double coef_2 = (sim->t == 0) ? +0. : +0.5;
+    double coef_1 = (sim->first_iteration) ? -1. : -1.5;
+    double coef_2 = (sim->first_iteration) ? +0. : +0.5;
     double r_half = 0.5 * sim->dt / (RE * sim->h * sim->h);
     double conv, pres, diff;
 #   if TEMP_MODE
@@ -321,7 +321,7 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
 
     // Solve system implicit in X (reversed indices for Q_ux)
     k = sim->nx + 2;
-    set_mesh_velocity(sim, (sim->t) * sim->dt);
+    set_mesh_velocity(sim, sim->tnow);
     set_system_vx(sim, adi, k);
 
     for (int block = 4; block < 8; block++) {
@@ -350,7 +350,7 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
 
     // Solve system implicit in Y
     k = sim->ny + 1;
-    set_mesh_velocity(sim, (sim->t + 1.) * sim->dt);
+    set_mesh_velocity(sim, sim->tnow + sim->dt);
     set_system_vy(sim, adi, k);
 
     for (int block = 4; block < 8; block++) {
@@ -388,8 +388,8 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
 
     double **T = sim->T;
 
-    double coef_1 = (sim->t == 0) ? -1. : -1.5;
-    double coef_2 = (sim->t == 0) ? +0. : +0.5;
+    double coef_1 = (sim->first_iteration) ? -1. : -1.5;
+    double coef_2 = (sim->first_iteration) ? +0. : +0.5;
     double r_half = 0.5 * sim->dt / (PR * RE * sim->h * sim->h);
     double conv, diff, diss;
     diss = 0.;

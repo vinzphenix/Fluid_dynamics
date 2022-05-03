@@ -12,7 +12,7 @@
 
 
 // Simulation parameters
-#define RE 2000.            // Reynolds number of the simulation
+#define RE 500.            // Reynolds number of the simulation
 
 
 // Oscillation parameters
@@ -23,18 +23,18 @@
 #define KAPPA_Y 0.02387    // Amplitude of the vertical perturbation POSITION  0.02387  0.15
 #define STROUHAL_Y (1./3.)  // Frequency of the vertical perturbation
 #define N_CYCLES 1          // Duration of the perturbation
-#define SMOOTH 0.           // Delay to reach 63% of the desired amplitude of the vertical oscillation (0 to disable)
-#define PERT_START 100.       // Starting time of the perturbation
+#define SMOOTH 1.           // Delay to reach 63% of the desired amplitude of the vertical oscillation (0 to disable)
+#define PERT_START 5.       // Starting time of the perturbation
 
 
 // Temperature parameters
-#define NO_SLIP 0           // Walls at y = 0 and y = H
-#define TEMP_MODE 0         // Thermal mode 0: disabled, 1: enabled
-#define PR 1.              // Prandtl = nu / alpha
-#define GR 100000.          // Grashof = beta (T1-T0) g L^3 / nu^2  // 1000000
+#define NO_SLIP 1           // Walls at y = 0 and y = H
+#define TEMP_MODE 1         // Thermal mode 0: disabled, 1: enabled
+#define PR 0.7              // Prandtl = nu / alpha
+#define GR 400000.          // Grashof = beta (T1-T0) g L^3 / nu^2  // 1000000
 #define EC 0.              // Eckert
 
-#define WALL_DIRICHLET 0         // external walls dirichlet (0: no flux, 1: dirichlet)
+#define WALL_DIRICHLET 1         // external walls dirichlet (0: no flux, 1: dirichlet)
 #define BOX_LFT_RGT_DIRICHLET 0  // left and right sides of box dirichlet
 #define BOX_BOT_TOP_DIRICHLET 0  // top and bottom sides of box dirichlet
 #define TMIN -1.                 // Min temperature (upper external wall, upper wall of box)
@@ -42,6 +42,7 @@
 
 
 // Code parameters
+#define ADAPTATIVE_DT 1     // 0: classic increment, 1: check reh and rew to adapt time step (but not that functionnal)
 #define USE_ADI 0           // 0: classic scheme, 1: solve using ADI method  // *boundary conditions ?
 #define CONVECTION_MODE 2   // 0: advective form, 1: divergence form, 2: average of both
 #define SAVE 1              // 1 to save, 0 otherwise
@@ -49,7 +50,7 @@
 // #define SAVE_MODULO 50      // save results every ... iteration
 
 // Box measurements
-#define L_ 15
+#define L_ 20
 #define H_ 5
 #define LBOX 5
 #define D_IN 3
@@ -66,17 +67,17 @@
 #define ABORT_MSG(s) printf("%s\n%s\n", s, "Program aborted.")
 
 // Progress bar
-#define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
-#define PBWIDTH 60
+#define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||"
+#define PBWIDTH 50
 
 
 typedef struct {
-    int nt, nx, ny, n, t;
-    int size_u, size_v, size_p, size_T;
+    int nt, nx, ny, n, first_iteration;
+    int size_u, size_v, size_p, size_T, count_avg;
     int i_start[12], i_final[12], j_start[12], j_final[12];
-    double h, dt, tsim;
-    double uMesh, vMesh;
-    int save_modulo, start_avg_idx;
+    double h, dt, tsim, dt_stable;
+    double tnow, elapsed, save_freq, start_avg;
+    double uMesh, vMesh, reh, rew;
     
     double *u_data, *v_data, *p_data, *T_data;
     double *u_avg, *v_avg;
@@ -87,10 +88,10 @@ typedef struct {
 } Sim_data;
 
 
-void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input, int save_modulo_input, const char *myPath);
+void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input, double save_freq, const char *myPath);
 void init_fields(Sim_data *sim);
-void save_fields(Sim_data *sim, int t);
-void compute_diagnostics(Sim_data *sim, int t);
+void save_fields(Sim_data *sim);
+void save_diagnostics(Sim_data *sim, int saving);
 void free_Sim_data(Sim_data *sim);
 void check_boundary(Sim_data *sim);
 

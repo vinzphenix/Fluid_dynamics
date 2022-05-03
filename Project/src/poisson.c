@@ -36,7 +36,7 @@ void computeRHS(Sim_data *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) 
 
     for (i = 0; i < sim->nx; i++) {
         for (j = 0; j < sim->ny; j++) {
-            rhs[r++] = (sim->US[i+1][j+1] - sim->US[i  ][j+1]) + (sim->VS[i+1][j+1] - sim->VS[i+1][j  ]); 
+            rhs[r++] = ((sim->US[i+1][j+1] - sim->US[i  ][j+1]) + (sim->VS[i+1][j+1] - sim->VS[i+1][j  ])) / sim->dt;
         }
     }
 #endif
@@ -96,7 +96,7 @@ This function is called only once during the simulation, i.e. in initialize_pois
 void computeLaplacianMatrixNOIF(Sim_data *sim, Mat A, int rowStart, int rowEnd) {
     int i, j, idx;
     int k = sim->ny;
-    double alpha = sim->dt / (sim->h);
+    double alpha = sim->n;  // 1/h^2  *  h  =  n
     
     int i_w_left =  D_IN * sim->n - 1;
     int i_w_right = (D_IN + LBOX) * sim->n;
@@ -224,7 +224,7 @@ void computeLaplacianMatrix(Sim_data *sim, Mat A, int rowStart, int rowEnd) {
     int flag_right, flag_left, flag_above, flag_below;
     int k = sim->ny;
     double diag_value;
-    double alpha = sim->dt / (sim->h);
+    double alpha = sim->n;  // (1/h^2)  *  h  =  n
     
     int i_w_left =  D_IN * sim->n - 1;
     int i_w_right = (D_IN + LBOX) * sim->n;

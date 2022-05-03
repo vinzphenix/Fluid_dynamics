@@ -11,7 +11,7 @@ char filename_T[50];
 char filename_u_avg[50];
 char filename_v_avg[50];
 
-void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input, int save_modulo_input, const char *myPath) {
+void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input, double freq, const char *myPath) {
 
     sprintf(filename_params, "%ssimu_params.txt", myPath);
     sprintf(filename_stats, "%ssimu_stats.txt", myPath);
@@ -21,6 +21,13 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sprintf(filename_T, "%ssimu_T.txt", myPath);
     sprintf(filename_u_avg, "%ssimu_u_avg.txt", myPath);
     sprintf(filename_v_avg, "%ssimu_v_avg.txt", myPath);
+    
+    // erase from previous run
+    fclose(fopen(filename_stats, "w"));
+    fclose(fopen(filename_u, "w"));
+    fclose(fopen(filename_v, "w"));
+    fclose(fopen(filename_p, "w"));
+    fclose(fopen(filename_T, "w"));
 
     // Space discretization
     sim->n = n_input;
@@ -29,14 +36,17 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sim->h = 1. / ((double) sim->n);
 
     // Time discretization
-    double dtStable = fmin(FOURIER * RE * (sim->h) * (sim->h), CFL * sim->h / U0V0);
-    sim->dt = (dt_input == 0.) ? dtStable : dt_input;
+    sim->dt_stable = fmin(FOURIER * RE * (sim->h) * (sim->h), CFL * sim->h / U0V0);
+    sim->dt = (dt_input == 0.) ? sim->dt_stable : dt_input;
     sim->tsim = tend_input;
     sim->nt = (int) ceil(sim->tsim / sim->dt);
-    printf("Current \u0394t = %.5lf  vs  %.5lf = \u0394t maximal\n", sim->dt, dtStable);
+    printf("Current \u0394t = %.5lf  vs  %.5lf = \u0394t maximal\n", sim->dt, sim->dt_stable);
 
-    sim->save_modulo = save_modulo_input;
-    sim->start_avg_idx = ceil(START_AVG / sim->dt);
+    sim->tnow = 0.;
+    sim->elapsed = 0.;
+    sim->save_freq = freq;
+    sim->start_avg = START_AVG;
+    sim->count_avg = 0;
     
     // Obstacle initially not moving
     sim->uMesh = 0.;
@@ -184,7 +194,7 @@ void init_fields(Sim_data *sim) {
     
 #   if NO_SLIP
     double eta;
-    for (j = 1; j < sim->ny + 1; j++) {   // Inflow uniform profile u
+    for (j = 1; j < sim->ny + 1; j++) {
         eta = (j-0.5) * sim->h / H_;
         sim->U[0][j] = 6. * 1. * eta * (1. - eta);     // Poiseuille
         sim->US[0][j] = sim->U[0][j];                  // Poiseuille
@@ -228,30 +238,69 @@ void init_fields(Sim_data *sim) {
 }
 
 
-void save_fields(Sim_data *sim, int t) {
+int increase_dt = 0; 
+int decrease_dt = 0;
+// int nChanges = 0;
+double dt_change;
+double dt_init;
+void adapt_dt(Sim_data *sim, double speed) {
+
+    sim->dt_stable = fmin(FOURIER * RE * (sim->h) * (sim->h), CFL * sim->h / speed);
+
+    // Handle adaptative timestep
+    if (sim->tnow < 1.) {
+        dt_init = sim->dt;
+        return;
+    }
+    int duration = 10;
+
+    if ((decrease_dt == 0) && (increase_dt == 0)){
+        // keep dt in [0.90, 0.95]*dt_stable
+        if ((sim->dt > sim->dt_stable * 0.95) && (sim->dt > dt_init * 0.1)) {
+            // second condition avoids doing smaller and smaller time steps
+            // ((sim->rew > 40.) || (sim->reh > 40.)) ||
+            decrease_dt = 1;
+            dt_change = sim->dt_stable * 0.05;
+            // nChanges --;  // not used anymore
+        } else if ((sim->dt < sim->dt_stable * 0.90))  {
+            //((sim->rew < 32.) && (sim->reh < 32.)) || 
+            increase_dt = 1;
+            dt_change = sim->dt_stable * 0.05;
+            // nChanges ++;  // not used anymore
+        }
+    }
+    if ((0 < decrease_dt) && (decrease_dt <= duration)) {
+        sim->dt -= dt_change / duration;
+        decrease_dt ++;
+    } else if ((0 < increase_dt) && (increase_dt <= duration)) {
+        sim->dt += dt_change / duration;
+        increase_dt ++;
+    } else if (decrease_dt > duration) {
+        decrease_dt = 0;
+    } else if (increase_dt > duration) {
+        increase_dt = 0;
+    }
+}
+
+
+void save_fields(Sim_data *sim) {
     FILE *ptr, *ptr_u, *ptr_v, *ptr_p, *ptr_T;
     int i;
 
-    if (t == 0) {
+    if (sim->tnow == 0) {
         ptr = fopen(filename_params, "w");
-        fprintf(ptr, "%d %d %d %d %d\n", sim->nt, sim->nx, sim->ny, sim->n, sim->save_modulo);
-        fprintf(ptr, "%le %le %.10le %le %d %d %d %d %d\n", RE, sim->tsim, sim->dt, sim->h, L_, H_, LBOX, D_IN, D_BOT);
+        fprintf(ptr, "%d %d %d %d\n", sim->nx, sim->ny, sim->n, TEMP_MODE);
+        fprintf(ptr, "%le %le %.10le %le %le %le\n", RE, sim->tsim, sim->dt, sim->h, sim->save_freq, sim->start_avg);
+        fprintf(ptr, "%d %d %d %d %d\n", L_, H_, LBOX, D_IN, D_BOT);
         fprintf(ptr, "%le %le %le %le %le %le %le %d\n", ALPHA, STROUHAL, SIWNG_START, KAPPA_Y, STROUHAL_Y, PERT_START, SMOOTH, N_CYCLES);
-        fprintf(ptr, "%d %le %le %le %le %le\n", TEMP_MODE, PR, GR, EC, TMIN, TMAX);
+        fprintf(ptr, "%le %le %le %le %le\n", PR, GR, EC, TMIN, TMAX);
         fclose(ptr);
     }
-    
-    if (t == 0) {
-        ptr_u = fopen(filename_u, "w");
-        ptr_v = fopen(filename_v, "w");
-        ptr_p = fopen(filename_p, "w");
-        ptr_T = fopen(filename_T, "w");
-    } else {
-        ptr_u = fopen(filename_u, "a");
-        ptr_v = fopen(filename_v, "a");
-        ptr_p = fopen(filename_p, "a");
-        ptr_T = fopen(filename_T, "a");
-    }
+
+    ptr_u = fopen(filename_u, "a");
+    ptr_v = fopen(filename_v, "a");
+    ptr_p = fopen(filename_p, "a");
+    ptr_T = fopen(filename_T, "a");
 
     for (i = 0; i < sim->size_u; i++) fprintf(ptr_u, FMT, sim->u_data[i]);  // velocity x
     for (i = 0; i < sim->size_v; i++) fprintf(ptr_v, FMT, sim->v_data[i]);  // velocity y
@@ -274,7 +323,7 @@ void save_fields(Sim_data *sim, int t) {
  }
 
 
-void compute_diagnostics(Sim_data *sim, int t) {
+void save_diagnostics(Sim_data *sim, int saving) {
     
     int i, j, i1, i2, j1, j2;
     double uij, vij, wij;
@@ -286,20 +335,21 @@ void compute_diagnostics(Sim_data *sim, int t) {
     double lift_f = 0.;
     FILE *ptr;
 
-    // Update averaged fields (from iteration t=0 to t=nt included)
-    if (t >= sim->start_avg_idx) {
+    // Update averaged fields ("as soon as vortex shedding established")
+    if (sim->tnow >= sim->start_avg) {
         for (i = 0; i < sim->size_u; i++) sim->u_avg[i] += sim->u_data[i];
         for (i = 0; i < sim->size_v; i++) sim->v_avg[i] += sim->v_data[i];
+        sim->count_avg ++;
     }
     
-    if (t == sim->nt) {  // save at last iteration
+    if (sim->tnow >= sim->tsim) {  // save at last iteration
         ptr = fopen(filename_u_avg, "w");
-        for (i = 0; i < sim->size_u; i++) fprintf(ptr, "%.10le\n", sim->u_avg[i] / (sim->nt - sim->start_avg_idx + 1));
+        for (i = 0; i < sim->size_u; i++) fprintf(ptr, "%.10le\n", sim->u_avg[i] / sim->count_avg);
         fclose(ptr);
         // ceil(20. / sim->dt)
 
         ptr = fopen(filename_v_avg, "w");
-        for (i = 0; i < sim->size_v; i++) fprintf(ptr, "%.10le\n", sim->v_avg[i] / (sim->nt - sim->start_avg_idx + 1));
+        for (i = 0; i < sim->size_v; i++) fprintf(ptr, "%.10le\n", sim->v_avg[i] / sim->count_avg);
         fclose(ptr);
     }
 
@@ -348,18 +398,21 @@ void compute_diagnostics(Sim_data *sim, int t) {
         drag_f += (sim->U[i][j1] - sim->U[i][j1+1]) + (sim->U[i][j2] - sim->U[i][j2-1]);      // [ -(du/dy) below + (du/dy) above ] * dx
     drag_f += 0.5 * ((sim->U[i][j1] - sim->U[i][j1+1]) + (sim->U[i][j2] - sim->U[i][j2-1]));  // trapezoidal integration : last
     
-    reh = reh * sim->h * RE;
-    rew = rew * sim->h * sim->h * RE;
+    sim->reh = reh * sim->h * RE;
+    sim->rew = rew * sim->h * sim->h * RE;
     drag_p = 2 * drag_p * sim->h;
     drag_f = 2 * drag_f / RE;
     lift_p = 2 * lift_p * sim->h;
     lift_f = 2 * lift_f / RE;
     // factor 2 because Cd = Fd / (0.5 * rho * u^2 * Hbox)
 
-    if (t == 0) ptr = fopen(filename_stats, "w");
-    else ptr = fopen(filename_stats, "a");
-    fprintf(ptr, "%le %le %le %le %le %le\n", reh, rew, drag_p, drag_f, lift_p, lift_f);
+    ptr = fopen(filename_stats, "a");
+    fprintf(ptr, "%le %le %le %le %le %le %.10le %d\n", sim->reh, sim->rew, drag_p, drag_f, lift_p, lift_f, sim->tnow, saving);
     fclose(ptr);
+
+#   if ADAPTATIVE_DT
+    adapt_dt(sim, reh);
+#   endif
 }
 
 
@@ -671,8 +724,8 @@ void predictor_step(Sim_data *sim) {
     double **U = sim->U;
     double **V = sim->V;
 
-    double coef_1 = (sim->t == 0) ? -1. : -1.5;
-    double coef_2 = (sim->t == 0) ? +0. : +0.5;
+    double coef_1 = (sim->first_iteration) ? -1. : -1.5;
+    double coef_2 = (sim->first_iteration) ? +0. : +0.5;
     double nu_h2 = 1. / (RE * sim->h * sim->h);
 #   if TEMP_MODE
     double beta = 0.5 * GR / (RE * RE);  // 0.5 here to prepare the average in the "for" loop
@@ -808,8 +861,8 @@ void corrector_step_temperature(Sim_data *sim) {
     int i, j;
     int i_s, i_f, j_s, j_f;
 
-    double coef_1 = (sim->t == 0) ? -1. : -1.5;
-    double coef_2 = (sim->t == 0) ? +0. : +0.5;
+    double coef_1 = (sim->first_iteration) ? -1. : -1.5;
+    double coef_2 = (sim->first_iteration) ? +0. : +0.5;
     double diff = 1. / (PR * RE) * 1. / (sim->h * sim->h);
     
     double diss = (EC / RE) * 1. / (sim->h * sim->h);

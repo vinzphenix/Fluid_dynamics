@@ -29,7 +29,7 @@ make -j
 
 - __-ksp_type__ : Name of the PETSc Krylov method, that shouldn't be modified
 - __-pc_type__ : Name of the PETSc preconditioner method, that shouldn't be modified
-- __-n__ [integer] : Spatial discretization, with $H_{box}=1/n$
+- __-n__ [integer] : Spatial discretization, with $`H_{box}=1/n`$
 - __-dt__ [double] : Time step, or initial time step if adaptative time step activated
 - __-tend__ [double] : Final time of the simulation
 - __-freq__ [double] : Frequency to which the program saves the fields in `.txt` files
@@ -37,7 +37,7 @@ make -j
 
 
 ## Produce an animation
-The animation proposed shows the streamlines (iso-$\psi$), the pressure field $p$, the vorticity field $\omega$ and if possible the temperature field $T$.
+The animation proposed shows the streamlines (iso-$`\psi`$), the pressure field $`p`$, the vorticity field $`\omega`$ and if possible the temperature field $`T`$.
 
 First, you need to produces the frames of the animation based on a simulation stored in the directory `./results/`. To do so, make sure that the directory `./anim/` exists and execute:
 ```

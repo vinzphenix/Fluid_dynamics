@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
+import sys
 
 from tqdm import tqdm
 from scipy.interpolate import RegularGridInterpolator
@@ -10,35 +11,33 @@ from matplotlib.animation import FuncAnimation, PillowWriter, FFMpegWriter
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-ftSz1, ftSz2, ftSz3 = 20, 17, 15
-plt.rcParams['font.family'] = 'monospace'
-
 
 class Simulation:
 
     def __init__(self, filenames, analyze=False):
 
-        if analyze:
-            params1, params2, params3, params4, dataframes, diagnostics, self.u_avg, self.v_avg = read_data_init(filenames, analyze)
-        else:
-            params1, params2, params3, params4, dataframes = read_data_init(filenames)
+        params1, params2, params3, params4, params5, dataframes, diagnostics, self.u_avg, self.v_avg = read_data_init(filenames, analyze)
 
-        self.nt, self.nx, self.ny, self.n, self.save_modulo = params1
-        self.RE, self.T, self.dt, self.h, self.L, self.H, self.lbox, self.din, self.dbot = params2
-        self.alpha, self.st, self.swing_start, self.kappa_y, self.st_y, self.pert_start, self.smooth, self.n_cycles = params3
-        self.temperature, self.prandtl, self.grashof, self.eckert, self.tmin, self.tmax = params4
+        self.nx, self.ny, self.n, self.temperature = params1
+        self.RE, self.T, self.dt, self.h, self.save_freq, self.start_avg = params2
+        self.L, self.H, self.lbox, self.din, self.dbot = params3
+        self.alpha, self.st, self.swing_start, self.kappa_y, self.st_y, self.pert_start, self.smooth, self.n_cycles = params4
+        self.prandtl, self.grashof, self.eckert, self.tmin, self.tmax = params5
 
         self.df_p, self.df_u, self.df_v = dataframes[:3]
         self.df_T = dataframes[-1]
 
+        # self.nt_simu = self.nt
+        # self.dt_simu = self.dt
+        # self.dt *= self.save_modulo
+        # self.nt //= self.save_modulo
+        # self.t_simu = np.linspace(0., self.T, self.nt_simu + 1)
+        # self.t = np.linspace(0., self.T, self.nt + 1)
 
-        self.nt_simu = self.nt
-        self.dt_simu = self.dt
-        self.dt *= self.save_modulo
-        self.nt //= self.save_modulo
-        
-        self.t_simu = np.linspace(0., self.T, self.nt_simu + 1)
-        self.t = np.linspace(0., self.T, self.nt + 1)
+        self.t_simu = diagnostics[:, 6]
+        self.t = self.t_simu[diagnostics[:, 7] == 1]
+        self.nt = self.t.shape[0] - 1
+
         self.kappa = self.alpha / (2. * np.pi * self.st)
         self.alpha_y = self.kappa_y * (2. * np.pi * self.st_y)
         self.pert_dt = self.n_cycles / self.st_y
@@ -67,13 +66,12 @@ class Simulation:
         self.mask_middle = (self.din < self.xxm) * (self.xxm < self.din+self.lbox) * (self.dbot < self.yym) * (self.yym < self.dbot+1)
         self.mask_corner = (self.din <= self.xx) * (self.xx <= self.din+self.lbox) * (self.dbot <= self.yy) * (self.yy <= self.dbot+1)
 
-        if analyze:
-            self.reh = diagnostics[:, 0]
-            self.rew = diagnostics[:, 1]
-            self.drag_p = diagnostics[:, 2]
-            self.drag_f = diagnostics[:, 3]
-            self.lift_p = diagnostics[:, 4]
-            self.lift_f = diagnostics[:, 5]
+        self.reh = diagnostics[:, 0]
+        self.rew = diagnostics[:, 1]
+        self.drag_p = diagnostics[:, 2]
+        self.drag_f = diagnostics[:, 3]
+        self.lift_p = diagnostics[:, 4]
+        self.lift_f = diagnostics[:, 5]
 
 
 def read_data_init(filenames, analyze=False):
@@ -86,12 +84,11 @@ def read_data_init(filenames, analyze=False):
         params2 = [float(x) for x in lines[1].split(" ")]
         params3 = [float(x) for x in lines[2].split(" ")]
         params4 = [float(x) for x in lines[3].split(" ")]
-    
-    nt, nx, ny, n, save_modulo = params1    
-    params4[0] = int(params4[0])
+        params5 = [float(x) for x in lines[4].split(" ")]
 
-    for i in range(6, 9):
-        params2[i] = int(params2[i])
+    nx, ny, n, temp_enabled = params1
+    for i in range(2, len(params3)):
+        params3[i] = int(params3[i])
 
     size_p, size_u, size_v = nx * ny, (nx+1) * (ny+2), (nx+2) * (ny+1)
     
@@ -100,17 +97,16 @@ def read_data_init(filenames, analyze=False):
     df_v = pd.read_csv(filename_v, chunksize=size_v, header=None)
     dfs = [df_p, df_u, df_v]
 
-    if bool(params4[0]):
+    # if bool(params4[0]):
+    if temp_enabled == 1:
         dfs.append(pd.read_csv(filename_T, chunksize=size_p, header=None))
 
-    if analyze:
-        diagnostics = np.loadtxt(filename_stats)
-        u_avg = np.array(pd.read_csv(filename_u_avg, header=None)).reshape(nx+1, ny+2)
-        v_avg = np.array(pd.read_csv(filename_v_avg, header=None)).reshape(nx+2, ny+1)
-        return params1, params2, params3, params4, dfs, diagnostics, u_avg, v_avg
+    diagnostics = np.loadtxt(filename_stats)
+    u_avg = np.array(pd.read_csv(filename_u_avg, header=None)).reshape(nx+1, ny+2)
+    v_avg = np.array(pd.read_csv(filename_v_avg, header=None)).reshape(nx+2, ny+1)
     
-    else:
-        return params1, params2, params3, params4, dfs
+    return params1, params2, params3, params4, params5, dfs, diagnostics, u_avg, v_avg
+    
     # find bounds
     # t1 = perf_counter()
     # (pmin, pmax), (umin, umax), (vmin, vmax), (wmin, wmax) = find_all_bounds()
@@ -209,7 +205,7 @@ def find_all_bounds(filename_p, filename_u, filename_v):
     return res
 
 
-def update(t):
+def update(t_idx):
 
     p, u, v, w, T = read_block(sim, needed={"p": True, "u": True, "v": True, "w": True, "T":True})
     p_masked, w_masked, T_masked = apply_mask(sim, p, w, T)
@@ -217,24 +213,24 @@ def update(t):
     animated_items = []
 
     for patch in patches:
-        patch.set_xy([sim.din + sim.delta_x[t], sim.dbot + sim.delta_y[t]])
+        patch.set_xy([sim.din + sim.delta_x[t_idx], sim.dbot + sim.delta_y[t_idx]])
         animated_items.append(patch)
      
-    pressure.set_extent([sim.delta_x[t], sim.L + sim.delta_x[t], 0 + sim.delta_y[t], sim.H + sim.delta_y[t]])  # update position
+    pressure.set_extent([sim.delta_x[t_idx], sim.L + sim.delta_x[t_idx], 0 + sim.delta_y[t_idx], sim.H + sim.delta_y[t_idx]])  # update position
     pressure.set_data(p_masked)
     animated_items.append(pressure)
 
-    vorticity.set_extent([sim.delta_x[t], sim.L + sim.delta_x[t], 0 + sim.delta_y[t], sim.H + sim.delta_y[t]])  # update position
+    vorticity.set_extent([sim.delta_x[t_idx], sim.L + sim.delta_x[t_idx], 0 + sim.delta_y[t_idx], sim.H + sim.delta_y[t_idx]])  # update position
     vorticity.set_data(w_masked)
     animated_items.append(vorticity)
 
-    if kwargs["temperature"]:
-        temperature.set_extent([sim.delta_x[t], sim.L + sim.delta_x[t], 0 + sim.delta_y[t], sim.H + sim.delta_y[t]])  # update position
+    if sim.temperature:
+        temperature.set_extent([sim.delta_x[t_idx], sim.L + sim.delta_x[t_idx], 0 + sim.delta_y[t_idx], sim.H + sim.delta_y[t_idx]])  # update position
         temperature.set_data(T_masked)
         animated_items.append(temperature)
 
 
-    if kwargs["stream"] and t > 0:
+    if kwargs["stream"] and t_idx > 0:
         for item in strm[0].collections:
             item.remove()
         
@@ -246,7 +242,7 @@ def update(t):
         levels = np.linspace(psi_min + 0.01 * psi_dif, psi_max - 0.01 * psi_dif, nStreamLines)
         levels = levels - scaling * psi_dif / (2. * np.pi) * np.sin(2. * np.pi / psi_dif * (levels - psi_avg))
 
-        strm[0] = axs[0].contour(sim.xx + sim.delta_x[t], sim.yy + sim.delta_y[t], psi, linewidths=strm_lw,
+        strm[0] = axs[0].contour(sim.xx + sim.delta_x[t_idx], sim.yy + sim.delta_y[t_idx], psi, linewidths=strm_lw,
                                  colors=strm_color, alpha=strm_alpha, levels=levels, linestyles="solid")
         animated_items.append(strm[0].collections)
     
@@ -258,12 +254,12 @@ def update(t):
         
         for j, (line, x_particles, y_particles) in enumerate(zip(lines, streaklines_x, streaklines_y)):
             # if t % cycle == 0:
-            x_particles[(t//cycle) % nParticles] = 2 * sim.kappa
-            y_particles[(t//cycle) % nParticles] = spots_y[j]
+            x_particles[(t_idx//cycle) % nParticles] = 2 * sim.kappa
+            y_particles[(t_idx//cycle) % nParticles] = spots_y[j]
             mask = (0. <= x_particles) * (x_particles <= L) * (0. <= y_particles) * (y_particles <= H)
             
             # evaluate the field at the right place: take the shift in consideration
-            args = np.c_[x_particles[mask] - sim.delta_x[t], y_particles[mask] - sim.delta_y[t]]
+            args = np.c_[x_particles[mask] - sim.delta_x[t_idx], y_particles[mask] - sim.delta_y[t_idx]]
             
             x_particles[mask] += sim.dt * u_interp(args)  # Euler explicite
             y_particles[mask] += sim.dt * v_interp(args)  # Euler explicite
@@ -275,7 +271,18 @@ def update(t):
         animated_items += lines
 
 
-    time_text.set_text(time_str.format(t * sim.dt))
+    time_text.set_text(time_str.format(sim.t[t_idx]))
+    
+    idx_t_simu = np.argwhere(sim.t_simu == sim.t[t_idx])[0][0]
+    idx_t_simu = idx_t_simu if t_idx < nt else idx_t_simu - 1
+    dt_now = sim.t_simu[idx_t_simu+1] - sim.t_simu[idx_t_simu]
+    mantisse_dt = dt_now / np.power(10., -3)
+    # dt_text = r"    $\Delta t^*= {:.1f}\cdot 10^{{{:.0f}}}$".format(mantisse_dt, -3)
+    axs[0].set_title(title_text + dt_text.format(mantisse_dt, -3), fontsize=title_fontsize)
+
+    if save != "html":
+        pbar.update(1)
+
     animated_items.append(time_text)
     return tuple(animated_items)
 
@@ -304,14 +311,33 @@ def create_html():
         f.close()
 
 
+ftSz1, ftSz2, ftSz3 = 20, 17, 15  # time text, parameters, labels
+plt.rcParams['font.family'] = 'monospace'
+plt.rcParams["text.usetex"] = True
+fix_title = True
+
+
 if __name__ == "__main__":
 
-    kwargs = {"stream":True, "streak":False, "temperature": False}
+    kwargs = {"stream":True, "streak":False}
     
-    case_name = "high_re"  # case_1
-    path_res = "../results/" + case_name
-    path_anim = "../anim/" + case_name
-    html_ref = "../anim/case_1.html"  # copy and create new html with a different path to images
+    # case_name = "no_slip_gr"  # case_1
+    if (len(sys.argv) != 5) or ("-h" in sys.argv):
+        print("usage: python3 run.py -dir [directory_name] -save [no, gif, mp4, html]") 
+    if sys.argv[1] == "-dir":
+        case_name = sys.argv[2]
+    if (sys.argv[3] == "-save") and (sys.argv[4] in ["no", "gif", "mp4", "html"]):
+        save = sys.argv[4]
+
+    # path_src = "/media/vincelinux/LaCie/LMECA2660"
+    path_src = ".."
+    
+    # path_dst = "/media/vincelinux/LaCie/LMECA2660"
+    path_dst = ".."
+
+    path_res = path_src + "/results/" + case_name
+    path_anim = path_dst + "/anim/" + case_name
+    html_ref = path_dst + "/anim/no_slip.html"  # copy and create new html with a different path to images
 
     filename_params = f"{path_res}/simu_params.txt"
     filename_p = f"{path_res}/simu_p.txt"
@@ -324,24 +350,27 @@ if __name__ == "__main__":
 
     sim = Simulation([filename_params, filename_p, filename_u, filename_v, filename_T,
                       filename_stats, filename_u_avg, filename_v_avg], analyze=False)
-    kwargs["temperature"] = bool(sim.temperature)
 
     cmap1, cmap2, cmap3, cmap4 = "Spectral_r", "bwr", "RdBu_r", "turbo_r"  # OrRd
     nStreamLines, scaling, strm_lw, strm_color, strm_alpha = 24, 0.70, 1.25, "grey", 0.25
     nStreakLines, nParticles, strk_lw, strk_color, strk_alpha = 2, 500, 3., "grey", 0.5
 
-    # Fields
-    # p, u, v, w, p_masked, w_masked = read_block(sim)
+
+    # make some parameters global for access simplicity
 
     nt, nx, ny = sim.nt, sim.nx, sim.ny
     L, H, din, dbot, lbox = sim.L, sim.H, sim.din, sim.dbot, sim.lbox
     xx, yy = sim.xx, sim.yy
 
-    n_plots = 3 if kwargs["temperature"] else 2
-    width, height = (10., 8.5) if kwargs["temperature"] else (12., 8.)
 
     #############################################################################################
     ######################################  -  FIGURE  -  #######################################
+
+    n_plots = 3 if sim.temperature else 2
+    height = 9. if sim.temperature else 8.
+    width = (height * 0.9 / n_plots) * (sim.L + 2) / sim.H
+    # width, height = (9., 8.5) if sim.temperature else (12., 8.)
+
     fig, axs = plt.subplots(n_plots, 1, figsize=(width, height), constrained_layout=False, sharex="all", sharey="all")
 
     # pmin, pmax = np.amin(p), np.amax(p)
@@ -359,34 +388,40 @@ if __name__ == "__main__":
     cbar_p, cbar_w = fig.colorbar(pressure, cax=cax_p), fig.colorbar(vorticity, cax=cax_w)
     cax_p.set_ylabel(r"$\Delta p \: / \: \rho U^2$", fontsize=ftSz3)
     cax_w.set_ylabel(r"$\omega \: H_{{box}} \: / \: U$", fontsize=ftSz3)
-    title_text = "$Re={:.0f}$".format(sim.RE)
 
-    title_fontsize = ftSz3
-    if kwargs["temperature"]:
+    space_sep = r"\qquad\quad" if sim.eckert == 0. else r"\qquad"
+    title_text = r"$Re={:.0f} {:s}$".format(sim.RE, space_sep)
+    title_fontsize = ftSz2 * 15./17. if sim.temperature else ftSz2
+
+    if sim.temperature:
         temperature = axs[2].imshow(np.zeros((nx, ny)), extent=(0, L, 0, H), vmin=Tmin, vmax=Tmax, cmap=cmap3, origin="lower")
         cax_T = make_colorbar_with_padding(axs[2])
         cbar_T = fig.colorbar(temperature, cax=cax_T)
         cax_T.set_yticks([Tmin + i * (Tmax - Tmin) / (5. - 1.) for i in range(5)])
         cax_T.set_ylabel(r"$(T - T_0)\: / \: \Delta T$", fontsize=ftSz3)
 
-        title_text += "    $Pr={:.1f}$".format(sim.prandtl)
-        title_fontsize *= 0.85
+        title_text += "$Pr={:.1f} {:s}$".format(sim.prandtl, space_sep)
         if sim.grashof > 0:
             base10power_Gr = np.floor(np.log10(sim.grashof))
             mantisse_Gr = sim.grashof / np.power(10, base10power_Gr)
-            title_text += "    $Gr={:.0f} \cdot 10^{{{:.0f}}}$".format(mantisse_Gr, base10power_Gr)
+            title_text += "$Gr={:.0f} \cdot 10^{{{:.0f}}} {:s}$".format(mantisse_Gr, base10power_Gr, space_sep)
         else:
-            title_text += "    $Gr=0$"
+            title_text += "$Gr=0 {:s}$".format(space_sep)
 
         if sim.eckert > 0:
             base10power_Ec = np.floor(np.log10(sim.eckert))
             mantisse_Ec = sim.eckert / np.power(10, base10power_Ec)
-            title_text += "   $Ec={:.0f} \cdot 10^{{{:.0f}}}$".format(mantisse_Ec, base10power_Ec)
+            title_text += "$Ec={:.0f} \cdot 10^{{{:.0f}}} {:s}$".format(mantisse_Ec, base10power_Ec, space_sep)
 
-    base10power_dt = np.floor(np.log10(sim.dt_simu))
-    mantisse_dt = sim.dt_simu / np.power(10, base10power_dt)
-    title_text += "    $h^* = {:.3f}$".format(sim.h) + "    $\Delta t^*= {:.1f}\cdot 10^{{{:.0f}}}$".format(mantisse_dt, base10power_dt)
-    axs[0].set_title(title_text, fontsize=title_fontsize)
+    title_text += "$h^* = {:.3f} {:s}$".format(sim.h, space_sep)
+    base10power_dt = np.floor(np.log10(sim.dt))
+    mantisse_dt = sim.dt / np.power(10, base10power_dt)
+    if fix_title:  # avoid the title to move when dt changes
+        dt_text = r"$\Delta t^*= \mathtt{{{:.1f}}} \cdot 10^{{{:.0f}}}$"
+    else:
+        dt_text = r"$\Delta t^*= {:.1f}\cdot 10^{{{:.0f}}}$"
+
+    axs[0].set_title(title_text + dt_text.format(mantisse_dt, base10power_dt), fontsize=title_fontsize)
 
     # streamlines and streaklines
     if kwargs["stream"]:
@@ -408,14 +443,14 @@ if __name__ == "__main__":
     for ax in axs:
         ax.axis([0., L, 0., H])
         ax.set_aspect('equal')
-    
+
     # Time text
-    position_text = (0.03,0.85) if n_plots == 3 else (0.02, 0.9)
-    fontsize = ftSz2 * 0.9 if n_plots == 3 else ftSz2
-    time_str = r"$t*$ = {:5.2f}"
+    position_text = (0.03,0.85) if n_plots == 3 else (0.855, 0.9)
+    # fontsize = ftSz2 * 0.90 if n_plots == 3 else ftSz2
+    time_str = r"$t^*$ = {:5.2f}"
     bbox_dic = dict(boxstyle="round", fc="wheat", ec="none", alpha=0.85)
-    time_text = axs[0].text(*position_text, time_str.format(0), fontsize=fontsize, transform=axs[0].transAxes, bbox=bbox_dic)
-    
+    time_text = axs[0].text(*position_text, time_str.format(0), fontsize=ftSz1, transform=axs[0].transAxes, bbox=bbox_dic)
+
 
     ##############################################################################################
     ###################################  -  SAVE & DISPLAY  -  ###################################
@@ -423,29 +458,34 @@ if __name__ == "__main__":
     # save = "none"
     # save = "gif"
     # save = "mp4"
-    save = "html"
+    # save = "html"
 
     if save == "none":
-        anim = FuncAnimation(fig, update, tqdm(range(nt//10+1)), interval=10, blit=False, init_func=lambda :None, repeat=False)
+        pbar = tqdm(total=nt+1)
+        anim = FuncAnimation(fig, update, nt+1, interval=40, blit=False, init_func=lambda :None, repeat=False)
+        pbar.close()
         plt.show()
     
     elif save == "gif":
-        anim = FuncAnimation(fig, update, tqdm(range(nt+1)), interval=100, blit=False, init_func=lambda :None, repeat=False)
+        pbar = tqdm(total=nt+1)
+        anim = FuncAnimation(fig, update, nt+1, interval=40, blit=False, init_func=lambda :None, repeat=False)
         writerGIF = PillowWriter(fps=15)
-        anim.save(f"{path_anim}/flow.gif", writer=writerGIF, dpi=100)
+        anim.save(f"{path_anim}.gif", writer=writerGIF, dpi=100)
+        pbar.close()
     
     elif save == "mp4":
-        anim = FuncAnimation(fig, update, nt+1, interval=100, blit=False, repeat=False)
-        writerMP4 = FFMpegWriter(fps=15)
-        anim.save(f"{path_anim}/flow.mp4", writer=writerMP4)
+        # fig.subplots_adjust(left=0.0)
+        pbar = tqdm(total=nt+1)
+        anim = FuncAnimation(fig, update, nt+1, interval=40, blit=False, init_func=lambda :None, repeat=False)
+        writerMP4 = FFMpegWriter(fps=25)
+        anim.save(f"{path_anim}.mp4", writer=writerMP4)
+        pbar.close()
 
     elif save == "html":
-        # path_frames = f"{path_anim}/{case_name:s}/"
         os.makedirs(path_anim + "/", exist_ok=True)
-
-        fig.subplots_adjust(bottom=0.02, top=0.98, left=0.02, right=0.98, hspace=0.05)
-        for t in tqdm(range(nt + 1)):
+        fig.subplots_adjust(bottom=0.01, top=0.99, left=0.01, right=0.99, hspace=0.05)
+        for t in tqdm(range(nt+1)):
             update(t)
-            fig.savefig(f"{path_anim:s}/frame_{t:05d}.png", format="png", bbox_inches='tight', pad_inches=0.02)
+            fig.savefig(f"{path_anim:s}/frame_{t:05d}.png", format="png", bbox_inches='tight', pad_inches=0.055)
         
         create_html()

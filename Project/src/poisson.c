@@ -342,7 +342,7 @@ void free_poisson_solver(Poisson_data* data) {
 
 void test_poisson(Sim_data *sim, Poisson_data *poisson) {
     poisson_solver(sim, poisson);
-    FILE *ptr = fopen("./data/test_poisson.txt", "w");
+    FILE *ptr = fopen("./results/test_poisson.txt", "w");
     fprintf(ptr, "%d\n", sim->n);
     for (int i = 0; i < sim->nx; i++) {
         for (int j = 0; j < sim->ny; j++) {

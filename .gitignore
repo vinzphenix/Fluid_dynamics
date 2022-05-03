@@ -4,16 +4,15 @@ Project/lib_petsc
 deps
 
 Project/data
-Project/figures
 Project/results
 
 # Exclude animations (too heavy)
 Project/anim/**/*.txt
 Project/anim/**/*.png
 Project/anim/**/*.txt
-Project/anim/**/*.mp4
+# Project/anim/**/*.mp4
 Project/anim/**/*.html
-!case_1.html
+!no_slip_crash.html
 
 # Prerequisites
 *.d

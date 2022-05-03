@@ -1,16 +1,18 @@
 # import os
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'run.py')))
 
-from unittest import case
-from run_new import *
+from run import *
 
 
 def plot_vorticity(t_list, cmap, save=False):
 
     n_plots = len(t_list)
     indices = [np.argmin(np.abs(this_t - sim.t)) for this_t in t_list]
-        
-    fig, axs = plt.subplots(n_plots, 1, figsize=(10., 10.), sharex="all", sharey="all")
+    
+    h = sim.H * 2.
+    w = h / (n_plots * sim.H) * sim.L
+
+    fig, axs = plt.subplots(n_plots, 1, figsize=(w, h), sharex="all", sharey="all")
     fig.tight_layout()
     caxs = [make_colorbar_with_padding(axs[i]) for i in range(n_plots)]
     
@@ -32,11 +34,6 @@ def plot_vorticity(t_list, cmap, save=False):
         levels = np.linspace(wmin + 0.01 * wdif, wmax - 0.01 * wdif, nStreamLines)
         levels = levels - scaling * wdif / (2. * np.pi) * np.sin(2. * np.pi / wdif * (levels - wavg))
         
-        # levels = np.linspace(wmax * 0.05, np.round(wmax * 0.95, 0), 10)
-        # levels = np.r_[-levels[::-1], levels]
-        # levels = np.linspace(-wmax, wmax, 20)
-        # levels = levels - 0.5 * (2*wmax) / (2. * np.pi) * np.sin(2. * np.pi / (2 * wmax) * (levels))
-
         ct = axs[i].contour(x + delta_x[t], y + delta_y[t], w, linewidths=2., levels=levels, cmap=cmap)
         cbar = fig.colorbar(ct, cax=caxs[i], spacing = 'proportional', ticks=np.round(np.linspace(levels[0], levels[-1], 7)))
         i += 1
@@ -47,7 +44,6 @@ def plot_vorticity(t_list, cmap, save=False):
     axs[-1].set_xlabel(r"$x / H_{box}$", fontsize=ftSz2)
     for idx, ax in zip(indices, axs):
         box = Rectangle((din + delta_x[idx], dbot + delta_y[idx]), lbox, 1., fc="grey", ec="none", alpha=1., zorder=5)
-        print(din + delta_x[idx])
         ax.add_patch(box)
         ax.text(0.03,0.85, r"$t = {:5.2f}$".format(sim.t[idx]), fontsize=ftSz2, transform=ax.transAxes, bbox=bbox_dic)
         ax.set_ylabel(r"$y / H_{{box}}$", fontsize=ftSz2)
@@ -55,7 +51,8 @@ def plot_vorticity(t_list, cmap, save=False):
         ax.set_aspect("equal")
 
     if save:
-        fig.savefig(f"../figures/vorticity_{case_name}.svg", format="svg", bbox_inches='tight')
+        # fig.savefig(f"../figures/vorticity_{case_name}.svg", format="svg", bbox_inches='tight')
+        fig.savefig(f"../figures/vorticity_{case_name}.png", format="png", bbox_inches='tight')
     else:
         plt.show()
 
@@ -66,7 +63,10 @@ def plot_streamlines(t_list, cmap, save=False):
     indices = [np.argmin(np.abs(this_t - sim.t)) for this_t in t_list]
     x, y, delta_x, delta_y = sim.x, sim.y, sim.delta_x, sim.delta_y
 
-    fig, axs = plt.subplots(n_plots, 1, figsize=(10., 10.), sharex="all", sharey="all")
+    h = sim.H * 2.
+    w = h / (n_plots * sim.H) * sim.L
+
+    fig, axs = plt.subplots(n_plots, 1, figsize=(w, h), sharex="all", sharey="all")
     fig.tight_layout()
     caxs = [make_colorbar_with_padding(axs[i]) for i in range(n_plots)]
 
@@ -98,13 +98,14 @@ def plot_streamlines(t_list, cmap, save=False):
         ax.set_aspect("equal")
 
     if save:
-        fig.savefig(f"../figures/streamlines_{case_name}.svg", format="svg", bbox_inches='tight')
+        # fig.savefig(f"../figures/streamlines_{case_name}.svg", format="svg", bbox_inches='tight')
+        fig.savefig(f"../figures/streamlines_{case_name}.png", format="png", bbox_inches='tight')
     else:
         plt.show()
 
 
 def plot_average_flow(cmap1, cmap2, compute=False, t_start=20., save=False):
-    if sim.T < t_start:
+    if sim.T <= sim.start_avg:
         return
 
     fig, axs = plt.subplots(2, 1, figsize=(10., 8.), sharex="all", sharey="all")
@@ -142,8 +143,6 @@ def plot_average_flow(cmap1, cmap2, compute=False, t_start=20., save=False):
     v_avg = (v_avg[1:, :] + v_avg[:-1, :]) / 2.
 
     # STREAMLINES
-    # psi = axs[0].contour(x, y, u_sum.T, 10, cmap=cmap)
-    # cbar1 = fig.colorbar(psi, cax=caxs[0])
     speed = np.hypot(u_avg.T, v_avg.T)
     lw = 2 * np.abs(1. - speed)
     strm = axs[0].streamplot(x, y, u_avg.T, v_avg.T, density=2., linewidth=lw, color=speed, cmap=cmap1)
@@ -172,7 +171,8 @@ def plot_average_flow(cmap1, cmap2, compute=False, t_start=20., save=False):
     plt.subplots_adjust(hspace=0.1)
 
     if save:
-        fig.savefig(f"../figures/avg_flow_{case_name}.svg", format="svg", bbox_inches='tight')
+        # fig.savefig(f"../figures/avg_flow_{case_name}.svg", format="svg", bbox_inches='tight')
+        fig.savefig(f"../figures/avg_flow_{case_name}.png", format="png", bbox_inches='tight')
     else:
         plt.show()
 
@@ -273,8 +273,6 @@ def plot_drag_lift(compute=False, save=False):
     axs[-1].set_xlabel(r"$t U_{\infty} / H_{box}$", fontsize=ftSz2)
     axs[0].set_ylabel(r"$C_d$", fontsize=ftSz2)
     axs[1].set_ylabel(r"$C_l$", fontsize=ftSz2)
-    # axs[0].set_ylabel(r"$Drag \;/\; (\rho U_{{\infty}}^2 H_{{box}}^2) $", fontsize=ftSz2)
-    # axs[1].set_ylabel(r"$Lift \;/\; (\rho U_{{\infty}}^2 H_{{box}}^2) $", fontsize=ftSz2)
     
     axs[1].legend(fontsize=ftSz3, bbox_to_anchor=(0.1, -0.30, 0.8, 0.1), mode="expand", fancybox=True, shadow=True, ncol=3)
     for ax in axs:
@@ -285,13 +283,9 @@ def plot_drag_lift(compute=False, save=False):
     else:
         plt.show()
 
-# kg m / s^2
-# F / (rho U0^2 Hbox^2)
-
-
 
 if __name__ == "__main__":
-    save_global = True
+    save_global = False
     ftSz1, ftSz2, ftSz3 = 25, 20, 17
     plt.rcParams["text.usetex"] = save_global
     plt.rcParams['font.family'] = 'serif'  # monospace
@@ -300,13 +294,14 @@ if __name__ == "__main__":
     cmap2 = plt.get_cmap("bwr")
     cmap3 = plt.get_cmap("Spectral_r")
 
-    case_list = ["case_1", "case_2", "case_3", "case_4", "hot_box", "hot_cold", "no_slip",
-                 "Re_2k_case_1", "Re_2k_eckert", "Re_2k_hot_box", "Re_100_hot_cold", "vertical"]
+    case_list_hard_drive = ["case_1", "case_2", "case_3", "case_4", "hot_box", "hot_cold", "no_slip", "no_slip_faster",
+                            "Re_2k_case_1", "Re_2k_eckert", "Re_2k_hot_box", "Re_100_hot_cold", "vertical"]
+    case_list = ["check_1", "check_2"]
     
-    # for case_name in case_list[:4]:
-    for case_name in ["vertical"]:
-        path_res = "/media/vincelinux/LaCie/LMECA2660/results/" + case_name
-        # path_res = "../results/" + case_name
+    # for case_name in case_list_hard_drive:
+    for case_name in case_list:
+        # path_res = "/media/vincelinux/LaCie/LMECA2660/results/" + case_name
+        path_res = "../results/" + case_name
 
         filename_params = f"{path_res}/simu_params.txt"
         filename_stats = f"{path_res}/simu_stats.txt"
@@ -324,20 +319,18 @@ if __name__ == "__main__":
         T, h, L, H, din, dbot, lbox, RE = sim.T, sim.h, sim.L, sim.H, sim.din, sim.dbot, sim.lbox, sim.RE
         x, y, xx, yy, delta_x, delta_y = sim.x, sim.y, sim.xx, sim.yy, sim.delta_x, sim.delta_y
 
-
         dd = 3*h
         # mask_middle = (din < xxm) * (xxm < din+lbox) * (dbot < yym) * (yym < dbot+1)
         mask_corner = (din < xx) * (xx < din + lbox) * (dbot < yy) * (yy < dbot + 1.)
         mask_hard = (din - dd < xx) * (xx < din + lbox + dd) * (dbot - dd < yy) * (yy < dbot + 1. + dd)
 
 
-        # CAN ONLY DO ONE AT A TIME
+        # To be computed now --> slow
+        # EITHER vorticity OR streamlines
+        # plot_vorticity([30.e-0, 31.e-0, 32.e-0], cmap=cmap1, save=save_global)
+        # plot_streamlines([5e-0, 10.-0, 15.e-0], cmap=cmap2, save=save_global)  # 0.2, 0.5, 1.
 
-        # plot_vorticity([12.5e-0, 25.e-0, 50.e-0], cmap=cmap1, save=save_global)
-        plot_vorticity([20.e-0, 22.e-0, 24.e-0], cmap=cmap1, save=save_global)  # case2
-
-
-        # plot_streamlines([10., 20., 30.], cmap=cmap2, save=save_global)  # 0.2, 0.5, 1.
-        # plot_average_flow(cmap2, cmap1, compute=False, t_start=20., save=save_global)
-        # plot_max_RE(compute=False, save=save_global)
-        # plot_drag_lift(compute=False, save=save_global)
+        # already computed during the simulation --> fast
+        plot_average_flow(cmap2, cmap1, compute=False, t_start=20., save=save_global)
+        plot_max_RE(compute=False, save=save_global)
+        plot_drag_lift(compute=False, save=save_global)

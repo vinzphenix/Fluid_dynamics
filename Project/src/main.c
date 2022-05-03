@@ -75,9 +75,11 @@ void printProgress(Sim_data *sim, int res, int ndec1, int ndec2, struct timespec
     // printf("\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    %*d/%*d   t_sim = %*.3lf s     \e[92m[%02dh%02d:%02d\e[0m",
     //        val, lpad, PBSTR, rpad, "", res, ndec1, t, ndec1, nt, ndec2+4, (double) t * dt, hours, minutes, seconds);
 
-    char info_msg[200] = "\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    t_sim = %*.3lf s    dt = %.3lf ms < %.3lf ms     Re_w,h = %4.1lf, %4.1lf    \e[92m[%02.0f:%02.0f < %02.0f:%02.0f] \e[0m ";
-    // strcat(info_msg, info_time);
-    printf(info_msg, val, lpad, PBSTR, rpad, "", res, ndec2+4, sim->tnow, 1.e3 * sim->dt, 1.e3 * sim->dt_stable, sim->rew, sim->reh, minutes, seconds, m_left, s_left);
+    char info_msg[200] = "\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    t_sim = %*.3lf s    dt = %.3lf ms < %.3lf ms     ";
+    char more_info[100] = "Re_w,h = %4.1lf, %4.1lf    \e[92m[%02.0f:%02.0f < %02.0f:%02.0f] \e[0m ";
+    strcat(info_msg, more_info);
+    printf(info_msg, val, lpad, PBSTR, rpad, "", res, ndec2+4, sim->tnow, 1.e3 * sim->dt, 1.e3 * sim->dt_stable,
+                     sim->rew, sim->reh, minutes, seconds, m_left, s_left);
     fflush(stdout);
 }
 
@@ -111,12 +113,11 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
 #       endif
 
         // UPDATE TIME AND BOUNDARY CONDITIONS
-        // sim->t = sim->t + 1;
         sim->tnow += sim->dt;
         sim->elapsed += sim->dt;
 
         set_mesh_velocity(sim, sim->tnow);
-        set_bd_conditions(sim);   // sets u and v at t=(n+1)  # no influence on corrector step
+        set_bd_conditions(sim);
         set_ghost_points(sim);
 #       if TEMP_MODE
         set_boundary_temperature(sim);
@@ -145,12 +146,12 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
         printProgress(sim, nIterations, ndec1, ndec2, start_exec);
 
         // SAVE RESULTS
-        if (sim->elapsed > sim->save_freq) {
+        if ((sim->save_freq > 0.) && (sim->elapsed > sim->save_freq)) {
             save_fields(sim);
             save_diagnostics(sim, 1);
             sim->elapsed = fmod(sim->elapsed, sim->save_freq);
         } else {
-            save_diagnostics(sim, 0);
+            save_diagnostics(sim, 0);  // second argument is a flag to indicate if the fields are saved
         }
     }
     
@@ -166,26 +167,36 @@ int main(int argc, char *argv[]){
     // -n        : number of spatial steps per distance H_box (must be >= 5)
     // -dt       : time step, automatically computed with CFL if set to 0.
     // -tend     : final time of the simulation
-    // -save     : save the fields u, v, p, T every ... iterations, 0 to never save
+    // -freq     : save the fields u, v, p, T every ... "seconds", 0 to never save
     // -dir      : sub-directory in which the files are saved (inside the directory "myPath")
 
 
     /**
      * Handle the flags received in the command line
      */
+
+    // Default values, but shouldn't be used in principle
     int n = 40;
     double dt = 0.002;
-    double tend = 10.;
+    double tend = 5.;
     double save_freq = 0.1;
 
     char myPath[50] = "./results/";
     char *endptr;
 
+    if (argc != 15) {
+        printf("Bad input  -->  usage: \n");
+        printf("./cfd -ksp_type fgmres -pc_type lu -n 46 -dt 0.001 -tend 50. -freq 0.1 -dir new_case\n");
+        return EXIT_FAILURE;
+    }
+
+    int count_args = 0;
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-n") == 0) {
             if (argc > i+1) n = (int) strtol(argv[i+1], &endptr, 10);
             if ((argc > i+1) && (*endptr == '\0') && (n >= 5)) {
                 i++;
+                count_args++;
             } else if (n < 5) {
                 ABORT_MSG("Parameter [n] should be at least 5 !");
             } else {
@@ -193,30 +204,39 @@ int main(int argc, char *argv[]){
             }
         } else if (strcmp(argv[i], "-dt") == 0) {
             if (argc > i+1) dt = (double) strtod(argv[i+1], &endptr);
-            if ((argc > i+1) && (*endptr == '\0') && (dt >= 0.)) {
+            if ((argc > i+1) && (*endptr == '\0') && (dt > 0.)) {
                 i++;
-            } else if (dt < 0.){
-                ABORT_MSG("[dt] must be > 0., or 0. for automatic setting based on CFL !");
+                count_args++;
+            } else if (dt <= 0.){
+                ABORT_MSG("[dt] must be > 0 !");
+                return EXIT_FAILURE;
             } else {
                 ABORT_MSG("Could not read value for parameter [dt] !");
+                return EXIT_FAILURE;
             }
         } else if (strcmp(argv[i], "-tend") == 0) {
             if (argc > i+1) tend = (double) strtod(argv[i+1], &endptr);
             if ((argc > i+1) && (*endptr == '\0') && (tend > 0.)) {
                 i++;
+                count_args++;
             } else if (tend <= 0.) {
                 ABORT_MSG("[tend] must be > 0. !");
+                return EXIT_FAILURE;
             } else {
                 ABORT_MSG("Could not read value for parameter [tend] !\n");
+                return EXIT_FAILURE;
             }
         } else if (strcmp(argv[i], "-freq") == 0) {
             if (argc > i+1) save_freq = (double) strtod(argv[i+1], &endptr);
-            if ((argc > i+1) && (*endptr == '\0') && (save_freq > 0.)) {
+            if ((argc > i+1) && (*endptr == '\0') && (save_freq >= 0.)) {
                 i++;
+                count_args++;
             } else if (save_freq < 0) {
-                ABORT_MSG("[freq] must be > 0 !");
+                ABORT_MSG("[freq] must be > 0, or = 0 if you don't want to save the fields !");
+                return EXIT_FAILURE;
             } else {
                 ABORT_MSG("Could not read value for parameter [freq]");
+                return EXIT_FAILURE;
             }
         } else if (strcmp(argv[i], "-dir") == 0) {
             if (argc > i+1) {
@@ -224,8 +244,8 @@ int main(int argc, char *argv[]){
                 char res;
                 
                 strcat(myPath, argv[i+1]);
-                if (myPath[strlen(myPath)-1] != '/')
-                    strcat(myPath, "/");
+                strcat(myPath, "/");
+                count_args++;
                 
                 if (stat(myPath, &st) == -1) {
                     mkdir(myPath, 0700);
@@ -235,13 +255,20 @@ int main(int argc, char *argv[]){
                         continue;
                     } else {
                         printf("Aborting the program\n");
-                        exit(EXIT_FAILURE);
+                        return EXIT_FAILURE;
                     }
                 }
             } else {
                 printf("Could not read value for parameter [dir]. Writing files in parent directory.\n");
+                return EXIT_FAILURE;
             }
         }
+    }
+
+    if (count_args != 5) {
+        printf("Expected 5 options, only got %d  --->  Usage:\n", count_args);
+        printf("./cfd -ksp_type fgmres -pc_type lu -n 46 -dt 0.001 -tend 50. -freq 0.1 -dir new_case\n");
+        return EXIT_FAILURE;
     }
 
     /**
@@ -297,4 +324,6 @@ int main(int argc, char *argv[]){
     free(adi_solver);
 #   endif
     PetscFinalize();
+
+    return EXIT_SUCCESS;
 }

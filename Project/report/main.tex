@@ -44,7 +44,7 @@ In this project, we are asked to solve the Navier-Stokes equations for incompres
     \draw [dashed, thick](0,0) -- (0,\Hdom);
     \draw [dashed, thick](\Ldom,0) -- (\Ldom,\Hdom);
     \node[above left] at (\Ldom,0){$\Omega$};
-    % Flèches:
+    % Arrows:
     \draw[<->] (0,-0.5) -- (\Ldom,-0.5);
     \node[below] at (\Ldom/2,-0.5) {$L$};
     \draw[<->] (\Ldom + 0.5,0) -- (\Ldom + 0.5,\Hdom);
@@ -120,23 +120,22 @@ We can also define dimensionless numbers, using physical properties of the fluid
     \label{eq:adimNumbers}
 \end{equation}
 
-\newpage
-We can now state the Navier-Stokes equations in dimensionless form, using the Boussinesq approximation. From this point in the document, we will drop this asterisk for the sake of readability.
+We can now state the Navier-Stokes equations in dimensionless form, using the Boussinesq approximation, for a domain $\Omega$ moving uniformly at velocity $\mathbf{v}_{mesh}$. \textbf{From this point in the document, we will drop this asterisk for the sake of readability}.
 \begin{align}
-    \pdv{u}{x} + \pdv{v}{y} &= 0  && \text{Cons. of mass}\label{eq:nsMass}\\
-    \pdv{u}{t} + u\pdv{u}{x} + v\pdv{u}{y} &= -\pdv{p}{x} + \frac{1}{Re} \left( \pdv[2]{u}{x} + \pdv[2]{u}{y} \right) && \text{Cons. of momentum in } \mathbf{\hat e}_{x}\label{eq:nsMomX}\\
-    \pdv{v}{t} + u\pdv{v}{x} + v\pdv{v}{y} &= -\pdv{p}{y} + \frac{1}{Re} \left( \pdv[2]{v}{x} + \pdv[2]{v}{y} \right) + \frac{Gr}{Re^2} T && \text{Cons. of momentum in } \mathbf{\hat e}_{y}\label{eq:nsMomY}\\
-    \pdv{T}{t} + u\pdv{T}{x} + v\pdv{T}{y} &= \frac{1}{Re \, Pr} \left( \pdv[2]{T}{x} + \pdv[2]{T}{y} \right) + \frac{Ec}{Re} \phi && \text{Cons. of energy} \label{eq:nsEnergy}
+    \pdv{u}{x} + \pdv{v}{y} &= 0  && \text{Mass cons.}\label{eq:nsMass}\\
+    \pdv{u}{t} + \bar u \pdv{u}{x} + \bar v \pdv{u}{y} &= -\pdv{p}{x} + \frac{1}{Re} \left( \pdv[2]{u}{x} + \pdv[2]{u}{y} \right) && \text{Momentum in } \mathbf{\hat e}_{x}\label{eq:nsMomX}\\
+    \pdv{v}{t} + \bar u \pdv{v}{x} + \bar v \pdv{v}{y} &= -\pdv{p}{y} + \frac{1}{Re} \left( \pdv[2]{v}{x} + \pdv[2]{v}{y} \right) + \frac{Gr}{Re^2} T && \text{Momentum in } \mathbf{\hat e}_{y}\label{eq:nsMomY}\\
+    \pdv{T}{t} + \bar u \pdv{T}{x} + \bar v \pdv{T}{y} &= \frac{1}{Re \, Pr} \left( \pdv[2]{T}{x} + \pdv[2]{T}{y} \right) + \frac{Ec}{Re} \phi && \text{Energy cons.} \label{eq:nsEnergy}
 \end{align}
 
-Where $\phi$, the viscous dissipation is defined as follows:
+Where $\bar u = u - u_{mesh}$, $\bar v = v - v_{mesh}$ and the viscous dissipation $\phi$ is defined as follows:
 \begin{align}
     \phi = 2 \mu \; \mathbf{d:d} = 2 \left[\left(\pdv{u}{x}\right)^2 + \left(\pdv{v}{y} \right)^2\right] + \left(\pdv{u}{y} + \pdv{v}{x}\right)^2 \qquad \text{with} \qquad \mathbf{d} = \frac{1}{2} \left[\left(\nabla u\right) + \left(\nabla u\right)^T \right] \label{eq:dissipation}
 \end{align}
 
 
-\section{Model of the obstacle oscillation}
-The rectangular obstacle stays at its initial position in the $x$ direction until a time $t_0$, where its starts oscillating horizontally. The same happens in the $y$ direction, where the threshold time $=\Tilde{t}_0$.
+\section{Obstacle oscillation model}
+The rectangular obstacle stays at its initial position in the $x$ direction until a time $t_0$, where it starts oscillating horizontally. The same happens in the $y$ direction, where the threshold time $=\Tilde{t}_0$.
 
 The dimensionless position of the obstacle is then given by:
 \begin{equation}
@@ -156,7 +155,7 @@ However, in our model, we need to impose the velocity as boundary condition:
 
 Since the displacement in $\mathbf{\hat e}_y$ is typically used to produce a perturbation, it stops after one period. 
 
-The numerical values chosen for the Strouhal number $S_t$ and the velocity amplitude $\kappa$ are
+The numerical values chosen for the Strouhal number $S_t$ and the velocity amplitude $\alpha$ are
 \begin{equation}
     S_t = \frac{1}{3} \qquad \tilde S_t = S_t \qquad \alpha = \frac{1}{2} \qquad \tilde \alpha = \frac{\alpha}{10}
 \end{equation}
@@ -183,7 +182,7 @@ The numerical values chosen for the Strouhal number $S_t$ and the velocity ampli
 \section{Numerical solver}
 The Navier-stokes equations shown in \eqref{eq:nsMass}-\eqref{eq:nsEnergy} are integrated in time using a two-step projection scheme that ensures a divergence-free velocity field $\bv$. The fields $u$, $v$, $p$, $\omega$ and $T$ are discretized using the staggered MAC mesh which is represented in figure \ref{fig:macMesh}. In this project, we use a uniform grid with $\Delta x = \Delta y = h$, but a non-uniform grid with stretching would be more adapted. It would allow us to have a coarser mesh where nothing happens (outside the boundary layer and outside the vortex shedding).
 
-When a boundary condition must be applied at some position $\mathbf{x}$ where a field is not defined, we define \textit{ghost points} outside the domain that approximate the condition using Taylor series.
+When a boundary condition must be applied at some position $\mathbf{x}$ where a field is not defined, we define \textit{ghost points} outside the domain in order to facilitate the update of the values of $u$, $v$ and $T$ inside the domain. The value of these ghost points is a linear combination of values further inside the domain, whose weights are found with Taylor series.
 
 \begin{figure}[H]
     \centering
@@ -195,7 +194,7 @@ When a boundary condition must be applied at some position $\mathbf{x}$ where a 
 
 Concerning the time integration, the convective term is integrated using the explicit and second order Adams-Bashforth scheme (explicit Euler scheme for the first time step), while the diffusive term is handled using the explicit and first order Euler scheme. The solver proposed can also handle the diffusive term for $\bv$ with a Crank-Nicolson scheme. This is done with an ADI method in order to only solve tri-diagonal systems. However, the current implementation of boundary conditions is not assured to be second order.
 
-First, we compute the convective terms $\bH = (H_x, H_y)$ that discretize $(\boldsymbol\nabla \bv) \cdot (\bv - \bv_{mesh})$, and $H_T$ discretizing $(\boldsymbol \nabla T) \cdot (\bv - \bv_{mesh})$. Second, we perform a predictor step to obtain an intermediate field denoted $\mathbf{v}^*$. Third, we solve the Poisson equation for $\Phi$, using the PETSC library \cite{petsc-efficient}. 
+First, we compute the convective terms $\bH = (H_x, H_y)$ that discretize $(\boldsymbol\nabla \bv) \cdot (\bv - \bv_{mesh})$, and $H_T$ discretizing $(\boldsymbol \nabla T) \cdot (\bv - \bv_{mesh})$. Second, we perform a predictor step to obtain an intermediate field denoted $\mathbf{v}^*$. Third, we solve the Poisson equation for $\Phi$, using the PETSc library \cite{petsc-efficient}. 
 Finally, we obtain the next iterates once the corrector step is completed. This procedure is detailed in equations \eqref{eq:predictor} - \eqref{eq:corrector}.
 
 \begin{align}
@@ -206,17 +205,17 @@ Finally, we obtain the next iterates once the corrector step is completed. This 
     T^{n+1} &= \frac{-1}{2} \left(3\, H_T^n - H_T^{n-1}\right) + \frac{1}{Re\, Pr} \nabla^2 T^n + \frac{Ec}{Re} \phi^n \label{eq:corrector}
 \end{align}
 
-The convection contribution can be computed using either the advective form or the divergence form, respectively:
+The convection contribution can be computed using either the advective form or the divergence form, respectively
 \begin{equation}
     \bH = (\boldsymbol\nabla \bv) \cdot (\bv - \bv_{mesh}) \qquad \text{or} \qquad \bH = \boldsymbol\nabla \cdot \big(\bv \, (\bv - \bv_{mesh}) \big)
 \end{equation}
-It was chosen to take the average of both.
+It was chosen to take the average of both forms, for $\mathbf{H}$ and for $H_T$.
 
-To ensure the stability of the scheme, the \textit{Fourier number} and the \textit{Courant-Friedrichs-Lewy number} were respectively set to \footnote{Recall that the variables $\Delta t$, $h$, $u$ and $v$ are dimensionless, so that $r$ and $CFL$ are also.}
+To ensure the stability of the scheme, the \textit{Fourier number} and the \textit{Courant-Friedrichs-Lewy number} were respectively set to \footnote{Recall that the variables $t$, $h$, $u$ and $v$ are dimensionless, so that $r$ and $CFL$ are also.}
 \begin{equation}
     r = \frac{\Delta t}{Re \, h^2} = 0.2 \qquad\qquad CFL = \frac{(|u|+|v|) \Delta t}{h} = 0.7
 \end{equation}
-where the velocity $(|u|+|v|)$ was estimated to $4$. As an option, the program can use an adaptive time step $\Delta t$ based on the velocity maximum value of $|u|+|v|$ computed at the previous step.
+where the velocity $(|u|+|v|)$ was estimated to $4$. As an option, the program can use an adaptive time step $\Delta t$ based on the maximum value of the velocity $|u|+|v|$ computed at the previous step.
 
 
 \section{Simulations without temperature coupling}
@@ -236,13 +235,13 @@ With the expression of the vorticity in 2D
 \begin{equation}
     \omega = \nabla \times \mathbf{v} = \pdv{v}{x} - \pdv{u}{y}
 \end{equation}
-we can easily computed $\omega$ on the staggered grid as shown previously in figure \ref{fig:macMesh}, using centered finited differences.
+we can easily compute $\omega$ on the staggered grid as shown previously in figure \ref{fig:macMesh}, using centered finite differences.
 
 The streamfunction is defined by
 \begin{equation}
-    u = -\pdv{\psi}{y} \qquad v = \pdv{\psi}{x}
+    u = \pdv{\psi}{y} \qquad v = -\pdv{\psi}{x}
 \end{equation}
-The value $\psi(x,y)$ can therefore be computed over the whole domain $\Omega$ by integrating the differential form $d\psi = v \diff x -u \diff y = \mathbf{v} \cdot \mathbf{\hat n} \diff s$ along some path $\Gamma$ from the reference point $(0,0)$ to $(x,y)$. We should note that the result is path-independent since the flow is diveregence-free. In fact, if one choses another path $\Gamma'$ from $(0,0)$ to $(x,y)$, we can obtain a closed curve $C$ by concatenating both curves:
+The value $\psi(x,y)$ can therefore be computed over the whole domain $\Omega$ by integrating the differential form $d\psi = u \diff y - v \diff x = \mathbf{v} \cdot \mathbf{\hat n} \diff s$ along some path $\Gamma$ from the reference point $(0,0)$ to $(x,y)$. We should note that the result is path-independent since the flow is divergence-free. In fact, if one choses another path $\Gamma'$ from $(0,0)$ to $(x,y)$, we can obtain a closed curve $C$ by concatenating both curves:
 \begin{equation}
     \int_{\Gamma} \mathbf{v} \cdot \mathbf{\hat n} \diff s + \int_{-\Gamma'} \mathbf{v} \cdot \mathbf{\hat n} \diff s = \oint_{C} \mathbf{v} \cdot \mathbf{\hat n} \diff s = \iint_{S} \nabla \cdot \mathbf{v} \diff a = 0
 \end{equation}
@@ -258,14 +257,14 @@ After some simplifications, and a nondimensionalization, we obtain
     C_d = \frac{D}{\frac{1}{2} \rho U_{\infty}^2} &= \bigintss_{y^-}^{y^+} \Big[p(x^-, y) - p(x^+, y)\Big] \diff y + \frac{1}{Re} \bigintss_{x^-}^{x^+} \left[ \left.\pdv{u}{y}\right|_{(x, y^+)} - \left.\pdv{u}{y}\right|_{(x, y^-)} \right] \diff x\\
     C_l = \frac{L}{\frac{1}{2} \rho U_{\infty}^2} &= \bigintss_{x^-}^{x^+} \Big[p(x, y^-) - p(x, y^+)\Big] \diff x + \frac{1}{Re} \bigintss_{y^-}^{y^+} \left[ \left.\pdv{v}{x}\right|_{(x^+, y)} - \left.\pdv{v}{x}\right|_{(x^-, y)} \right] \diff y
 \end{align}
-where $x^-$ and $x^+$ respecitvely refer to the $x$ value on the left and right sides of the rectangle, and $y^-$ and $y^+$ respecitvely refer to the $y$ value on the bottom and the top of the rectangle.
+where $x^-$ and $x^+$ respectively refer to the $x$ value on the left and right sides of the rectangle, and $y^-$ and $y^+$ respectively refer to the $y$ value underneath and above the rectangle.
 
 Finally, two mesh Reynolds numbers can be computed:
 \begin{align}
     Re_h &= (|u|+|v|) \,h \, Re && \text{based on the velocity of the flow}\\
     Re_{\omega} &= |\omega| \,h^2 \, Re && \text{based on the vorticity of the flow}
 \end{align}
-Here, we are only interrested about their maximum value over the domain $\Omega$ at each time step.
+Here, we are only interested about their maximum value over the domain $\Omega$ at each time step.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -274,7 +273,7 @@ Here, we are only interrested about their maximum value over the domain $\Omega$
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=\textwidth]{../figures/vorticity_case_1.svg}
+    \includegraphics[width=\textwidth]{../figures/vorticity_case_1.png}
     \caption{Level sets of the vorticity $\omega$ in \textit{case 1} at different dimensionless times $t$. These levels sets are slightly more concentrated around zero for a better visualization.}
     \label{fig:vorticity_1}
 \end{figure}
@@ -288,15 +287,15 @@ A few remarks:
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=\textwidth]{../figures/streamlines_case_1.svg}
+    \includegraphics[width=\textwidth]{../figures/streamlines_case_1.png}
     \caption{Snapshot of the streamlines of \textit{case 1}. The color is proportional to the velocity norm. The width of the lines is proportional to $\left|1 - \|\mathbf{v}\|\right|$ in order to highlight the regions where $\mathbf{v}$ is very different than the mean-flow.}
     \label{fig:streamlines_1}
 \end{figure}
-As show, in figure \ref{fig:streamlines_1}, the recirculation region grows with time. The stagnation point moves from $x-x_{wall} \approx 3$ at $t=12.5$ to $x - x_{wall} \approx 4.5$ at $t=25.$. The flow recirculation even becomes too large for the computational domain since the stagnation point grows beyond $x=15$ at $t \approx 40$.
+As show in figure \ref{fig:streamlines_1}, the recirculation region grows with time. The stagnation point moves from $x-x_{wall} \approx 3$ at $t=12.5$ to $x - x_{wall} \approx 4.5$ at $t=25.$. The flow recirculation even becomes too large for the computational domain since the stagnation point grows beyond $x=15$ at $t \approx 40$.
 
-The mesh Reynolds numbers are shown in figure \ref{fig:mesh_re_case1}. Their value quickly decrease before stabilizing around $25$. This is due to the fact that the flow is initially unphysical with discontinuities of $u$ near the walls that degrade the numerical solutions.
+The evolution of the mesh Reynolds numbers is represented in figure \ref{fig:mesh_re_case1}. Their value quickly decrease before stabilizing around $25$. This is probably due to the fact that the flow is initially nonphysical with discontinuities of $u$ near the walls that degrade the quality of the numerical simulation.
 
-In figure \ref{fig:drag_case1}, as expected the lift is zero (or almost due to numerical rounding errors) since the flow is symmetrical. On the other hand, the drag coefficient is non-zero, and $C_d \approx 1.25$ while the stagnation point stays inside the domain.
+In figure \ref{fig:drag_case1}, the lift is zero (or almost due to numerical rounding errors) since the flow is symmetrical. On the other hand, the drag coefficient is non-zero, and $C_d \approx 1.25$ before the stagnation point leaves the domain.
 
 \begin{figure}[H]
     \centering
@@ -308,7 +307,7 @@ In figure \ref{fig:drag_case1}, as expected the lift is zero (or almost due to n
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=0.95\textwidth]{../figures//drag_lift_case_1.svg}
+    \includesvg[width=0.95\textwidth]{../figures/drag_lift_case_1.svg}
     \caption{Aerodynamic coefficients evolution for \textit{case 1}.}
     \label{fig:drag_case1}
 \end{figure}
@@ -320,35 +319,37 @@ In figure \ref{fig:drag_case1}, as expected the lift is zero (or almost due to n
 \subsection{Case 2: obstacle at rest with unsymmetrical flow}
 \begin{figure}[H]
     \centering
-    \includesvg[width=\textwidth]{../figures/vorticity_case_2.svg}
+    \includegraphics[width=\textwidth]{../figures/vorticity_case_2.png}
     \caption{Level sets of the vorticity $\omega$ in \textit{case 2} at different dimensionless times $t$.}
     \label{fig:vorticity_2}
 \end{figure}
 
-Now, the flow is unsteady, but becomes periodic around $t=10$. In this configuration, positive and negative vortices detach one after the other. In figure \ref{fig:vorticity_2}, we can observe a vortex, in blue above the rectangle detaching from the boundary layer. The half-period $T/2$, or delay between the ejection of a "positive" vortex ($\omega$ > 0) and a "negative" vortex ($\omega$ < 0) and  appears to last approximately $2$ to $3$ dimensionless times.
+Now, the flow is unsteady, but becomes periodic around $t=10$. In this configuration, positive and negative vortices detach one after the other. In figure \ref{fig:vorticity_2}, we can observe a vortex, in blue above the rectangle detaching from the boundary layer. The delay between the ejection of a "positive" vortex ($\omega$ > 0) and a "negative" vortex ($\omega$ < 0) appears to be slightly more than $2$ dimensionless times. We can call it the half-period, or $T/2$.
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=\textwidth]{../figures/streamlines_case_2.svg}
+    \includegraphics[width=\textwidth]{../figures/streamlines_case_2.png}
     \caption{Streamlines of the flow in case 2 at different dimensionless times $t$. }
     \label{fig:streamlines_2}
 \end{figure}
 
-In figure \ref{fig:streamlines_2}, we observe many small recirculation regions near the obstacle walls. If we move away a little bit more from the upper and lower walls of the rectangle, we observe that the flow accelerates around the obstacle: this remark holds for all the cases.
+In figure \ref{fig:streamlines_2}, we observe many small recirculation regions near the obstacle walls. 
+
+If we move away a little bit more from the upper and lower walls of the rectangle, we observe that the flow accelerates around the obstacle: this remark holds for all the cases.
 
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=\textwidth]{../figures/avg_flow_case_2.svg}
-    \caption{Streamlines and vorticity of the average of flow of \textit{case 2} from $t=20$ to $t=60$.}
+    \includegraphics[width=\textwidth]{../figures/avg_flow_case_2.png}
+    \caption{Streamlines and vorticity of the flow of \textit{case 2} averaged from $t=20$ to $t=60$.}
     \label{fig:averaging_2}
 \end{figure}
 
 Looking the averaged-time flow in \ref{fig:averaging_2}, we observe that the recirculation region is much smaller than in \textit{case 1}: the \textit{averaged stagnation point} is located $\approx 1$ dimensionless unit behind the rectangle.
 
-The mesh Reynolds number also oscillates with the vortex shedding as shown in figure \ref{fig:mesh_re_case2}, with this half-period $T/2$.
+The mesh Reynolds number in \ref{fig:mesh_re_case2} also oscillates with the half-period $T/2$ of the vortex shedding.
 
-In figure \ref{fig:mesh_re_case2}, the drag coefficient $C_d$ oscillates as well with that period $T/2$, while the lift coefficient oscillates with the full period $T$. This is because the vortices rotate alternatively clockwise and anticlockwise.
+In figure \ref{fig:mesh_re_case2}, the drag coefficient $C_d$ oscillates as well with that period $T/2$, while the lift coefficient oscillates with the full period $T$. This is because clockwise and anticlockwise vortices affect the drag in the same way, but they affect the lift in opposite ways.
 
 Remark: the time axis of the aerodynamic coefficients stops at $t=50$ and not $t=60$ for a better visualization, but the flow was computed until $t=60$.
 
@@ -361,7 +362,7 @@ Remark: the time axis of the aerodynamic coefficients stops at $t=50$ and not $t
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=0.95\textwidth]{../figures//drag_lift_case_2.svg}
+    \includesvg[width=0.95\textwidth]{../figures/drag_lift_case_2.svg}
     \caption{Aerodynamic coefficients evolution for \textit{case 2}.}
     \label{fig:drag_case2}
 \end{figure}
@@ -372,7 +373,7 @@ Remark: the time axis of the aerodynamic coefficients stops at $t=50$ and not $t
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=\textwidth]{../figures/vorticity_case_3.svg}
+    \includegraphics[width=\textwidth]{../figures/vorticity_case_3.png}
     \caption{Level sets of the vorticity $\omega$ in \textit{case 3} at different dimensionless times $t$.}
     \label{fig:vorticity_3}
 \end{figure}
@@ -380,22 +381,22 @@ Remark: the time axis of the aerodynamic coefficients stops at $t=50$ and not $t
 
 The vorticity levels are shown in \ref{fig:vorticity_3}, at different times covering an oscillation period of the rectangle:
 \begin{itemize}
-    \item at $t=42$, the obstacle is at it leftmost position with maximum velocity headed to the right.
+    \item at $t=42$, the obstacle is at its leftmost position with maximum velocity headed to the right.
     \item at $t=43$, the obstacle has almost reached its rightmost position, still moving to the right, but slowing down.
     \item at $t=44$, the obstacle is now moving to left, reaching the same position as at $t=43$.
 \end{itemize}
 
 Vortices are generated around the upper left and lower left corners of the obstacle at $t=0 \: \textrm{mod} \: 3$, before \textit{sliding} close to the wall and finally detaching.
 
-Two remarks about figure \ref{fig:drag_case4}:
+Two remarks about figure \ref{fig:drag_case3}:
 \begin{itemize}
     \item The lift coefficient $C_l$ is again zero since the flow is symmetrical, as in \textit{case 1}.
-    \item The drag coefficient can become negative: when the box is accelerating to the right, the fluid resists this motion and \textit{pushes} the box to the left.
+    \item Both the the pressure drag and friction drag can become negative: when the box is accelerating to the right, the fluid resists this motion and \textit{pushes} the box to the left.
 \end{itemize}
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=\textwidth]{../figures/mesh_Re_case_3.svg}
+    \includesvg[width=0.95\textwidth]{../figures/mesh_Re_case_3.svg}
     \caption{Mesh Reynolds numbers evolution for \textit{case 3}.}
     \label{fig:mesh_re_case3}
 \end{figure}
@@ -414,7 +415,7 @@ Two remarks about figure \ref{fig:drag_case4}:
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=\textwidth]{../figures/vorticity_case_4_part1.svg}
+    \includegraphics[width=\textwidth]{../figures/vorticity_case_4_part1.png}
     \caption{Level sets of the vorticity $\omega$ in \textit{case 4} at different dimensionless times $t$.}
     \label{fig:vorticity_4a}
 \end{figure}
@@ -423,7 +424,7 @@ Now, thanks to the vertical perturbation, we obtain a non-symmetrical vortex she
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=\textwidth]{../figures/vorticity_case_4_part2.svg}
+    \includegraphics[width=\textwidth]{../figures/vorticity_case_4_part2.png}
     \caption{Level sets of the vorticity $\omega$ in \textit{case 4} at different dimensionless times $t$ - continued.}
     \label{fig:vorticity_4b}
 \end{figure}
@@ -439,7 +440,7 @@ In figure \ref{fig:vorticity_4b}, the field is shown for three more dimensionles
 
 \begin{figure}[H]
     \centering
-    \includesvg[width=0.95\textwidth]{../figures//drag_lift_case_4.svg}
+    \includesvg[width=0.95\textwidth]{../figures/drag_lift_case_4.svg}
     \caption{Aerodynamic coefficients evolution for \textit{case 4}.}
     \label{fig:drag_case4}
 \end{figure}
@@ -476,18 +477,120 @@ In figure \ref{fig:vorticity_4b}, the field is shown for three more dimensionles
 \section{Simulations with temperature coupling}
 
 \subsection{Hot obstacle}
+In this situation, the obstacle walls are maintained at a fixed dimensionless temperature $T=1$. For all the other walls, an adiabatic boundary condition is used.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../figures/frame_00526_hot_box.png}
+    \caption{Streamlines, pressure, vorticity and temperature fields.}
+    \label{fig:simu_hot_box}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../figures/avg_flow_hot_box.png}
+    \caption{Streamlines and vorticity of the flow averaged from $t=20$ to $t=60$.}
+    \label{fig:averaging_hot_box}
+\end{figure}
+
+Due to the buoyancy, the fluid located underneath the obstacle accelerates more than the fluid above as shown in figure \ref{fig:averaging_hot_box}. The pressure differential related to this acceleration can also be seen in the lift coefficient that becomes seriously negative in figure \ref{fig:drag_hot_box}.
+
+\begin{figure}[H]
+    \centering
+    \includesvg[width=\textwidth]{../figures/mesh_Re_hot_box.svg}
+    \caption{Mesh Reynolds numbers evolution.}
+    \label{fig:mesh_re_hot_box}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includesvg[width=0.95\textwidth]{../figures/drag_lift_hot_box.svg}
+    \caption{Aerodynamic coefficients evolution.}
+    \label{fig:drag_hot_box}
+\end{figure}
 
 \subsection{Obstacle cold above and hot underneath}
+In this situation, the obstacle upper wall is maintained at a fixed dimensionless temperature $T=-0.8$, the wall underneath at $T=1.$. For all the other walls, including the lateral walls of the obstacle, the boundary condition is adiabatic.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../figures/frame_00185_hot_cold.png}
+    \caption{Streamlines, pressure, vorticity and temperature fields.}
+    \label{fig:simu_hot_cold}
+\end{figure}
+Since $Pr=5 \gg 1$, the thermal boundary layer is much smaller than the velocity boundary layer. Furthermore, since the temperature is non-symmetrical ($|-0.8|<|1|$), there are sometimes hotter regions that are able to go upstream and to reach the other side of the obstacle.
+
+\begin{figure}[H]
+    \centering
+    \includesvg[width=\textwidth]{../figures/mesh_Re_Re_100_hot_cold.svg}
+    \caption{Mesh Reynolds numbers evolution.}
+    \label{fig:mesh_re_hot_cold}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includesvg[width=0.95\textwidth]{../figures/drag_lift_Re_100_hot_cold.svg}
+    \caption{Aerodynamic coefficients evolution.}
+    \label{fig:drag_hot_cold}
+\end{figure}
+
 
 \subsection{No-slip walls with fixed temperature}
+In this situation, the external walls become real walls, with a no-slip condition enforced. Furthermore, the upper and lower walls are respectively maintained at dimensionless temperature $T=-1$ and $T=1$ to produce more convection. All the other walls are considered adiabatic.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../figures/frame_00400_no_slip.png}
+    \caption{Streamlines, pressure, vorticity and temperature fields.}
+    \label{fig:simu_no_slip}
+\end{figure}
+
+With the no-slip boundary condition, we must be careful concerning the outflow boundary condition for higher values of $Gr$. In fact, when $Gr > 5 \cdot 10^{5}$, the flow becomes more complex and vortices become strong enough that the horizontal velocity $u$ sometimes is negative near the outflow. When these strong vortices reach the right boundary of $\Omega$, they are \textit{stuck} inside the domain. An example is given in the video \texttt{anim/no\_slip\_crash.mp4}.
+
+\begin{figure}[H]
+    \centering
+    \includesvg[width=\textwidth]{../figures/mesh_Re_no_slip.svg}
+    \caption{Mesh Reynolds numbers evolution.}
+    \label{fig:mesh_re_no_slip}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includesvg[width=0.95\textwidth]{../figures/drag_lift_no_slip.svg}
+    \caption{Aerodynamic coefficients evolution.}
+    \label{fig:drag_no_slip}
+\end{figure}
 
 \subsection{Heat generation through viscous dissipation}
+In this situation, all the walls are considered adiabatic. The heat source is only the viscous dissipation $\phi$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../figures/frame_00140_eckert.png}
+    \caption{Streamlines, pressure, vorticity and temperature fields.}
+    \label{fig:simu_eckert}
+\end{figure}
+
+In figure \ref{fig:simu_eckert}, the flow is about to become unsymmetrical due to the buoyancy effect ($Gr=10^5)$. It took that much time $t \approx 14$ to break the symmetry since $T \ll 1$.
+
+In this situation, we consider a higher Reynolds number: $Re=2000$. But, even with a spatial step $h\frac{1}{80}$, the mesh Reynolds number is too large $\approx 60$. A stretched grid near the obstacle would allow us to compute such flows more easily.
+
+\begin{figure}[H]
+    \centering
+    \includesvg[width=\textwidth]{../figures/mesh_Re_Re_2k_eckert.svg}
+    \caption{Mesh Reynolds numbers evolution.}
+    \label{fig:mesh_re_eckert}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includesvg[width=0.95\textwidth]{../figures/drag_lift_Re_2k_eckert.svg}
+    \caption{Aerodynamic coefficients evolution.}
+    \label{fig:drag_eckert}
+\end{figure}
+
 
 \newpage
-
-
-% 
-% \printbibliography
 
 \bibliographystyle{plain}
 \nocite{*}

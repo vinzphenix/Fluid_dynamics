@@ -44,7 +44,7 @@ clean:
 	@$(RM) $(EXE)
 
 clean_txt:
-	rm results/simu_*.txt
+	rm results/**/simu_*.txt
 
 -include $(OBJ:.o=.d)
 

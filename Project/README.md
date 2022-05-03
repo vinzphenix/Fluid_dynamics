@@ -1,6 +1,6 @@
 # 2D flow simulation - Project LMECA2660
 
-This project was done in the course _Numerical methods in fluid mechanics_. It simulates a 2D flow around a rectangular obstacle. Many situations can be considered: the obstacle can move horizontally and/or vertically, the temperature field can be coupled with the velocity fields through natural convection under the Boussinesq approximation.
+This project was done in the course _Numerical methods in fluid mechanics_. It simulates a 2D flow around a (possibly) moving rectangular obstacle. Furthermore, the temperature field can be coupled with the velocity fields through natural convection under the Boussinesq approximation.
 
 
 ## Structure
@@ -12,13 +12,13 @@ This project was done in the course _Numerical methods in fluid mechanics_. It s
     ├── doc               <- Documents, instructions, reference book
     ├── figures           <- Figures analyzing different simulations
     ├── include           <- Header files
-    │   ├── project.h          # Physical parameters and solver options
+    │   ├── project.h     <- Physical parameters (Re, Pr, ...) and solver settings (CFL, adaptive time step, ...)
     │   └── ...
-    ├── lib_petsc         <- PETSc dependency
+    ├── lib_petsc         <- PETSc installation
     ├── report            <- Report in .tex and .pdf formats
     ├── results           <- Results of simulations saved in .txt files
-    ├── scripts           <- Post-processing of the simulations: animations and figures
-    └── src               <- Source .c files
+    ├── scripts           <- Post-processing of the simulations: analysis with figures, and video generation
+    └── src               <- Source code in .c files
 
 ## Run the code
 The code in __C__ can be compiled easily with make, and then executed as follows:
@@ -29,30 +29,30 @@ make -j
 
 - __-ksp_type__ : Name of the PETSc Krylov method, that shouldn't be modified
 - __-pc_type__ : Name of the PETSc preconditioner method, that shouldn't be modified
-- __-n__ [integer] : Spatial discretization, with $H_{box}=1/n$
-- __-dt__ [double] : Time step, or initial time step if adaptative time step activated
+- __-n__ [integer] : Number of spatial steps per obstacle height, called Hbox
+- __-dt__ [double] : Time step, or initial time step if adaptive time step activated
 - __-tend__ [double] : Final time of the simulation
 - __-freq__ [double] : Frequency to which the program saves the fields in `.txt` files
 - __-dir__ : Name of the subdirectory created or overwritten in `./results/` directory
 
 
 ## Produce an animation
-The animation proposed shows the streamlines (iso-$\psi$), the pressure field $p$, the vorticity field $\omega$ and if possible the temperature field $T$.
+The animation proposed shows the streamlines (iso-psi), the pressure field, the vorticity field and if possible the temperature field.
 
-First, you need to produces the frames of the animation based on a simulation stored in the directory `./results/`. To do so, make sure that the directory `./anim/` exists and execute:
+First, make sure that the directory `./anim/` exists, and that you have the results of a simulation stored in the directory `./results/<name>`. Then, execute the following command with the format of your choice for the flag `-save`:
 ```
-python3 run.py -dir new_case
+python3 run.py -dir <name> -save <none, gif, mp4, html>
 ```
 
-Then, to produce a `.mp4` file, you can use `FFmpeg` as follows:
+If you used `html`, and want to produce a video based on the successive frames just created, you can use `FFmpeg` as follows:
 ```
-ffmpeg -framerate 24 -i ./anim/new_case/frame_%05d.png -vcodec libx264 -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -crf 5 -r 25 -pix_fmt yuv420p ./anim/new_case.mp4
+ffmpeg -framerate 25 -i ./anim/<name>/frame_%05d.png -vcodec libx264 -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -crf 5 -r 25 -pix_fmt yuv420p ./anim/<name>.mp4
 ```
 
 ## Dependencies
-The solver uses the PETSc library in order to solve the poisson equation of the reprojection scheme. Instructions for installing are available in the `./doc/` directory, or on the website https://petsc.org/release/install/install/.
+The solver uses the PETSc library in order to solve the poisson equation of the projection method. Instructions for installing are available in the `./doc/` directory. More details about an optimized compilation are given on the website https://petsc.org/release/install/install/#compilers.
 
-## Schema of the compuatational domain with default dimensions.
+## Schema of the computational domain with default dimensions
 ```
 ────────────────────────────────────────────────────────────────
 ->                        5                                     

@@ -5,8 +5,6 @@ import scipy.sparse as sp
 ftSz1, ftSz2, ftSz3 = 20, 17, 15
 plt.rcParams['font.family'] = 'monospace'
 
-dirPath = "../data"
-
 def plot_matrix():
     matrix = np.loadtxt("matrix.txt")
     row = matrix[:, 0].astype(int)
@@ -30,6 +28,7 @@ def read_data(filename):
 
 if __name__ == "__main__":
 
+    dirPath = "../results"
     n, w = read_data(f"{dirPath}/test_poisson.txt")
 
     L, H = 15, 5
@@ -45,17 +44,8 @@ if __name__ == "__main__":
 
     xx_, yy_ = np.meshgrid(x, y)
     xx, yy = np.meshgrid(xm, ym)
-
-    # want u and v at corners of boxes
-    # want w and p at center of boxes
-    # w_full = np.sin(np.pi * xx_ / L) * np.sin(2 * np.pi * yy_ / H)
-
-    # w = (w_full[:-1, :-1] + w_full[1:, :-1] + w_full[:-1, 1:] + w_full[1:, 1:]) / 4.
-    # u = +1./H * np.sin(np.pi * xx_ / L) ** 2 * np.sin(2 * np.pi * yy_ / H)
-    # v = -1./L * np.sin(2 * np.pi * xx_ / L) * np.sin(np.pi * yy_ / H) ** 2
     
     mask = (3 < xx) * (xx < 8) * (2 < yy) * (yy < 3)
-    # w[mask] = 0.5
 
     fig = plt.figure(figsize=(11, 9), constrained_layout=True)
     ax = fig.add_subplot(projection='3d')
@@ -67,5 +57,3 @@ if __name__ == "__main__":
     ax.set_ylabel("y")
 
     plt.show()
-
-

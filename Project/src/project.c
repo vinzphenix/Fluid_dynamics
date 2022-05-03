@@ -45,8 +45,11 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sim->tnow = 0.;
     sim->elapsed = 0.;
     sim->save_freq = freq;
-    sim->start_avg = START_AVG;
-    sim->count_avg = 0;
+    if (START_AVG > sim->tsim - 1) {
+        sim->start_avg = 0.75 * sim->tsim;
+    } else {
+        sim->start_avg = START_AVG;
+    }
     
     // Obstacle initially not moving
     sim->uMesh = 0.;
@@ -207,15 +210,16 @@ void init_fields(Sim_data *sim) {
     }
 #   endif
 
-
 #   if WALL_DIRICHLET
+    double one_to_zero;
     for (i = 1; i < sim->nx + 1; i++) {
+        // one_to_zero =  0.5 * (1. - tanh( ((i - 0.5) * sim->h - 0.75 * L_) / 1.));
+        one_to_zero = 1.;
         j = 0;
-        sim->T[i][j] = -0.2 * (sim->T[i][j+3] - 5.*sim->T[i][j+2] + 15.*sim->T[i][j+1] - 16.*TMAX);
+        sim->T[i][j] = -0.2 * (sim->T[i][j+3] - 5.*sim->T[i][j+2] + 15.*sim->T[i][j+1] - 16.*TMAX*one_to_zero);
         j = sim->ny+1;
-        sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16.*TMIN);
+        sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16.*TMIN*one_to_zero);
     }
-    // T_wall =  0.5 * (1. - tanh( ((i - 0.5) * sim->h - L_/2.) / 1.)) * TMAX;
 #   endif
 
 #   if BOX_BOT_TOP_DIRICHLET
@@ -244,8 +248,6 @@ int decrease_dt = 0;
 double dt_change;
 double dt_init;
 void adapt_dt(Sim_data *sim, double speed) {
-
-    sim->dt_stable = fmin(FOURIER * RE * (sim->h) * (sim->h), CFL * sim->h / speed);
 
     // Handle adaptative timestep
     if (sim->tnow < 1.) {
@@ -336,20 +338,18 @@ void save_diagnostics(Sim_data *sim, int saving) {
     FILE *ptr;
 
     // Update averaged fields ("as soon as vortex shedding established")
-    if (sim->tnow >= sim->start_avg) {
-        for (i = 0; i < sim->size_u; i++) sim->u_avg[i] += sim->u_data[i];
-        for (i = 0; i < sim->size_v; i++) sim->v_avg[i] += sim->v_data[i];
-        sim->count_avg ++;
+    if (sim->tnow > sim->start_avg) {
+        for (i = 0; i < sim->size_u; i++) sim->u_avg[i] += (sim->u_data[i]) * sim->dt;
+        for (i = 0; i < sim->size_v; i++) sim->v_avg[i] += (sim->v_data[i]) * sim->dt;
     }
     
-    if (sim->tnow >= sim->tsim) {  // save at last iteration
+    if (sim->tnow + 1.e-9 >= sim->tsim) {  // save at last iteration
         ptr = fopen(filename_u_avg, "w");
-        for (i = 0; i < sim->size_u; i++) fprintf(ptr, "%.10le\n", sim->u_avg[i] / sim->count_avg);
+        for (i = 0; i < sim->size_u; i++) fprintf(ptr, "%.10le\n", sim->u_avg[i] / (sim->tnow - sim->start_avg));
         fclose(ptr);
-        // ceil(20. / sim->dt)
 
         ptr = fopen(filename_v_avg, "w");
-        for (i = 0; i < sim->size_v; i++) fprintf(ptr, "%.10le\n", sim->v_avg[i] / sim->count_avg);
+        for (i = 0; i < sim->size_v; i++) fprintf(ptr, "%.10le\n", sim->v_avg[i] / (sim->tnow - sim->start_avg));
         fclose(ptr);
     }
 
@@ -365,6 +365,7 @@ void save_diagnostics(Sim_data *sim, int saving) {
             rew = fmax(rew, fabs(wij / sim->h));
         }
     }
+    sim->dt_stable = fmin(FOURIER * RE * (sim->h) * (sim->h), CFL * sim->h / reh);
 
     // Aerodynamic forces
     i1 = D_IN * sim->n - 1;   i2 = (D_IN + LBOX) * sim->n;
@@ -534,14 +535,15 @@ void set_ghost_points(Sim_data *sim) {
 void set_boundary_temperature(Sim_data *sim) {
     int i, j;
     double coef;
-    coef = sim->dt / sim->h * (1. - sim->uMesh);
 
     for (i = 1; i < sim->nx + 1; i++) {
 #       if WALL_DIRICHLET
+            // coef =  0.5 * (1. - tanh( ((i - 0.5) * sim->h - 0.75 * L_) / 1.));
+            coef = 1.;
             j = 0;  // Below
-            sim->T[i][j] = -0.2 * (sim->T[i][j+3] - 5.*sim->T[i][j+2] + 15.*sim->T[i][j+1] - 16. * TMAX);  // Dirichlet
+            sim->T[i][j] = -0.2 * (sim->T[i][j+3] - 5.*sim->T[i][j+2] + 15.*sim->T[i][j+1] - 16. * TMAX * coef);  // Dirichlet
             j = sim->ny+1;  // Above
-            sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16. * TMIN);  // Dirichlet
+            sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16. * TMIN * coef);  // Dirichlet
 #       else
             j = 0;  // Below
             sim->T[i][j] = sim->T[i][j+1];  // Adiabatic
@@ -550,6 +552,7 @@ void set_boundary_temperature(Sim_data *sim) {
 #       endif
     }
 
+    coef = sim->dt / sim->h * (1. - sim->uMesh);
     for (j = 1; j < sim->ny + 1; j++) sim->T[0        ][j] = sim->T[1][j];                                         // inflow
     for (j = 1; j < sim->ny + 1; j++) sim->T[sim->nx+1][j] -= coef * (sim->T[sim->nx+1][j] - sim->T[sim->nx][j]);  // outflow (advected ?)
 

@@ -210,6 +210,8 @@ def update(t_idx):
     p, u, v, w, T = read_block(sim, needed={"p": True, "u": True, "v": True, "w": True, "T":True})
     p_masked, w_masked, T_masked = apply_mask(sim, p, w, T)
 
+    # print(p[0, 0], p[0, 1], p[1, 0])
+
     animated_items = []
 
     for patch in patches:
@@ -326,7 +328,7 @@ if __name__ == "__main__":
         print("usage: python3 run.py -dir [directory_name] -save [no, gif, mp4, html]") 
     if sys.argv[1] == "-dir":
         case_name = sys.argv[2]
-    if (sys.argv[3] == "-save") and (sys.argv[4] in ["no", "gif", "mp4", "html"]):
+    if (sys.argv[3] == "-save") and (sys.argv[4] in ["none", "gif", "mp4", "html"]):
         save = sys.argv[4]
 
     # path_src = "/media/vincelinux/LaCie/LMECA2660"

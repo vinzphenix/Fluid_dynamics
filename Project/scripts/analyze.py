@@ -299,7 +299,8 @@ if __name__ == "__main__":
     case_list = ["check_1", "check_2"]
     
     # for case_name in case_list_hard_drive:
-    for case_name in case_list:
+    # for case_name in case_list:
+    for case_name in []:
         # path_res = "/media/vincelinux/LaCie/LMECA2660/results/" + case_name
         path_res = "../results/" + case_name
 
@@ -331,6 +332,6 @@ if __name__ == "__main__":
         # plot_streamlines([5e-0, 10.-0, 15.e-0], cmap=cmap2, save=save_global)  # 0.2, 0.5, 1.
 
         # already computed during the simulation --> fast
-        plot_average_flow(cmap2, cmap1, compute=False, t_start=20., save=save_global)
+        # plot_average_flow(cmap2, cmap1, compute=False, t_start=20., save=save_global)
         plot_max_RE(compute=False, save=save_global)
         plot_drag_lift(compute=False, save=save_global)

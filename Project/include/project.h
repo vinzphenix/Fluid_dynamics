@@ -14,14 +14,14 @@
 // Main dimensionless numbers
 #define RE 500.            // Reynolds number of the simulation
 #define PR 0.7             // Prandtl = nu / alpha
-#define GR 100000.         // Grashof = beta (T1-T0) g L^3 / nu^2  // 1000000
-#define EC 0.              // Eckert
+#define GR 100000.         // Grashof = beta (T1 - T0) g L^3 / nu^2  // 1000000
+#define EC 0.              // Eckert = Uinf / cp (T1 - T0)
 
 
 // Oscillation parameters
 #define ALPHA 0.5           // Amplitude of the horizontal oscillation VELOCITY
 #define STROUHAL (1. / 3.)  // Frequency of the horizontal oscillation
-#define SIWNG_START 0.      // Starting time of the horizontal oscillation
+#define SIWNG_START 0.    // Starting time of the horizontal oscillation
 
 #define KAPPA_Y 0.02387     // Amplitude of the vertical perturbation POSITION  0.02387  0.15
 #define STROUHAL_Y (1./3.)  // Frequency of the vertical perturbation
@@ -33,10 +33,10 @@
 // Temperature parameters
 #define NO_SLIP 0           // Walls at y = 0 and y = H
 #define TEMP_MODE 0         // Thermal mode 0: disabled, 1: enabled
-#define TMIN -1.                 // Min temperature (upper external wall, upper wall of box)
-#define TMAX 1.                  // Max temperature (lower external wall, lower wall of box, lateral sides of box)
+#define TMIN -1.            // Min temperature (upper external wall, upper wall of box)
+#define TMAX 1.             // Max temperature (lower external wall, lower wall of box, lateral sides of box)
 
-#if TEMP_MODE
+#if TEMP_MODE == 1
 #define WALL_DIRICHLET 1         // external walls dirichlet (0: no flux, 1: dirichlet)
 #define BOX_LFT_RGT_DIRICHLET 0  // left and right sides of box dirichlet
 #define BOX_BOT_TOP_DIRICHLET 0  // top and bottom sides of box dirichlet
@@ -50,7 +50,7 @@
 
 
 // Box measurements
-#define L_ 15
+#define L_ 20
 #define H_ 5
 #define LBOX 5
 #define D_IN 3
@@ -75,12 +75,14 @@
 typedef struct {
     int nt, nx, ny, n, first_iteration;
     int size_u, size_v, size_p, size_T;
+    int idx_set_p;
     int i_start[12], i_final[12], j_start[12], j_final[12];
+
     double h, dt, tsim, dt_stable;
     double tnow, elapsed, save_freq, start_avg;
     double uMesh, vMesh, reh, rew;
     
-    double *u_data, *v_data, *p_data, *T_data;
+    double *u_data, *v_data, *p_data, *T_data, *uin;
     double *u_avg, *v_avg;
     double **U, **US, **HX, **HX_;
     double **V, **VS, **HY, **HY_;

@@ -3,18 +3,52 @@
 #include "poisson.h"
 
 /*Called by poisson_solver at each time step*/
-/*More than probably, you should need to add arguments to the prototype ... */
-/*Modification to do :*/
-/*    -Impose zero mass flow here by changing value of U_star*/
-/*    -Fill vector rhs*/
 void computeRHS(Sim_data *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) {
-
-    // YOU MUST IMPOSE A ZERO-MASS FLOW HERE ...
 
     int i, j;
     int r = rowStart;
 
-#if TEST_POISSON
+    /*int i_w_left =  D_IN * sim->n - 1;
+    int i_w_right = (D_IN + LBOX) * sim->n;
+    int j_w_below = D_BOT * sim->n - 1;
+    int j_w_above = (D_BOT + 1) * sim->n;*/
+    
+#   if NO_SLIP
+    // YOU MUST IMPOSE A ZERO-MASS FLOW HERE ...
+    i = sim->nx;
+    double flow_in = 0.;
+    double flow_out = 0.;
+    for (j = 1; j < sim->ny + 1; j++) {
+        flow_in += sim->US[0][j];
+        flow_out += sim->US[i][j];
+    }
+    // if (sim->elapsed > sim->save_freq)
+    //     printf("\nBEFORE : In : %15.8lf  Out : %15.8lf\n", flow_in, flow_out);
+
+    for (j = 1; j < sim->ny + 1; j++) {
+        sim->US[i][j] = sim->US[i][j] - sim->uin[j] * (flow_out - flow_in) / sim->ny; 
+        sim->U[i][j] = sim->US[i][j];
+    }
+#   endif    
+    
+    // Going through the whole domain, included the points inside, because not taken into account later anyway
+    for (i = 0; i < sim->nx; i++) {
+        for (j = 0; j < sim->ny; j++) {
+            // 1/h factor of the divergence operator is taken into account in the matrix
+            rhs[r++] = ((sim->US[i+1][j+1] - sim->US[i  ][j+1]) + (sim->VS[i+1][j+1] - sim->VS[i+1][j  ])) / sim->dt;
+        }
+    }
+
+    /*Do not forget that the solution for the Poisson equation is defined within a constant.
+    One point from Phi must then be set to an abritrary constant.*/
+    rhs[sim->idx_set_p] = 0.;  // set value of phi at inflow
+}
+
+
+void computeRHS_TEST(Sim_data *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) {
+    int i, j;
+    int r = rowStart;
+
     // be carefull : (integral_boundary fluxes) MUST BE EQUAL TO (int_domain) source term (here 0.)
     for (i = 0; i < sim->nx; i++) {
         for (j = 0; j < sim->ny; j++, r++) {
@@ -26,32 +60,12 @@ void computeRHS(Sim_data *sim, double *rhs, PetscInt rowStart, PetscInt rowEnd) 
             }
         }
     }
-#else
-    /*int i_w_left =  D_IN * sim->n - 1;
-    int i_w_right = (D_IN + LBOX) * sim->n;
-    int j_w_below = D_BOT * sim->n - 1;
-    int j_w_above = (D_BOT + 1) * sim->n;*/
-
-    // 1/h factor of the divergence operator is taken into account in the matrix
-
-    for (i = 0; i < sim->nx; i++) {
-        for (j = 0; j < sim->ny; j++) {
-            rhs[r++] = ((sim->US[i+1][j+1] - sim->US[i  ][j+1]) + (sim->VS[i+1][j+1] - sim->VS[i+1][j  ])) / sim->dt;
-        }
-    }
-#endif
-
-    /*Do not forget that the solution for the Poisson equation is defined within a constant.
-    One point from Phi must then be set to an abritrary constant.*/
-    rhs[0] = 0.;  // set value of phi at inflow
+    rhs[0] = 0.;
 }
+
 
 /*To call at each time step after computation of U_star. This function solves the poisson equation*/
 /*and copies the solution of the equation into your vector Phi*/
-/*More than probably, you should need to add arguments to the prototype ... */
-/*Modification to do :*/
-/*    - Change the call to computeRHS as you have to modify its prototype too*/
-/*    - Copy solution of the equation into your vector PHI*/
 int poisson_solver(Sim_data *sim, Poisson_data *data) {
 
     /* Solve the linear system Ax = b for a 2-D poisson equation on a structured grid */
@@ -66,7 +80,11 @@ int poisson_solver(Sim_data *sim, Poisson_data *data) {
     /* Fill the right-hand-side vector : b */
     VecGetOwnershipRange(b, &rowStart, &rowEnd);
     VecGetArray(b, &rhs);
+#   if TEST_POISSON
+    computeRHS_TEST(sim, rhs, rowStart, rowEnd); /*MODIFY THE PROTOTYPE HERE*/
+#   else
     computeRHS(sim, rhs, rowStart, rowEnd); /*MODIFY THE PROTOTYPE HERE*/
+#   endif
     VecRestoreArray(b, &rhs);
 
 
@@ -196,8 +214,21 @@ void computeLaplacianMatrixNOIF(Sim_data *sim, Mat A, int rowStart, int rowEnd) 
     }
 
     // lower left corner (used to set reference)
-    idx = 0;
+    // idx = 0;
+    // MatSetValue(A, idx, idx, alpha, INSERT_VALUES);
+
+    // set reference
+    idx = sim->idx_set_p;
+    MatSetValue(A, idx, idx-1, 0., INSERT_VALUES);
+    MatSetValue(A, idx, idx+1, 0., INSERT_VALUES);
+    MatSetValue(A, idx, idx+k, 0., INSERT_VALUES);
     MatSetValue(A, idx, idx, alpha, INSERT_VALUES);
+
+    // lower left
+    idx = 0 * k + 0;
+    MatSetValue(A, idx, idx, -2. * alpha, INSERT_VALUES);
+    MatSetValue(A, idx, idx+1, alpha, INSERT_VALUES);
+    MatSetValue(A, idx, idx+k, alpha, INSERT_VALUES);
 
     // upper left corner
     idx = 0 * k + (k-1);
@@ -243,7 +274,7 @@ void computeLaplacianMatrix(Sim_data *sim, Mat A, int rowStart, int rowEnd) {
             flag_above = (j == j_w_above) && (i_w_left  < i) && (i < i_w_right);
 
             if ((i_w_left < i) && (i < i_w_right) && (j_w_below < j) && (j < j_w_above)) { // inside rectangle
-                diag_value += alpha;  // could use 1., but matrix conditionning would be worse
+                diag_value += alpha;  // could use 1., but matrix conditionning would be worse, I supose
             } else { // outside rectangle
                 if ((i != 0) && (!flag_right)) { // it has left neighbor
                     MatSetValue(A, idx, idx-k, alpha, INSERT_VALUES);
@@ -267,16 +298,20 @@ void computeLaplacianMatrix(Sim_data *sim, Mat A, int rowStart, int rowEnd) {
 
     /*Be careful; the solution from the system solved is defined within a constant.
     One point from Phi must then be set to an abritrary constant.*/
-    MatSetValue(A, 0, 1, 0., INSERT_VALUES);
-    MatSetValue(A, 0, k, 0., INSERT_VALUES);
-    MatSetValue(A, 0, 0, alpha, INSERT_VALUES);
+
+    idx = sim->idx_set_p;
+    
+    MatSetValue(A, idx, idx+k, 0., INSERT_VALUES);
+    MatSetValue(A, idx, idx, alpha, INSERT_VALUES);
+
+    if (0 < idx)  // not below
+        MatSetValue(A, idx, idx - 1, 0., INSERT_VALUES);
+    if (idx < sim->ny-1) // not above
+        MatSetValue(A, idx, idx + 1, 0., INSERT_VALUES);
 }
 
+
 /*To call during the initialization of your solver, before the begin of the time loop*/
-/*Maybe you should need to add an argument to specify the number of unknows*/
-/*Modification to do in this function :*/
-/*   -Specify the number of unknows*/
-/*   -Specify the number of non-zero diagonals in the sparse matrix*/
 PetscErrorCode initialize_poisson_solver(Sim_data *sim, Poisson_data *data) {
     PetscInt rowStart = 0;         /*rowStart = 0*/
     PetscInt rowEnd = sim->size_p; /*rowEnd = the number of unknows*/
@@ -330,7 +365,6 @@ PetscErrorCode initialize_poisson_solver(Sim_data *sim, Poisson_data *data) {
 }
 
 /*To call after the simulation to free the vectors needed for Poisson equation*/
-/*Modification to do : nothing */
 void free_poisson_solver(Poisson_data* data) {
     MatDestroy(&(data->A));
     VecDestroy(&(data->b));

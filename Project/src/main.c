@@ -308,7 +308,7 @@ int main(int argc, char *argv[]){
 #   if TEST_POISSON
     test_poisson(simulation, poisson);
 #   else
-    display_info(simulation, "reduced");  // "full"
+    display_info(simulation, "full");  // "full"
     integrate_flow(simulation, poisson, adi_solver);
 #   endif
 

@@ -40,7 +40,8 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sim->dt = (dt_input == 0.) ? sim->dt_stable : dt_input;
     sim->tsim = tend_input;
     sim->nt = (int) ceil(sim->tsim / sim->dt);
-    printf("Current \u0394t = %.5lf  vs  %.5lf = \u0394t maximal\n", sim->dt, sim->dt_stable);
+    printf("Current \u0394t = %.5lf  vs  %.5lf = \u0394t [CFL]  vs  %.5lf = \u0394t [Fourier]\n", 
+            sim->dt, CFL * sim->h / U0V0, FOURIER * RE * (sim->h) * (sim->h));
 
     sim->tnow = 0.;
     sim->elapsed = 0.;
@@ -51,10 +52,8 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
         sim->start_avg = START_AVG;
     }
     
-    // Obstacle initially not moving
-    sim->uMesh = 0.;
-    sim->vMesh = 0.;
-
+    set_mesh_velocity(sim, sim->tnow);
+    
     int size_u = (sim->nx + 1) * (sim->ny + 2);
     int size_v = (sim->nx + 2) * (sim->ny + 1);
     int size_p = (sim->nx + 0) * (sim->ny + 0);
@@ -63,7 +62,12 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sim->size_v = size_v;
     sim->size_p = size_p;
     sim->size_T = size_T;
-    
+
+    // impose the pressure at half the heigth, not lower left corner (bad if no-slip walls)
+    sim->idx_set_p = sim->ny / 2;
+
+    // Allocate uc
+    sim->uin = (double *)calloc(sim->ny + 2, sizeof(double));
 
     // Allocate u and set matrix access
     sim->u_data = (double *)calloc(5 * size_u, sizeof(double));
@@ -167,11 +171,18 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
 void init_fields(Sim_data *sim) {
     int i, j;
 
-    int i_w_left =  D_IN * sim->n;           // on boundary
-    int i_w_right = (D_IN + LBOX) * sim->n;  // on boundary
-    int j_w_below = D_BOT * sim->n + 1;      // in rectangle
-    int j_w_above = (D_BOT + 1) * sim->n;    // in rectangle
-
+    double eta;
+    for (j = 0; j < sim->ny + 2; j++) {
+        if (NO_SLIP) {
+            eta = (j - 0.5) * sim->h / H_;
+            sim->uin[j] = 6. * 1. * eta * (1. - eta);
+        }
+        else {
+            sim->uin[j] = 1.;  // Uinf
+        }
+        // sim->U[0][j] = sim->uc[j];     // Poiseuille
+        // sim->US[0][j] = sim->uc[j];    // Poiseuille
+    }
 
     // set u to U_inf at the beginning (0 is already good for v)
     for (i = 0; i < sim->nx+1; i++) {
@@ -180,29 +191,31 @@ void init_fields(Sim_data *sim) {
                 // printf("x = %.3lf  y = %.3lf\n", i*sim->h, (j-0.5)*sim->h);
                 continue;
             } else {
-                sim->U[i][j] = 1.;
-                sim->US[i][j] = 1.;
+                sim->U[i][j] = sim->uin[j];
+                sim->US[i][j] = sim->uin[j];
             }
         }
     }
 
-    // set ghost for u on upper and lower walls of rectangle
+    set_ghost_points(sim);
+
+    /*
+
+    int i_w_left =  D_IN * sim->n;           // on boundary
+    int i_w_right = (D_IN + LBOX) * sim->n;  // on boundary
+    int j_w_below = D_BOT * sim->n + 1;      // in rectangle
+    int j_w_above = (D_BOT + 1) * sim->n;    // in rectangle
+
+    // set ghost for u on upper and lower walls of rectangle  // ! identical
     for (i = i_w_left + 1; i < i_w_right; i++) {
         j = j_w_below;
         sim->U[i][j] = -0.2 * (sim->U[i][j-3] - 5.*sim->U[i][j-2] + 15.*sim->U[i][j-1] - 16 * 0.);
         j = j_w_above;
         sim->U[i][j] = -0.2 * (sim->U[i][j+3] - 5.*sim->U[i][j+2] + 15.*sim->U[i][j+1] - 16 * 0.);
-    }
+    }   
 
-    
 #   if NO_SLIP
-    double eta;
-    for (j = 1; j < sim->ny + 1; j++) {
-        eta = (j-0.5) * sim->h / H_;
-        sim->U[0][j] = 6. * 1. * eta * (1. - eta);     // Poiseuille
-        sim->US[0][j] = sim->U[0][j];                  // Poiseuille
-    }
-    for (i = 0; i < sim->nx + 1; i++) {
+    for (i = 0; i < sim->nx + 1; i++) {  // ! identical
         j = 0;
         sim->U[i][j] = -0.2 * (sim->U[i][j+3] - 5.*sim->U[i][j+2] + 15.*sim->U[i][j+1] - 16 * 0.);
         j = sim->ny+1;
@@ -210,7 +223,7 @@ void init_fields(Sim_data *sim) {
     }
 #   endif
 
-#   if WALL_DIRICHLET
+#   if WALL_DIRICHLET  // ! identical
     double one_to_zero;
     for (i = 1; i < sim->nx + 1; i++) {
         // one_to_zero =  0.5 * (1. - tanh( ((i - 0.5) * sim->h - 0.75 * L_) / 1.));
@@ -222,7 +235,7 @@ void init_fields(Sim_data *sim) {
     }
 #   endif
 
-#   if BOX_BOT_TOP_DIRICHLET
+#   if BOX_BOT_TOP_DIRICHLET  // ! identical
     for (i = sim->n * D_IN + 1; i < sim->n * (D_IN + LBOX) + 1; i++) {
         j = sim->n * D_BOT + 1;  // lower wall of rectangle
         sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16.*TMAX);
@@ -231,14 +244,15 @@ void init_fields(Sim_data *sim) {
     }
 #   endif
 
-#   if BOX_LFT_RGT_DIRICHLET
-    i = sim->n * D_IN + 1;  // left wall of rectanle
+#   if BOX_LFT_RGT_DIRICHLET  // ! identical
+    i = sim->n * D_IN + 1;  // left wall of rectangle
     for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++)
         sim->T[i][j] = -0.2 * (sim->T[i-3][j] - 5.*sim->T[i-2][j] + 15.*sim->T[i-1][j] - 16.*TMAX);
-    i = sim->n * (D_IN + LBOX);  // right wall of rectanle
+    i = sim->n * (D_IN + LBOX);  // right wall of rectangle
     for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++)
         sim->T[i][j] = -0.2 * (sim->T[i+3][j] - 5.*sim->T[i+2][j] + 15.*sim->T[i+1][j] - 16.*TMAX);
 #   endif
+    */
 }
 
 
@@ -428,8 +442,9 @@ void set_bd_conditions(Sim_data *sim) {
 
     // Outflow boundary condition for u
     i = sim->nx;
-    coef = sim->dt / sim->h * (1. - sim->uMesh);
-    for (j = 1; j <= sim->ny; j++) {  // u is advected at velocity (1 - uMesh)
+    for (j = 1; j < sim->ny + 1; j++) {  // u is advected at velocity ([Uinf]or[Poiseuille] - uMesh)
+        coef = sim->dt / sim->h * (sim->uin[j] - sim->uMesh);
+        // coef = sim->dt / sim->h * (1. - sim->uMesh);
         sim->US[i][j] = sim->U[i][j] - coef * (sim->U[i][j] - sim->U[i-1][j]);
         sim->U[i][j] = sim->US[i][j];
     }
@@ -501,15 +516,13 @@ void set_ghost_points(Sim_data *sim) {
     // Outflow boundary condition for v
     // write into VS, and then copy back into V to avoid using updated values V(n+1) in the computation of V(n+1)
     i = sim->nx;  // before last i_index of v_ij
-    coef = sim->dt * (1. - sim->uMesh);
     for (j = 1; j < sim->ny; j++) {
+        coef = sim->dt * (sim->uin[j] - sim->uMesh);
+        // coef = sim->dt * (1. - sim->uMesh);
         w_last = ((sim->V[i+1][j] - sim->V[i  ][j]) - (sim->U[i  ][j+1] - sim->U[i  ][j])) / sim->h;
         w_left = ((sim->V[i  ][j] - sim->V[i-1][j]) - (sim->U[i-1][j+1] - sim->U[i-1][j])) / sim->h;
-        sim->VS[i+1][j] = (sim->V[i][j] + sim->U[i][j+1] - sim->U[i][j]) + sim->h * w_last - coef * (w_last - w_left);
+        sim->V[i+1][j] = (sim->V[i][j] + sim->U[i][j+1] - sim->U[i][j]) + sim->h * w_last - coef * (w_last - w_left);
         // [(sim->VS[i+1][j] - sim->V[i][j]) - (sim->U[i][j+1] - sim->U[i][j])/h - w_last ]/dt = -uc * (w_last - w_left) / dx;
-    }
-    for (j = 1; j < sim->ny; j++) {
-        sim->V[i+1][j] = sim->VS[i+1][j];
     }
 
 
@@ -552,11 +565,14 @@ void set_boundary_temperature(Sim_data *sim) {
 #       endif
     }
 
-    coef = sim->dt / sim->h * (1. - sim->uMesh);
-    for (j = 1; j < sim->ny + 1; j++) sim->T[0        ][j] = sim->T[1][j];                                         // inflow
-    for (j = 1; j < sim->ny + 1; j++) sim->T[sim->nx+1][j] -= coef * (sim->T[sim->nx+1][j] - sim->T[sim->nx][j]);  // outflow (advected ?)
+    for (j = 1; j < sim->ny + 1; j++) {
+        coef = sim->dt / sim->h * (sim->uin[j] - sim->uMesh);
+        // coef = sim->dt / sim->h * (1. - sim->uMesh);
+        sim->T[0        ][j] = sim->T[1][j];  // inflow
+        sim->T[sim->nx+1][j] -= coef * (sim->T[sim->nx+1][j] - sim->T[sim->nx][j]);  // outflow (advected ?)
+    }
 
-    i = sim->n * D_IN + 1;  // left wall of rectanle
+    i = sim->n * D_IN + 1;  // left wall of rectangle
     for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++) {
 #       if BOX_LFT_RGT_DIRICHLET
         sim->T[i][j] = -0.2 * (sim->T[i-3][j] - 5.*sim->T[i-2][j] + 15.*sim->T[i-1][j] - 16.*TMAX);  // Dirichlet
@@ -565,7 +581,7 @@ void set_boundary_temperature(Sim_data *sim) {
 #       endif
     }
 
-    i = sim->n * (D_IN + LBOX);  // right wall of rectanle
+    i = sim->n * (D_IN + LBOX);  // right wall of rectangle
     for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++) {
 #       if BOX_LFT_RGT_DIRICHLET
         sim->T[i][j] = -0.2 * (sim->T[i+3][j] - 5.*sim->T[i+2][j] + 15.*sim->T[i+1][j] - 16.*TMAX);  // Dirichlet
@@ -573,9 +589,6 @@ void set_boundary_temperature(Sim_data *sim) {
         sim->T[i][j] = sim->T[i+1][j];  // No flux
 #       endif
     }
-    // if dirichlet applied on lateral walls of the box --> change special treatment in corrector step
-    // sim->T[i][j] = -0.2 * (sim->T[i+3][j] - 5.*sim->T[i+2][j] + 15.*sim->T[i+1][j] - 16.*TMAX);
-
 
     // ! Ghost points in the corners are overwritten
     for (i = sim->n * D_IN + 1; i < sim->n * (D_IN + LBOX) + 1; i++) {
@@ -934,10 +947,9 @@ void swap_next_previous(Sim_data *sim) {
 
 
 void set_mesh_velocity(Sim_data *sim, double t_now) {
-    // double t_now = sim->dt * sim->t;
     double pert_end = PERT_START + ((double) N_CYCLES / STROUHAL_Y);
     
-    if (SIWNG_START < t_now) {
+    if (SIWNG_START <= t_now) {
         sim->uMesh = ALPHA * sin(2. * M_PI * STROUHAL * (t_now - SIWNG_START));
     } else {
         sim->uMesh = 0.;

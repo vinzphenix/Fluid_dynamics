@@ -6,6 +6,7 @@
 #include <petsc.h>
 #include <petscsys.h>
 #include "project.h"
+#include "mpi.h"
 
 //Structure storing petsc vectors
 

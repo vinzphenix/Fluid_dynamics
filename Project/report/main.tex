@@ -293,7 +293,7 @@ A few remarks:
 \end{figure}
 As show in figure \ref{fig:streamlines_1}, the recirculation region grows with time. The stagnation point moves from $x-x_{wall} \approx 3$ at $t=12.5$ to $x - x_{wall} \approx 4.5$ at $t=25.$. The flow recirculation even becomes too large for the computational domain since the stagnation point grows beyond $x=15$ at $t \approx 40$.
 
-The evolution of the mesh Reynolds numbers is represented in figure \ref{fig:mesh_re_case1}. Their value quickly decrease before stabilizing around $25$. This is probably due to the fact that the flow is initially nonphysical with discontinuities of $u$ near the walls that degrade the quality of the numerical simulation.
+The mesh Reynolds numbers are represented in figure \ref{fig:mesh_re_case1}. Their value quickly decrease before stabilizing around $25$. This is probably due to the fact that the flow is initially nonphysical with discontinuities of $u$ near the walls that degrade the quality of the numerical simulation.
 
 In figure \ref{fig:drag_case1}, the lift is zero (or almost due to numerical rounding errors) since the flow is symmetrical. On the other hand, the drag coefficient is non-zero, and $C_d \approx 1.25$ before the stagnation point leaves the domain.
 
@@ -546,6 +546,8 @@ In this situation, the external walls become real walls, with a no-slip conditio
 \end{figure}
 
 With the no-slip boundary condition, we must be careful concerning the outflow boundary condition for higher values of $Gr$. In fact, when $Gr > 5 \cdot 10^{5}$, the flow becomes more complex and vortices become strong enough that the horizontal velocity $u$ sometimes is negative near the outflow. When these strong vortices reach the right boundary of $\Omega$, they are \textit{stuck} inside the domain. An example is given in the video \texttt{anim/no\_slip\_crash.mp4}.
+
+Therefore, I imposed a zero mass flow, and set $u_c$ with a Poiseuille profile. But these corrections do not improve the situation as much as expected.
 
 \begin{figure}[H]
     \centering

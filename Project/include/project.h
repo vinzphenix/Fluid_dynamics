@@ -50,7 +50,7 @@
 
 
 // Box measurements
-#define L_ 20
+#define L_ 15
 #define H_ 5
 #define LBOX 5
 #define D_IN 3

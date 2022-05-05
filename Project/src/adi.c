@@ -221,7 +221,7 @@ void predictor_step_u_adi(Sim_data *sim, ADI_data *adi) {
     */
 
     int i, j, idx, k;
-    int i_s, i_f, j_s, j_f;
+    int block, i_s, i_f, j_s, j_f;
 
     double **U = sim->U;
 
@@ -235,7 +235,7 @@ void predictor_step_u_adi(Sim_data *sim, ADI_data *adi) {
     set_mesh_velocity(sim, sim->tnow);
     set_system_ux(sim, adi, k);
 
-    for (int block = 0; block < 4; block++) {
+    for (block = 0; block < 4; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];
@@ -261,7 +261,7 @@ void predictor_step_u_adi(Sim_data *sim, ADI_data *adi) {
     set_mesh_velocity(sim, sim->tnow + sim->dt);
     set_system_uy(sim, adi, k);
 
-    for (int block = 0; block < 4; block++) {
+    for (block = 0; block < 4; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];
@@ -306,7 +306,7 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
     */
 
     int i, j, idx, k;
-    int i_s, i_f, j_s, j_f;
+    int block, i_s, i_f, j_s, j_f;
 
     double **V = sim->V;
 
@@ -324,7 +324,7 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
     set_mesh_velocity(sim, sim->tnow);
     set_system_vx(sim, adi, k);
 
-    for (int block = 4; block < 8; block++) {
+    for (block = 4; block < 8; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];
@@ -353,7 +353,7 @@ void predictor_step_v_adi(Sim_data *sim, ADI_data *adi) {
     set_mesh_velocity(sim, sim->tnow + sim->dt);
     set_system_vy(sim, adi, k);
 
-    for (int block = 4; block < 8; block++) {
+    for (block = 4; block < 8; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];

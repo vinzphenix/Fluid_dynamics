@@ -77,8 +77,9 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sim->US  = sim->U + 1 * (sim->nx + 1);
     sim->HX  = sim->U + 2 * (sim->nx + 1);
     sim->HX_ = sim->U + 3 * (sim->nx + 1);
-
-    for (int i = 0; i < sim->nx + 1; i++) {
+    
+    int i;
+    for (i = 0; i < sim->nx + 1; i++) {
         sim->U[i]   = sim->u_data + 0 * size_u + i * (sim->ny + 2);
         sim->US[i]  = sim->u_data + 1 * size_u + i * (sim->ny + 2);
         sim->HX[i]  = sim->u_data + 2 * size_u + i * (sim->ny + 2);
@@ -95,7 +96,7 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sim->HY  = sim->V + 2 * (sim->nx + 2);
     sim->HY_ = sim->V + 3 * (sim->nx + 2);
 
-    for (int i = 0; i < sim->nx + 2; i++) {
+    for (i = 0; i < sim->nx + 2; i++) {
         sim->V[i]   = sim->v_data + 0 * size_v + i * (sim->ny + 1);
         sim->VS[i]  = sim->v_data + 1 * size_v + i * (sim->ny + 1);
         sim->HY[i]  = sim->v_data + 2 * size_v + i * (sim->ny + 1);
@@ -109,7 +110,7 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sim->P = (double **)malloc(2 * (sim->nx) * sizeof(double *));
     sim->PHI = sim->P + (sim->nx);
 
-    for (int i = 0; i < sim->nx; i++) {
+    for (i = 0; i < sim->nx; i++) {
         sim->P[i]   = sim->p_data + 0 * size_p + i * (sim->ny);
         sim->PHI[i] = sim->p_data + 1 * size_p + i * (sim->ny);
     }
@@ -123,7 +124,7 @@ void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_inpu
     sim->HT  = sim->T + 1 * (sim->nx + 2);
     sim->HT_ = sim->T + 2 * (sim->nx + 2);
 
-    for (int i = 0; i < sim->nx + 2; i++) {
+    for (i = 0; i < sim->nx + 2; i++) {
         sim->T[i]   = sim->T_data + 0 * size_T + i * (sim->ny + 2);
         sim->HT[i]  = sim->T_data + 1 * size_T + i * (sim->ny + 2);
         sim->HT_[i] = sim->T_data + 2 * size_T + i * (sim->ny + 2);

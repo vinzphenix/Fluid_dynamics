@@ -112,7 +112,7 @@ int poisson_solver(Sim_data *sim, Poisson_data *data) {
 This function is called only once during the simulation, i.e. in initialize_poisson_solver.
 */
 void computeLaplacianMatrixNOIF(Sim_data *sim, Mat A, int rowStart, int rowEnd) {
-    int i, j, idx;
+    int i, j, idx, block;
     int k = sim->ny;
     double alpha = sim->n;  // 1/h^2  *  h  =  n
     
@@ -127,7 +127,7 @@ void computeLaplacianMatrixNOIF(Sim_data *sim, Mat A, int rowStart, int rowEnd) 
     int j_final[4] = {sim->ny - 1, j_w_below, sim->ny - 1, sim->ny - 1};
 
     // main blocks no touching boundaries
-    for (int block = 0; block < 4; block++) {
+    for (block = 0; block < 4; block++) {
         for (i = i_start[block]; i < i_final[block]; i++) {
             for (j = j_start[block]; j < j_final[block]; j++) {
                 idx = i * k + j;
@@ -166,7 +166,7 @@ void computeLaplacianMatrixNOIF(Sim_data *sim, Mat A, int rowStart, int rowEnd) 
     j_start[0] = 0; j_final[0] = sim->ny - 1;          // one shot
     j_start[1] = j_w_above; j_final[1] = j_w_below;    // one shot
 
-    for (int block = 0; block < 2; block++) {      
+    for (block = 0; block < 2; block++) {      
         for (i = i_start[block]; i < i_final[block]; i++) {
 
             j = j_start[block]; // below missing
@@ -192,7 +192,7 @@ void computeLaplacianMatrixNOIF(Sim_data *sim, Mat A, int rowStart, int rowEnd) 
     i_start[0] = 0; i_final[0] = sim->nx - 1;           // one shot
     i_start[1] = i_w_right; i_final[1] = i_w_left;     // one shot
 
-    for (int block = 0; block < 2; block++) {      
+    for (block = 0; block < 2; block++) {      
         
         i = i_start[block]; // left missing
         for (j = j_start[block]; j < j_final[block]; j++) {
@@ -375,11 +375,12 @@ void free_poisson_solver(Poisson_data* data) {
 
 
 void test_poisson(Sim_data *sim, Poisson_data *poisson) {
+    int i, j;
     poisson_solver(sim, poisson);
     FILE *ptr = fopen("./results/test_poisson.txt", "w");
     fprintf(ptr, "%d\n", sim->n);
-    for (int i = 0; i < sim->nx; i++) {
-        for (int j = 0; j < sim->ny; j++) {
+    for (i = 0; i < sim->nx; i++) {
+        for (j = 0; j < sim->ny; j++) {
             fprintf(ptr, "%.4le ", sim->PHI[i][j]);
         }
         fprintf(ptr, "\n");

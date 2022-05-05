@@ -189,9 +189,10 @@ int main(int argc, char *argv[]){
         printf("./cfd -ksp_type fgmres -pc_type lu -n 46 -dt 0.001 -tend 50. -freq 0.1 -dir new_case\n");
         return EXIT_FAILURE;
     }
-
+    
+    int i;
     int count_args = 0;
-    for (int i = 1; i < argc; i++) {
+    for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-n") == 0) {
             if (argc > i+1) n = (int) strtol(argv[i+1], &endptr, 10);
             if ((argc > i+1) && (*endptr == '\0') && (n >= 5)) {

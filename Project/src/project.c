@@ -626,9 +626,9 @@ void compute_convection(Sim_data *sim) {
 
     double **H = sim->HX;
 
-    int i_s, i_f, j_s, j_f;
+    int block, i_s, i_f, j_s, j_f;
 
-    for (int block = 0; block < 4; block++) {
+    for (block = 0; block < 4; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];
@@ -656,7 +656,7 @@ void compute_convection(Sim_data *sim) {
     }
 
     H = sim->HY;
-    for (int block = 4; block < 8; block++) {
+    for (block = 4; block < 8; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];
@@ -702,9 +702,9 @@ void compute_convection_temperature(Sim_data *sim) {
     factor *= 0.5;
 #   endif
 
-    int i_s, i_f, j_s, j_f;
+    int block, i_s, i_f, j_s, j_f;
 
-    for (int block = 8; block < 12; block++) {
+    for (block = 8; block < 12; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];
@@ -747,10 +747,10 @@ void predictor_step(Sim_data *sim) {
     double beta = 0.5 * GR / (RE * RE);  // 0.5 here to prepare the average in the "for" loop
 #   endif
 
-    int i_s, i_f, j_s, j_f;
+    int block, i_s, i_f, j_s, j_f;
 
     // update u field
-    for (int block = 0; block < 4; block++) {
+    for (block = 0; block < 4; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];
@@ -769,7 +769,7 @@ void predictor_step(Sim_data *sim) {
     }
 
     // update v field
-    for (int block = 4; block < 8; block++) {
+    for (block = 4; block < 8; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];
@@ -796,10 +796,10 @@ void corrector_step(Sim_data *sim) {
     int i, j;
     double dphi;
 
-    int i_s, i_f, j_s, j_f;
+    int block, i_s, i_f, j_s, j_f;
 
     // update u field
-    for (int block = 0; block < 4; block++) {
+    for (block = 0; block < 4; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];
@@ -814,7 +814,7 @@ void corrector_step(Sim_data *sim) {
     }
 
     // update v field
-    for (int block = 4; block < 8; block++) {
+    for (block = 4; block < 8; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];
@@ -875,7 +875,7 @@ void handle4corners(Sim_data *sim, double diff) {
 
 void corrector_step_temperature(Sim_data *sim) {
     int i, j;
-    int i_s, i_f, j_s, j_f;
+    int block, i_s, i_f, j_s, j_f;
 
     double coef_1 = (sim->first_iteration) ? -1. : -1.5;
     double coef_2 = (sim->first_iteration) ? +0. : +0.5;
@@ -888,7 +888,7 @@ void corrector_step_temperature(Sim_data *sim) {
         // for (j = 1; j < sim->ny + 1; j++) {
 
     // compute rhs of temperature equation (diffusion + viscous dissipation)
-    for (int block = 8; block < 12; block++) {
+    for (block = 8; block < 12; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];
@@ -911,7 +911,7 @@ void corrector_step_temperature(Sim_data *sim) {
     // ! The problem is that the 4 corners inside the rectangle are ghost points of 2 different cells each
     handle4corners(sim, diff);  // Does it really make a difference ? Not sure, since ghost values should not be very much different
 
-    for (int block = 8; block < 12; block++) {
+    for (block = 8; block < 12; block++) {
         i_s = sim->i_start[block];
         i_f = sim->i_final[block];
         j_s = sim->j_start[block];

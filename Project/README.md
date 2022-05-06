@@ -49,13 +49,21 @@ If you used `html`, and want to produce a video based on the successive frames j
 ffmpeg -framerate 25 -i <name>/frame_%05d.png -vcodec libx264 -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -crf 5 -r 25 -pix_fmt yuv420p <name>.mp4
 ```
 
+If you want to convert a `.mp4` to a `.gif`:
+```
+ffmpeg -ss 0.0 -t 9.5 -i input.mp4 -f gif output.gif
+```
+
 ## Dependencies
 The solver uses the PETSc library in order to solve the poisson equation of the projection method. Instructions for installing are available in the `./doc/` directory. More details about an optimized compilation are given on the website https://petsc.org/release/install/install/#compilers.
 
-## Examples
+## Example 1
 
-![Example1 mp4](anim/case_4.mp4)
+![Example 1 gif](anim/example_1.gif)
 
-![Example2 mp4](anim/hot_box.mp4)
+## Example 2
+![Example 2 gif](anim/example_2.gif)
 
-![Example3 mp4](anim/Re_100_hot_cold.mp4)
+## Example 3
+![Example 3 gif](anim/example_3.gif)
+

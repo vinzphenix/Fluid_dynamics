@@ -5,23 +5,23 @@
 
 #include <petsc.h>
 #include <petscsys.h>
-#include "project.h"
-#include "mpi.h"
 
-//Structure storing petsc vectors
+#include "mpi.h"
+#include "project.h"
+
+// Structure storing petsc vectors
 
 typedef struct {
-
-	Vec b;
-	Vec x;
-	Mat A;
-	KSP sles;
+    Vec b;
+    Vec x;
+    Mat A;
+    KSP sles;
 
 } Poisson_data;
 
-PetscErrorCode initialize_poisson_solver(Sim_data *sim, Poisson_data* data);
+PetscErrorCode initialize_poisson_solver(Sim_data *sim, Poisson_data *data);
 int poisson_solver(Sim_data *sim, Poisson_data *data);
-void free_poisson_solver(Poisson_data* data);
+void free_poisson_solver(Poisson_data *data);
 void test_poisson(Sim_data *sim, Poisson_data *poisson);
 
 #endif

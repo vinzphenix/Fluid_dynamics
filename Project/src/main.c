@@ -1,6 +1,6 @@
-#include "project.h"
-#include "poisson.h"
 #include "adi.h"
+#include "poisson.h"
+#include "project.h"
 
 // Fix: implement adi for temperature // bof bof
 // Improvement: implement streched grid, adaptative time
@@ -19,12 +19,14 @@ void display_info(Sim_data *sim, char *mode) {
      RE = U0 Hbox / nu
     */
 
-    printf("\n ==================================== \e[1mLMECA2660 project in CFD\e[0m ====================================\n");
+    printf(
+        "\n ==================================== \e[1mLMECA2660 project in CFD\e[0m "
+        "====================================\n");
     const char *dt_status = (ADAPTATIVE_DT == 1) ? "adaptative" : "fixed";
     const char *adi_status = (USE_ADI == 1) ? "enabled" : "disabled";
     const char *tmp_status = (TEMP_MODE > 0) ? "enabled" : "disabled";
-    printf("\e[1m       Re = %.0lf    dx = %.3lf    T_simu = %.2lf   dt %s    Temp %s   ADI %s \e[0m \n\n",
-           RE, sim->h, sim->tsim, dt_status, tmp_status, adi_status);
+    printf("\e[1m       Re = %.0lf    dx = %.3lf    T_simu = %.2lf   dt %s    Temp %s   ADI %s \e[0m \n\n", RE, sim->h,
+           sim->tsim, dt_status, tmp_status, adi_status);
     char description[] = {
         "        ╭──────────────────────────────────────────────────────────────╮\n"
         "        │                       %2d                                     │\n"
@@ -37,29 +39,25 @@ void display_info(Sim_data *sim, char *mode) {
         "        │                        |%2d                                   │\n"
         "        │                        |                                     │\n"
         "        ╰──────────────────────────────────────────────────────────────╯\n\n"};
-    
+
     if (strcmp(mode, "full") == 0) {
         printf(description, LBOX, D_IN, L_ - D_IN - LBOX, 1, D_BOT);
     }
 }
 
-
 void printProgress(Sim_data *sim, int res, int ndec1, int ndec2, struct timespec start_exec) {
-    // int t = sim->t;
-    // int nt = sim->nt;
-    // double percentage = (double) t / (double) nt;
-    // double dt = sim->dt;
     double percentage = sim->tnow / sim->tsim;
 
-    int val = (int) (percentage * 100);
-    int lpad = (int) (percentage * PBWIDTH);
+    int val = (int)(percentage * 100);
+    int lpad = (int)(percentage * PBWIDTH);
     int rpad = PBWIDTH - lpad;
 
     struct timespec clock_now;
     clock_gettime(CLOCK_REALTIME, &clock_now);
 
-    double exec_time = (double) ((1e9 * clock_now.tv_sec + clock_now.tv_nsec) - (1e9 * start_exec.tv_sec + start_exec.tv_nsec)) * 1.e-9;
-    double time_left = exec_time * (sim->tsim/sim->tnow - 1);
+    double exec_time =
+        (double)((1e9 * clock_now.tv_sec + clock_now.tv_nsec) - (1e9 * start_exec.tv_sec + start_exec.tv_nsec)) * 1.e-9;
+    double time_left = exec_time * (sim->tsim / sim->tnow - 1);
     time_left = fmax(time_left, 0.);
 
     // int hours = exec_time / 3600;
@@ -72,24 +70,24 @@ void printProgress(Sim_data *sim, int res, int ndec1, int ndec2, struct timespec
     double s_left = fmod(time_left, 60.);
     double m_left = floor(time_left / 60.);
 
-    // printf("\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    %*d/%*d   t_sim = %*.3lf s     \e[92m[%02dh%02d:%02d\e[0m",
+    // printf("\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    %*d/%*d   t_sim = %*.3lf s
+    // \e[92m[%02dh%02d:%02d\e[0m",
     //        val, lpad, PBSTR, rpad, "", res, ndec1, t, ndec1, nt, ndec2+4, (double) t * dt, hours, minutes, seconds);
 
-    char info_msg[200] = "\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    t_sim = %*.3lf s    dt = %.3lf ms < %.3lf ms     ";
-    char more_info[100] = "Re_w,h = %4.1lf, %4.1lf    \e[92m[%02.0f:%02.0f < %02.0f:%02.0f] \e[0m ";
-    strcat(info_msg, more_info);
-    printf(info_msg, val, lpad, PBSTR, rpad, "", res, ndec2+4, sim->tnow, 1.e3 * sim->dt, 1.e3 * sim->dt_stable,
-                     sim->rew, sim->reh, minutes, seconds, m_left, s_left);
+    char info_msg[250] =
+        "\r\e[93m\e[1m%3d%%\e[0m [%.*s%*s]   \e[91mPoisson %d its\e[0m    t_sim = %*.3lf s    \e[34mdt = %.3lf ms < "
+        "%.3lf ms\e[0m     Re_w,h = %4.1lf, %4.1lf    \e[92m[%02.0f:%02.0f < %02.0f:%02.0f] \e[0m ";
+    printf(info_msg, val, lpad, PBSTR, rpad, "", res, ndec2 + 4, sim->tnow, 1.e3 * sim->dt, 1.e3 * sim->dt_stable,
+           sim->rew, sim->reh, minutes, seconds, m_left, s_left);
     fflush(stdout);
 }
 
-
 void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
     struct timespec start_exec;
-    
+
     int nIterations;
-    int ndec1 = (int) ceil(log10(sim->nt + 1));
-    int ndec2 = (int) ceil(log10(sim->tsim + 1.));
+    int ndec1 = (int)ceil(log10(sim->nt + 1));
+    int ndec2 = (int)ceil(log10(sim->tsim + 1.));
     sim->first_iteration = 1;
 
     // sim->t = 0;
@@ -97,20 +95,17 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
     save_diagnostics(sim, 1);
 
     while (sim->tnow + 1e-9 < sim->tsim) {
-
-        // CONVECTION        
+        // CONVECTION
         compute_convection(sim);
-#       if TEMP_MODE
-        compute_convection_temperature(sim);
-#       endif
-        
+        compute_convection_temperature(sim);  // does nothing if TEMP_MODE disabled
+
         // PREDICTOR STEP
-#       if USE_ADI
+#if USE_ADI
         predictor_step_u_adi(sim, adi);
         predictor_step_v_adi(sim, adi);
-#       else
+#else
         predictor_step(sim);
-#       endif
+#endif
 
         // UPDATE TIME AND BOUNDARY CONDITIONS
         sim->tnow += sim->dt;
@@ -119,9 +114,7 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
         set_mesh_velocity(sim, sim->tnow);
         set_bd_conditions(sim);
         set_ghost_points(sim);
-#       if TEMP_MODE
-        set_boundary_temperature(sim);
-#       endif
+        set_boundary_temperature(sim);  // does nothing if TEMP_MODE disabled
 
         // SOLVE POISSON EQUATION
         // clock_t start = clock();
@@ -130,17 +123,15 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
 
         // CORRECTOR STEP
         corrector_step(sim);
-#       if TEMP_MODE
-        corrector_step_temperature(sim);
-#       endif
+        corrector_step_temperature(sim);  // does nothing if TEMP_MODE disabled
 
         // KEEP HISTORY OF HX, HY, HT
         swap_next_previous(sim);
 
-
         // PROGRESS BAR
         if (sim->first_iteration) {
-            clock_gettime(CLOCK_REALTIME, &start_exec);  // don't take first iteration into account, since much much longer
+            clock_gettime(CLOCK_REALTIME,
+                          &start_exec);  // don't take first iteration into account, since much much longer
             sim->first_iteration = 0;
         }
         printProgress(sim, nIterations, ndec1, ndec2, start_exec);
@@ -154,13 +145,11 @@ void integrate_flow(Sim_data *sim, Poisson_data *poisson, ADI_data *adi) {
             save_diagnostics(sim, 0);  // second argument is a flag to indicate if the fields are saved
         }
     }
-    
-    printf("\n\n");
 
+    printf("\n\n");
 }
 
-
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[]) {
     // ./cfd -ksp_type fgmres -pc_type lu -n 46 -dt 0.001 -tend 50. -freq 0.1 -dir new_case
     // -ksp_type : solver used by PETSC to solve the poisson equation of the two-step method
     // -pc_type  : pre-conditionner of the PETSC solver
@@ -169,7 +158,6 @@ int main(int argc, char *argv[]){
     // -tend     : final time of the simulation
     // -freq     : save the fields u, v, p, T every ... "seconds", 0 to never save
     // -dir      : sub-directory in which the files are saved (inside the directory "myPath")
-
 
     /**
      * Handle the flags received in the command line
@@ -189,13 +177,13 @@ int main(int argc, char *argv[]){
         printf("./cfd -ksp_type fgmres -pc_type lu -n 46 -dt 0.001 -tend 50. -freq 0.1 -dir new_case\n");
         return EXIT_FAILURE;
     }
-    
+
     int i;
     int count_args = 0;
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-n") == 0) {
-            if (argc > i+1) n = (int) strtol(argv[i+1], &endptr, 10);
-            if ((argc > i+1) && (*endptr == '\0') && (n >= 5)) {
+            if (argc > i + 1) n = (int)strtol(argv[i + 1], &endptr, 10);
+            if ((argc > i + 1) && (*endptr == '\0') && (n >= 5)) {
                 i++;
                 count_args++;
             } else if (n < 5) {
@@ -204,11 +192,11 @@ int main(int argc, char *argv[]){
                 ABORT_MSG("Could not read value for parameter [n] !");
             }
         } else if (strcmp(argv[i], "-dt") == 0) {
-            if (argc > i+1) dt = (double) strtod(argv[i+1], &endptr);
-            if ((argc > i+1) && (*endptr == '\0') && (dt > 0.)) {
+            if (argc > i + 1) dt = (double)strtod(argv[i + 1], &endptr);
+            if ((argc > i + 1) && (*endptr == '\0') && (dt > 0.)) {
                 i++;
                 count_args++;
-            } else if (dt <= 0.){
+            } else if (dt <= 0.) {
                 ABORT_MSG("[dt] must be > 0 !");
                 return EXIT_FAILURE;
             } else {
@@ -216,8 +204,8 @@ int main(int argc, char *argv[]){
                 return EXIT_FAILURE;
             }
         } else if (strcmp(argv[i], "-tend") == 0) {
-            if (argc > i+1) tend = (double) strtod(argv[i+1], &endptr);
-            if ((argc > i+1) && (*endptr == '\0') && (tend > 0.)) {
+            if (argc > i + 1) tend = (double)strtod(argv[i + 1], &endptr);
+            if ((argc > i + 1) && (*endptr == '\0') && (tend > 0.)) {
                 i++;
                 count_args++;
             } else if (tend <= 0.) {
@@ -228,8 +216,8 @@ int main(int argc, char *argv[]){
                 return EXIT_FAILURE;
             }
         } else if (strcmp(argv[i], "-freq") == 0) {
-            if (argc > i+1) save_freq = (double) strtod(argv[i+1], &endptr);
-            if ((argc > i+1) && (*endptr == '\0') && (save_freq >= 0.)) {
+            if (argc > i + 1) save_freq = (double)strtod(argv[i + 1], &endptr);
+            if ((argc > i + 1) && (*endptr == '\0') && (save_freq >= 0.)) {
                 i++;
                 count_args++;
             } else if (save_freq < 0) {
@@ -240,19 +228,19 @@ int main(int argc, char *argv[]){
                 return EXIT_FAILURE;
             }
         } else if (strcmp(argv[i], "-dir") == 0) {
-            if (argc > i+1) {
+            if (argc > i + 1) {
                 struct stat st = {0};
                 char res;
-                
-                strcat(myPath, argv[i+1]);
+
+                strcat(myPath, argv[i + 1]);
                 strcat(myPath, "/");
                 count_args++;
-                
+
                 if (stat(myPath, &st) == -1) {
                     mkdir(myPath, 0700);
                 } else {
-                    printf("The directory %s already exists. Do you want to overwrite it ? [y] or [n]: ", argv[i+1]);
-                    if ((scanf("%c", &res) == 1) && (res == 'y')){
+                    printf("The directory %s already exists. Do you want to overwrite it ? [y] or [n]: ", argv[i + 1]);
+                    if ((scanf("%c", &res) == 1) && (res == 'y')) {
                         continue;
                     } else {
                         printf("Aborting the program\n");
@@ -273,7 +261,7 @@ int main(int argc, char *argv[]){
     }
 
     /**
-     * Built-in initializing function of PETSC
+     * Initialization function of PETSC
      */
     int argc_petsc = 3;  // PETSC is not concerned by the other arguments
     PetscInitialize(&argc_petsc, &argv, 0, 0);
@@ -294,36 +282,27 @@ int main(int argc, char *argv[]){
     // printf("Time to create Matrix = %.3f s\n", (double) (clock() - start) / CLOCKS_PER_SEC);
 
     /**
-     * Initialize the ADI solver if needed. The boundary conditions are not correct yet.
-     * TODO: make it right.
+     * Initialize the ADI solver if needed. Not sure boundary conditions are 100% correct yet.
      */
     ADI_data *adi_solver = (ADI_data *)malloc(sizeof(ADI_data));
-#   if USE_ADI
-    init_adi_solver(simulation, adi_solver);
-#   endif
-
+    init_adi_solver(simulation, adi_solver);  // does nothing if ADI is disabled
 
     /**
      * MAIN PROCESS
      */
-#   if TEST_POISSON
+#if TEST_POISSON
     test_poisson(simulation, poisson);
-#   else
+#else
     display_info(simulation, "full");  // "full"
     integrate_flow(simulation, poisson, adi_solver);
-#   endif
-
+#endif
 
     /**
      * FREE THE MEMORY
      */
     free_Sim_data(simulation);
     free_poisson_solver(poisson);
-#   if USE_ADI
     free_adi_solver(adi_solver);
-#   else
-    free(adi_solver);
-#   endif
     PetscFinalize();
 
     return EXIT_SUCCESS;

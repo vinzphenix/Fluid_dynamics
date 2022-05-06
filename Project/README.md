@@ -21,7 +21,7 @@ This project was done in the course _Numerical methods in fluid mechanics_. It s
     └── src               <- Source code in .c files
 
 ## Run the code
-The code in __C__ can be compiled easily with make, and then executed as follows:
+The code in `C` can be compiled easily with `make`, and then executed as follows:
 ```
 make -j
 ./cfd -ksp_type fgmres -pc_type lu -n 50 -dt 0.002 -tend 50. -freq 0.1 -dir new_case
@@ -39,30 +39,23 @@ make -j
 ## Produce an animation
 The animation proposed shows the streamlines (iso-psi), the pressure field, the vorticity field and if possible the temperature field.
 
-First, make sure that the directory `./anim/` exists, and that you have the results of a simulation stored in the directory `./results/<name>`. Then, execute the following command with the format of your choice for the flag `-save`:
+First, make sure that you have the results of a simulation stored in the directory `./results/<name>`. Then, execute the following command inside the directory `./scripts/` with the format of your choice for the flag `-save`:
 ```
 python3 run.py -dir <name> -save <none, gif, mp4, html>
 ```
 
 If you used `html`, and want to produce a video based on the successive frames just created, you can use `FFmpeg` as follows:
 ```
-ffmpeg -framerate 25 -i ./anim/<name>/frame_%05d.png -vcodec libx264 -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -crf 5 -r 25 -pix_fmt yuv420p ./anim/<name>.mp4
+ffmpeg -framerate 25 -i <name>/frame_%05d.png -vcodec libx264 -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -crf 5 -r 25 -pix_fmt yuv420p <name>.mp4
 ```
 
 ## Dependencies
 The solver uses the PETSc library in order to solve the poisson equation of the projection method. Instructions for installing are available in the `./doc/` directory. More details about an optimized compilation are given on the website https://petsc.org/release/install/install/#compilers.
 
-## Schema of the computational domain with default dimensions
-```
-────────────────────────────────────────────────────────────────
-->                        5                                     
-->              <------------------->                           
-->                                                              
-->      3      ╭─────────────────────╮             7            
-->  <------->  │              | 1    │  <---------------------> 
-->             ╰─────────────────────╯                          
-->                        |                                     
-->                        | 2                                   
-->                        |                                     
-────────────────────────────────────────────────────────────────
-```
+## Examples
+
+![Example1 mp4](anim/case_4.mp4)
+
+![Example2 mp4](anim/hot_box.mp4)
+
+![Example3 mp4](anim/Re_100_hot_cold.mp4)

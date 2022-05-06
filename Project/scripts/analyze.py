@@ -35,7 +35,7 @@ def plot_vorticity(t_list, cmap, save=False):
         levels = levels - scaling * wdif / (2. * np.pi) * np.sin(2. * np.pi / wdif * (levels - wavg))
         
         ct = axs[i].contour(x + delta_x[t], y + delta_y[t], w, linewidths=2., levels=levels, cmap=cmap)
-        cbar = fig.colorbar(ct, cax=caxs[i], spacing = 'proportional', ticks=np.round(np.linspace(levels[0], levels[-1], 7)))
+        cbar = fig.colorbar(ct, cax=caxs[i], spacing='proportional', ticks=np.round(np.linspace(levels[0], levels[-1], 7)))
         i += 1
         if i == n_plots:
             break
@@ -147,20 +147,24 @@ def plot_average_flow(cmap1, cmap2, compute=False, t_start=20., save=False):
     lw = 2 * np.abs(1. - speed)
     strm = axs[0].streamplot(x, y, u_avg.T, v_avg.T, density=2., linewidth=lw, color=speed, cmap=cmap1)
     cbar1 = fig.colorbar(strm.lines, cax=caxs[0])
-    cbar1.ax.set_ylabel(r"$\|\: (u,\, v) \:\|$", fontsize=ftSz2)
+    cbar1.ax.set_ylabel(r"$\|\: \mathbf{v} \, / \, U_{\infty} \:\|$", fontsize=ftSz2)
 
     # VORTICITY
     wmin, wmax = np.amin(w[~mask_hard]), np.amax(w[~mask_hard])
     wmax = max(np.abs(wmin), np.abs(wmax))
-    levels = np.linspace(-0.75 * wmax, 0.75 * wmax, 50)
+    scaling, nStreamLines = 0.5, 40
+    wavg, wdif = (wmax + wmin) / 2., wmax - wmin
+    levels = np.linspace(wmin + 0.01 * wdif, wmax - 0.01 * wdif, nStreamLines)
+    levels = levels - scaling * wdif / (2. * np.pi) * np.sin(2. * np.pi / wdif * (levels - wavg))
+    # levels = np.linspace(-0.75 * wmax, 0.75 * wmax, 50)
     ct = axs[1].contour(x, y, w, levels=levels, cmap=cmap2)
-    cbar2 = fig.colorbar(ct, cax=caxs[1], ticks=np.round(np.linspace(levels[0], levels[-1], 7)))
-    cbar2.ax.set_ylabel(r"$\omega$", fontsize=ftSz2)
+    cbar2 = fig.colorbar(ct, cax=caxs[1], ticks=np.round(np.linspace(levels[0], levels[-1], 7)), spacing = 'proportional')
+    cbar2.ax.set_ylabel(r"$\omega \: H_{box} \, / \, U_{\infty}$", fontsize=ftSz2)
 
     # LABELS
     bbox_dic = dict(boxstyle="round", fc="wheat", ec="none", alpha=0.85)
-    axs[0].set_title(r"Streamfunction $\psi$", fontsize=ftSz2)
-    axs[1].set_title(r"Vorticity $\omega$", fontsize=ftSz2)
+    axs[0].set_title(r"Streamfunction", fontsize=ftSz2)
+    axs[1].set_title(r"Vorticity", fontsize=ftSz2)
     axs[-1].set_xlabel(r"$x / H_{box}$", fontsize=ftSz2)
     for ax in axs:
         box = Rectangle((din, dbot), lbox, 1., fc="lightgrey", ec="none", alpha=1., zorder=5)
@@ -168,7 +172,7 @@ def plot_average_flow(cmap1, cmap2, compute=False, t_start=20., save=False):
         ax.set_ylabel(r"$y / H_{{box}}$", fontsize=ftSz2)
         ax.axis([0., L, 0., H])
 
-    plt.subplots_adjust(hspace=0.1)
+    plt.subplots_adjust(hspace=0.25)
 
     if save:
         # fig.savefig(f"../figures/avg_flow_{case_name}.svg", format="svg", bbox_inches='tight')
@@ -285,7 +289,7 @@ def plot_drag_lift(compute=False, save=False):
 
 
 if __name__ == "__main__":
-    save_global = False
+    save_global = True
     ftSz1, ftSz2, ftSz3 = 25, 20, 17
     plt.rcParams["text.usetex"] = save_global
     plt.rcParams['font.family'] = 'serif'  # monospace
@@ -332,6 +336,6 @@ if __name__ == "__main__":
         # plot_streamlines([5e-0, 10.-0, 15.e-0], cmap=cmap2, save=save_global)  # 0.2, 0.5, 1.
 
         # already computed during the simulation --> fast
-        # plot_average_flow(cmap2, cmap1, compute=False, t_start=20., save=save_global)
-        plot_max_RE(compute=False, save=save_global)
-        plot_drag_lift(compute=False, save=save_global)
+        plot_average_flow(cmap2, cmap1, compute=False, t_start=20., save=save_global)
+        # plot_max_RE(compute=False, save=save_global)
+        # plot_drag_lift(compute=False, save=save_global)

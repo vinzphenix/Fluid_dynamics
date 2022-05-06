@@ -11,6 +11,7 @@ char filename_T[50];
 char filename_u_avg[50];
 char filename_v_avg[50];
 
+
 void init_Sim_data(Sim_data *sim, int n_input, double dt_input, double tend_input, double freq, const char *myPath) {
 
     sprintf(filename_params, "%ssimu_params.txt", myPath);
@@ -181,15 +182,12 @@ void init_fields(Sim_data *sim) {
         else {
             sim->uin[j] = 1.;  // Uinf
         }
-        // sim->U[0][j] = sim->uc[j];     // Poiseuille
-        // sim->US[0][j] = sim->uc[j];    // Poiseuille
     }
 
     // set u to U_inf at the beginning (0 is already good for v)
     for (i = 0; i < sim->nx+1; i++) {
         for (j = 0; j < sim->ny+2; j++) {
             if ((sim->i_final[0] <= i) && (i < sim->i_start[3]) && (sim->j_final[1] <= j) && (j < sim->j_start[2])) {
-                // printf("x = %.3lf  y = %.3lf\n", i*sim->h, (j-0.5)*sim->h);
                 continue;
             } else {
                 sim->U[i][j] = sim->uin[j];
@@ -199,71 +197,15 @@ void init_fields(Sim_data *sim) {
     }
 
     set_ghost_points(sim);
-
-    /*
-
-    int i_w_left =  D_IN * sim->n;           // on boundary
-    int i_w_right = (D_IN + LBOX) * sim->n;  // on boundary
-    int j_w_below = D_BOT * sim->n + 1;      // in rectangle
-    int j_w_above = (D_BOT + 1) * sim->n;    // in rectangle
-
-    // set ghost for u on upper and lower walls of rectangle  // ! identical
-    for (i = i_w_left + 1; i < i_w_right; i++) {
-        j = j_w_below;
-        sim->U[i][j] = -0.2 * (sim->U[i][j-3] - 5.*sim->U[i][j-2] + 15.*sim->U[i][j-1] - 16 * 0.);
-        j = j_w_above;
-        sim->U[i][j] = -0.2 * (sim->U[i][j+3] - 5.*sim->U[i][j+2] + 15.*sim->U[i][j+1] - 16 * 0.);
-    }   
-
-#   if NO_SLIP
-    for (i = 0; i < sim->nx + 1; i++) {  // ! identical
-        j = 0;
-        sim->U[i][j] = -0.2 * (sim->U[i][j+3] - 5.*sim->U[i][j+2] + 15.*sim->U[i][j+1] - 16 * 0.);
-        j = sim->ny+1;
-        sim->U[i][j] = -0.2 * (sim->U[i][j-3] - 5.*sim->U[i][j-2] + 15.*sim->U[i][j-1] - 16 * 0.);
-    }
-#   endif
-
-#   if WALL_DIRICHLET  // ! identical
-    double one_to_zero;
-    for (i = 1; i < sim->nx + 1; i++) {
-        // one_to_zero =  0.5 * (1. - tanh( ((i - 0.5) * sim->h - 0.75 * L_) / 1.));
-        one_to_zero = 1.;
-        j = 0;
-        sim->T[i][j] = -0.2 * (sim->T[i][j+3] - 5.*sim->T[i][j+2] + 15.*sim->T[i][j+1] - 16.*TMAX*one_to_zero);
-        j = sim->ny+1;
-        sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16.*TMIN*one_to_zero);
-    }
-#   endif
-
-#   if BOX_BOT_TOP_DIRICHLET  // ! identical
-    for (i = sim->n * D_IN + 1; i < sim->n * (D_IN + LBOX) + 1; i++) {
-        j = sim->n * D_BOT + 1;  // lower wall of rectangle
-        sim->T[i][j] = -0.2 * (sim->T[i][j-3] - 5.*sim->T[i][j-2] + 15.*sim->T[i][j-1] - 16.*TMAX);
-        j = sim->n * (D_BOT + 1);  // upper wall of rectangle
-        sim->T[i][j] = -0.2 * (sim->T[i][j+3] - 5.*sim->T[i][j+2] + 15.*sim->T[i][j+1] - 16.*TMIN);
-    }
-#   endif
-
-#   if BOX_LFT_RGT_DIRICHLET  // ! identical
-    i = sim->n * D_IN + 1;  // left wall of rectangle
-    for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++)
-        sim->T[i][j] = -0.2 * (sim->T[i-3][j] - 5.*sim->T[i-2][j] + 15.*sim->T[i-1][j] - 16.*TMAX);
-    i = sim->n * (D_IN + LBOX);  // right wall of rectangle
-    for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++)
-        sim->T[i][j] = -0.2 * (sim->T[i+3][j] - 5.*sim->T[i+2][j] + 15.*sim->T[i+1][j] - 16.*TMAX);
-#   endif
-    */
 }
 
 
 int increase_dt = 0; 
 int decrease_dt = 0;
-// int nChanges = 0;
 double dt_change;
 double dt_init;
 void adapt_dt(Sim_data *sim, double speed) {
-
+#if ADAPTATIVE_DT
     // Handle adaptative timestep
     if (sim->tnow < 1.) {
         dt_init = sim->dt;
@@ -275,15 +217,11 @@ void adapt_dt(Sim_data *sim, double speed) {
         // keep dt in [0.90, 0.95]*dt_stable
         if ((sim->dt > sim->dt_stable * 0.95) && (sim->dt > dt_init * 0.1)) {
             // second condition avoids doing smaller and smaller time steps
-            // ((sim->rew > 40.) || (sim->reh > 40.)) ||
             decrease_dt = 1;
             dt_change = sim->dt_stable * 0.05;
-            // nChanges --;  // not used anymore
         } else if ((sim->dt < sim->dt_stable * 0.90))  {
-            //((sim->rew < 32.) && (sim->reh < 32.)) || 
             increase_dt = 1;
             dt_change = sim->dt_stable * 0.05;
-            // nChanges ++;  // not used anymore
         }
     }
     if ((0 < decrease_dt) && (decrease_dt <= duration)) {
@@ -297,6 +235,7 @@ void adapt_dt(Sim_data *sim, double speed) {
     } else if (increase_dt > duration) {
         increase_dt = 0;
     }
+#endif
 }
 
 
@@ -309,7 +248,8 @@ void save_fields(Sim_data *sim) {
         fprintf(ptr, "%d %d %d %d\n", sim->nx, sim->ny, sim->n, TEMP_MODE);
         fprintf(ptr, "%le %le %.10le %le %le %le\n", RE, sim->tsim, sim->dt, sim->h, sim->save_freq, sim->start_avg);
         fprintf(ptr, "%d %d %d %d %d\n", L_, H_, LBOX, D_IN, D_BOT);
-        fprintf(ptr, "%le %le %le %le %le %le %le %d\n", ALPHA, STROUHAL, SIWNG_START, KAPPA_Y, STROUHAL_Y, PERT_START, SMOOTH, N_CYCLES);
+        fprintf(ptr, "%le %le %le %le %le %le %le %d\n", ALPHA, STROUHAL, SIWNG_START, KAPPA_Y, STROUHAL_Y, PERT_START,
+                SMOOTH, N_CYCLES);
         fprintf(ptr, "%le %le %le %le %le\n", PR, GR, EC, TMIN, TMAX);
         fclose(ptr);
     }
@@ -337,11 +277,10 @@ void save_fields(Sim_data *sim) {
     fclose(ptr_v);
     fclose(ptr_p);
     fclose(ptr_T);
- }
+}
 
 
 void save_diagnostics(Sim_data *sim, int saving) {
-    
     int i, j, i1, i2, j1, j2;
     double uij, vij, wij;
     double reh = 0.;
@@ -357,7 +296,7 @@ void save_diagnostics(Sim_data *sim, int saving) {
         for (i = 0; i < sim->size_u; i++) sim->u_avg[i] += (sim->u_data[i]) * sim->dt;
         for (i = 0; i < sim->size_v; i++) sim->v_avg[i] += (sim->v_data[i]) * sim->dt;
     }
-    
+
     if (sim->tnow + 1.e-9 >= sim->tsim) {  // save at last iteration
         ptr = fopen(filename_u_avg, "w");
         for (i = 0; i < sim->size_u; i++) fprintf(ptr, "%.10le\n", sim->u_avg[i] / (sim->tnow - sim->start_avg));
@@ -368,52 +307,53 @@ void save_diagnostics(Sim_data *sim, int saving) {
         fclose(ptr);
     }
 
-
     // Mesh reynolds numbers
-    for (i = 0; i < sim->nx+1; i++) {
-        for (j = 0; j < sim->ny+1; j++) {
-            uij = 0.5 * (sim->U[i][j+1] + sim->U[i][j]);
-            vij = 0.5 * (sim->V[i+1][j] + sim->V[i][j]);
+    for (i = 0; i < sim->nx + 1; i++) {
+        for (j = 0; j < sim->ny + 1; j++) {
+            uij = 0.5 * (sim->U[i][j + 1] + sim->U[i][j]);
+            vij = 0.5 * (sim->V[i + 1][j] + sim->V[i][j]);
             reh = fmax(reh, fabs(uij) + fabs(vij));
 
-            wij = (sim->V[i+1][j] - sim->V[i][j]) - (sim->U[i][j+1] - sim->U[i][j]);
+            wij = (sim->V[i + 1][j] - sim->V[i][j]) - (sim->U[i][j + 1] - sim->U[i][j]);
             rew = fmax(rew, fabs(wij / sim->h));
         }
     }
     sim->dt_stable = fmin(FOURIER * RE * (sim->h) * (sim->h), CFL * sim->h / reh);
+    adapt_dt(sim, reh);  // this reh = |u| + |v|
 
-    // Aerodynamic forces
-    i1 = D_IN * sim->n - 1;   i2 = (D_IN + LBOX) * sim->n;
-    j1 = D_BOT * sim->n - 1;  j2 = (D_BOT + 1) * sim->n;
+    // Aerodynamic forces, computed with trapezoidal integration
+    i1 = D_IN * sim->n - 1;
+    i2 = (D_IN + LBOX) * sim->n;
+    j1 = D_BOT * sim->n - 1;
+    j2 = (D_BOT + 1) * sim->n;
 
     j = j1;
     drag_p += 0.5 * (sim->P[i1][j] - sim->P[i2][j]);
-    for (j++; j < j2; j++)
-        drag_p += sim->P[i1][j] - sim->P[i2][j];
+    for (j++; j < j2; j++) drag_p += sim->P[i1][j] - sim->P[i2][j];
     drag_p += 0.5 * (sim->P[i1][j] - sim->P[i2][j]);
 
     i = i1;
     lift_p += 0.5 * (sim->P[i][j1] - sim->P[i][j2]);
-    for (i++; i < i2; i++)
-        lift_p += sim->P[i][j1] - sim->P[i][j2];
+    for (i++; i < i2; i++) lift_p += sim->P[i][j1] - sim->P[i][j2];
     lift_p += 0.5 * (sim->P[i][j1] - sim->P[i][j2]);
 
-
-    i1 = D_IN * sim->n;   i2 = (D_IN + LBOX) * sim->n + 1;
-    j1 = D_BOT * sim->n;  j2 = (D_BOT + 1) * sim->n + 1;
+    i1 = D_IN * sim->n;
+    i2 = (D_IN + LBOX) * sim->n + 1;
+    j1 = D_BOT * sim->n;
+    j2 = (D_BOT + 1) * sim->n + 1;
 
     j = j1;
-    lift_f += 0.5 * ((sim->V[i1][j] - sim->V[i1+1][j]) + (sim->V[i2][j] - sim->V[i2-1][j]));  // trapezoidal integration : first
-    for (j++; j < j2 - 1; j++)
-        lift_f += (sim->V[i1][j] - sim->V[i1+1][j]) + (sim->V[i2][j] - sim->V[i2-1][j]);      // [ -(dv/dx) left + (dv/dx) right ] * dy
-    lift_f += 0.5 * ((sim->V[i1][j] - sim->V[i1+1][j]) + (sim->V[i2][j] - sim->V[i2-1][j]));  // trapezoidal integration : last
+    // [ -(dv/dx) left + (dv/dx) right ] * dy
+    lift_f += 0.5 * ((sim->V[i1][j] - sim->V[i1 + 1][j]) + (sim->V[i2][j] - sim->V[i2 - 1][j]));
+    for (j++; j < j2 - 1; j++) lift_f += (sim->V[i1][j] - sim->V[i1 + 1][j]) + (sim->V[i2][j] - sim->V[i2 - 1][j]);
+    lift_f += 0.5 * ((sim->V[i1][j] - sim->V[i1 + 1][j]) + (sim->V[i2][j] - sim->V[i2 - 1][j]));
 
     i = i1;
-    drag_f += 0.5 * ((sim->U[i][j1] - sim->U[i][j1+1]) + (sim->U[i][j2] - sim->U[i][j2-1]));  // trapezoidal integration : first
-    for (i++; i < i2 - 1; i++)
-        drag_f += (sim->U[i][j1] - sim->U[i][j1+1]) + (sim->U[i][j2] - sim->U[i][j2-1]);      // [ -(du/dy) below + (du/dy) above ] * dx
-    drag_f += 0.5 * ((sim->U[i][j1] - sim->U[i][j1+1]) + (sim->U[i][j2] - sim->U[i][j2-1]));  // trapezoidal integration : last
-    
+    // [ -(du/dy) below + (du/dy) above ] * dx
+    drag_f += 0.5 * ((sim->U[i][j1] - sim->U[i][j1 + 1]) + (sim->U[i][j2] - sim->U[i][j2 - 1]));
+    for (i++; i < i2 - 1; i++) drag_f += (sim->U[i][j1] - sim->U[i][j1 + 1]) + (sim->U[i][j2] - sim->U[i][j2 - 1]);
+    drag_f += 0.5 * ((sim->U[i][j1] - sim->U[i][j1 + 1]) + (sim->U[i][j2] - sim->U[i][j2 - 1]));
+
     sim->reh = reh * sim->h * RE;
     sim->rew = rew * sim->h * sim->h * RE;
     drag_p = 2 * drag_p * sim->h;
@@ -422,20 +362,17 @@ void save_diagnostics(Sim_data *sim, int saving) {
     lift_f = 2 * lift_f / RE;
     // factor 2 because Cd = Fd / (0.5 * rho * u^2 * Hbox)
 
+    double now = sim->tnow;
     ptr = fopen(filename_stats, "a");
-    fprintf(ptr, "%le %le %le %le %le %le %.10le %d\n", sim->reh, sim->rew, drag_p, drag_f, lift_p, lift_f, sim->tnow, saving);
+    fprintf(ptr, "%le %le %le %le %le %le %.9le %d\n", sim->reh, sim->rew, drag_p, drag_f, lift_p, lift_f, now, saving);
     fclose(ptr);
-
-#   if ADAPTATIVE_DT
-    adapt_dt(sim, reh);
-#   endif
 }
 
 
 void set_bd_conditions(Sim_data *sim) {
     int i, j;
     double coef;
-    
+
     /*// Inflow boundary condition for u  // never changes
     for (j = 1; j <= sim->ny; j++) {
         U[0][j] = 1.;
@@ -446,37 +383,34 @@ void set_bd_conditions(Sim_data *sim) {
     for (j = 1; j < sim->ny + 1; j++) {  // u is advected at velocity ([Uinf]or[Poiseuille] - uMesh)
         coef = sim->dt / sim->h * (sim->uin[j] - sim->uMesh);
         // coef = sim->dt / sim->h * (1. - sim->uMesh);
-        sim->US[i][j] = sim->U[i][j] - coef * (sim->U[i][j] - sim->U[i-1][j]);
+        sim->US[i][j] = sim->U[i][j] - coef * (sim->U[i][j] - sim->U[i - 1][j]);
         sim->U[i][j] = sim->US[i][j];
     }
 
-#   if NO_SLIP  // if slip: v=0 at all times
+#if NO_SLIP  // if slip: v=0 at all times
     // Channel walls: condition for v
-    for (i = 0; i < sim->nx + 2; i++) { // no-through flow
-        sim->VS[i][0] = sim->vMesh;             // below
-        sim->VS[i][sim->ny] = sim->vMesh;       // above
-        
+    for (i = 0; i < sim->nx + 2; i++) {    // no-through flow
+        sim->VS[i][0] = sim->vMesh;        // below
+        sim->VS[i][sim->ny] = sim->vMesh;  // above
+
         sim->V[i][0] = sim->VS[i][0];
         sim->V[i][sim->ny] = sim->VS[i][sim->ny];
     }
-#   endif
-
+#endif
 
     i = D_IN * sim->n;  // Left wall of rectangle (u)
     for (j = D_BOT * sim->n + 1; j <= (D_BOT + 1) * sim->n; j++) {
         sim->US[i][j] = sim->uMesh;
         sim->U[i][j] = sim->US[i][j];
     }
-    
-    i = (D_IN + LBOX) * sim->n; // Right wall of rectangle (u)
+
+    i = (D_IN + LBOX) * sim->n;  // Right wall of rectangle (u)
     for (j = D_BOT * sim->n + 1; j <= (D_BOT + 1) * sim->n; j++) {
         sim->US[i][j] = sim->uMesh;
         sim->U[i][j] = sim->US[i][j];
     }
 
-
-    for (i = D_IN * sim->n + 1; i < (D_IN + LBOX) * sim->n; i++) {                
-        
+    for (i = D_IN * sim->n + 1; i < (D_IN + LBOX) * sim->n; i++) {
         j = D_BOT * sim->n;  // lower wall of the rectangle
         sim->VS[i][j] = sim->vMesh;
         sim->V[i][j] = sim->VS[i][j];
@@ -494,59 +428,57 @@ void set_ghost_points(Sim_data *sim) {
     // External walls
     for (i = 0; i < sim->nx + 1; i++) {
         j = 0;
-#       if NO_SLIP  // (v = 0) and (u = 0)
-            sim->U[i][j] = -0.2 * (sim->U[i][j+3] - 5.*sim->U[i][j+2] + 15.*sim->U[i][j+1] - 16.*sim->uMesh);
-#       else
-            sim->U[i][0] = sim->U[i][1];  // (v = 0 and w = 0 --> du/dy = 0)
-#       endif
+#if NO_SLIP  // (v = 0) and (u = 0)
+        sim->U[i][j] = -0.2 * (sim->U[i][j + 3] - 5. * sim->U[i][j + 2] + 15. * sim->U[i][j + 1] - 16. * sim->uMesh);
+#else
+        sim->U[i][0] = sim->U[i][1];  // (v = 0 and w = 0 --> du/dy = 0)
+#endif
 
-        j = sim->ny+1;
-#       if NO_SLIP
-            sim->U[i][j] = -0.2 * (sim->U[i][j-3] - 5.*sim->U[i][j-2] + 15.*sim->U[i][j-1] - 16.*sim->uMesh);
-#       else
-            sim->U[i][j] = sim->U[i][j-1];
-#       endif
+        j = sim->ny + 1;
+#if NO_SLIP
+        sim->U[i][j] = -0.2 * (sim->U[i][j - 3] - 5. * sim->U[i][j - 2] + 15. * sim->U[i][j - 1] - 16. * sim->uMesh);
+#else
+        sim->U[i][j] = sim->U[i][j - 1];
+#endif
     }
-
 
     // Inflow boundary condition for v
     for (j = 1; j < sim->ny; j++) {  // trick with ghost for zero v at inflow
         sim->V[0][j] = -0.2 * (sim->V[3][j] - 5. * sim->V[2][j] + 15. * sim->V[1][j] - 16. * 0.);  // 0 or vMesh ?
     }
-    
+
     // Outflow boundary condition for v
-    // write into VS, and then copy back into V to avoid using updated values V(n+1) in the computation of V(n+1)
-    i = sim->nx;  // before last i_index of v_ij
+    i = sim->nx;  // the before last i_index of v_ij
     for (j = 1; j < sim->ny; j++) {
         coef = sim->dt * (sim->uin[j] - sim->uMesh);
         // coef = sim->dt * (1. - sim->uMesh);
-        w_last = ((sim->V[i+1][j] - sim->V[i  ][j]) - (sim->U[i  ][j+1] - sim->U[i  ][j])) / sim->h;
-        w_left = ((sim->V[i  ][j] - sim->V[i-1][j]) - (sim->U[i-1][j+1] - sim->U[i-1][j])) / sim->h;
-        sim->V[i+1][j] = (sim->V[i][j] + sim->U[i][j+1] - sim->U[i][j]) + sim->h * w_last - coef * (w_last - w_left);
-        // [(sim->VS[i+1][j] - sim->V[i][j]) - (sim->U[i][j+1] - sim->U[i][j])/h - w_last ]/dt = -uc * (w_last - w_left) / dx;
+        w_last = ((sim->V[i + 1][j] - sim->V[i][j]) - (sim->U[i][j + 1] - sim->U[i][j])) / sim->h;
+        w_left = ((sim->V[i][j] - sim->V[i - 1][j]) - (sim->U[i - 1][j + 1] - sim->U[i - 1][j])) / sim->h;
+        sim->V[i + 1][j] =
+            (sim->V[i][j] + sim->U[i][j + 1] - sim->U[i][j]) + sim->h * w_last - coef * (w_last - w_left);
     }
-
 
     // Left wall of rectangle
     i = D_IN * sim->n + 1;
     for (j = D_BOT * sim->n + 1; j < (D_BOT + 1) * sim->n; j++)
-        sim->V[i][j] = -0.2 * (sim->V[i-3][j] - 5.*sim->V[i-2][j] + 15.*sim->V[i-1][j] - 16.*sim->vMesh);
+        sim->V[i][j] = -0.2 * (sim->V[i - 3][j] - 5. * sim->V[i - 2][j] + 15. * sim->V[i - 1][j] - 16. * sim->vMesh);
 
     // Right wall of rectangle
     i = (D_IN + LBOX) * sim->n;
     for (j = D_BOT * sim->n + 1; j < (D_BOT + 1) * sim->n; j++)
-        sim->V[i][j] = -0.2 * (sim->V[i+3][j] - 5.*sim->V[i+2][j] + 15.*sim->V[i+1][j] - 16.*sim->vMesh);
+        sim->V[i][j] = -0.2 * (sim->V[i + 3][j] - 5. * sim->V[i + 2][j] + 15. * sim->V[i + 1][j] - 16. * sim->vMesh);
 
     // Upper and lower walls of rectangle
     for (i = D_IN * sim->n + 1; i < (D_IN + LBOX) * sim->n; i++) {
         j = D_BOT * sim->n + 1;  // below
-        sim->U[i][j] = -0.2 * (sim->U[i][j-3] - 5.*sim->U[i][j-2] + 15.*sim->U[i][j-1] - 16.*sim->uMesh);
+        sim->U[i][j] = -0.2 * (sim->U[i][j - 3] - 5. * sim->U[i][j - 2] + 15. * sim->U[i][j - 1] - 16. * sim->uMesh);
         j = (D_BOT + 1) * sim->n;  // above
-        sim->U[i][j] = -0.2 * (sim->U[i][j+3] - 5.*sim->U[i][j+2] + 15.*sim->U[i][j+1] - 16.*sim->uMesh);
+        sim->U[i][j] = -0.2 * (sim->U[i][j + 3] - 5. * sim->U[i][j + 2] + 15. * sim->U[i][j + 1] - 16. * sim->uMesh);
     }
 }
 
 void set_boundary_temperature(Sim_data *sim) {
+#if TEMP_MODE
     int i, j;
     double coef;
 
@@ -576,18 +508,18 @@ void set_boundary_temperature(Sim_data *sim) {
     i = sim->n * D_IN + 1;  // left wall of rectangle
     for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++) {
 #       if BOX_LFT_RGT_DIRICHLET
-        sim->T[i][j] = -0.2 * (sim->T[i-3][j] - 5.*sim->T[i-2][j] + 15.*sim->T[i-1][j] - 16.*TMAX);  // Dirichlet
+            sim->T[i][j] = -0.2 * (sim->T[i-3][j] - 5.*sim->T[i-2][j] + 15.*sim->T[i-1][j] - 16.*TMAX);  // Dirichlet
 #       else
-        sim->T[i][j] = sim->T[i-1][j];  // No flux
+            sim->T[i][j] = sim->T[i-1][j];  // No flux
 #       endif
     }
 
     i = sim->n * (D_IN + LBOX);  // right wall of rectangle
     for (j = sim->n * D_BOT + 1; j < sim->n * (D_BOT + 1) + 1; j++) {
 #       if BOX_LFT_RGT_DIRICHLET
-        sim->T[i][j] = -0.2 * (sim->T[i+3][j] - 5.*sim->T[i+2][j] + 15.*sim->T[i+1][j] - 16.*TMAX);  // Dirichlet
+            sim->T[i][j] = -0.2 * (sim->T[i+3][j] - 5.*sim->T[i+2][j] + 15.*sim->T[i+1][j] - 16.*TMAX);  // Dirichlet
 #       else
-        sim->T[i][j] = sim->T[i+1][j];  // No flux
+            sim->T[i][j] = sim->T[i+1][j];  // No flux
 #       endif
     }
 
@@ -608,6 +540,7 @@ void set_boundary_temperature(Sim_data *sim) {
             sim->T[i][j] = sim->T[i][j+1];
 #       endif
     }
+#   endif
 }
 
 
@@ -687,6 +620,7 @@ void compute_convection(Sim_data *sim) {
 }
 
 void compute_convection_temperature(Sim_data *sim) {
+#if TEMP_MODE
     int i, j;
 
     double **T = sim->T;
@@ -732,6 +666,7 @@ void compute_convection_temperature(Sim_data *sim) {
             }
         }
     }
+#   endif
 }
 
 
@@ -875,6 +810,7 @@ void handle4corners(Sim_data *sim, double diff) {
 }
 
 void corrector_step_temperature(Sim_data *sim) {
+#if TEMP_MODE
     int i, j;
     int block, i_s, i_f, j_s, j_f;
 
@@ -925,6 +861,7 @@ void corrector_step_temperature(Sim_data *sim) {
             }
         }
     }
+#   endif
 }
 
 

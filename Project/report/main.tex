@@ -99,7 +99,7 @@ In the rest of this document, we will only work with dimensionless variables. He
     \label{eq:adimChoice}
 \end{equation}
 
-We can also define dimensionless numbers, using physical properties of the fluid: its kinematic viscosity $\nu$, its thermal diffusivity $\alpha$, its heat capacity $c_p$, its density $\rho_0$, and its the volumetric thermal expansion coefficient $\beta=\frac{1}{\rho_0} \left(\pdv{\rho}{T}\right)_p$ where $g$ is the gravitational acceleration.
+We can also define dimensionless numbers, using physical properties of the fluid: its kinematic viscosity $\nu$, its thermal diffusivity $\alpha$, its heat capacity $c_p$, its density $\rho_0$, and its the volumetric thermal expansion coefficient $\beta=\frac{1}{\rho_0} \left(\pdv{\rho}{T}\right)_p$.
 
 \begin{equation}
     \begin{split}
@@ -119,6 +119,8 @@ We can also define dimensionless numbers, using physical properties of the fluid
     \end{split}
     \label{eq:adimNumbers}
 \end{equation}
+
+where $g$ is the gravitational acceleration.
 
 We can now state the Navier-Stokes equations in dimensionless form, using the Boussinesq approximation, for a domain $\Omega$ moving uniformly at velocity $\mathbf{v}_{mesh}$. \textbf{From this point in the document, we will drop this asterisk for the sake of readability}.
 \begin{align}
@@ -180,7 +182,7 @@ The numerical values chosen for the Strouhal number $S_t$ and the velocity ampli
 \end{table}
 
 \section{Numerical solver}
-The Navier-stokes equations shown in \eqref{eq:nsMass}-\eqref{eq:nsEnergy} are integrated in time using a two-step projection scheme that ensures a divergence-free velocity field $\bv$. The fields $u$, $v$, $p$, $\omega$ and $T$ are discretized using the staggered MAC mesh which is represented in figure \ref{fig:macMesh}. In this project, we use a uniform grid with $\Delta x = \Delta y = h$, but a non-uniform grid with stretching would be more adapted. It would allow us to have a coarser mesh where nothing happens (outside the boundary layer and outside the vortex shedding).
+The Navier-stokes equations shown in \eqref{eq:nsMass}-\eqref{eq:nsEnergy} are integrated in time using a two-step projection scheme that ensures a divergence-free velocity field $\bv$. As often with finite difference method for Navier-Stokes equations, the fields $u$, $v$, $p$, $\omega$ and $T$ are discretized using a staggered MAC mesh which is represented in figure \ref{fig:macMesh}. In this project, we use a uniform grid with $\Delta x = \Delta y = h$, but a non-uniform grid with stretching would be more adapted. It would allow us to have a finer grid near the walls and a coarser mesh where the flow is irrotational.
 
 When a boundary condition must be applied at some position $\mathbf{x}$ where a field is not defined, we define \textit{ghost points} outside the domain in order to facilitate the update of the values of $u$, $v$ and $T$ inside the domain. The value of these ghost points is a linear combination of values further inside the domain, whose weights are found with Taylor series.
 
@@ -192,7 +194,7 @@ When a boundary condition must be applied at some position $\mathbf{x}$ where a 
 \end{figure}
 
 
-Concerning the time integration, the convective term is integrated using the explicit and second order Adams-Bashforth scheme (explicit Euler scheme for the first time step), while the diffusive term is handled using the explicit and first order Euler scheme. The solver proposed can also handle the diffusive term for $\bv$ with a Crank-Nicolson scheme. This is done with an ADI method in order to only solve tri-diagonal systems. However, the current implementation of boundary conditions is not assured to be second order.
+Concerning the time integration, the convective term is integrated using the explicit and second order Adams-Bashforth scheme (explicit Euler scheme for the first time step), while the diffusive term is handled using the explicit and first order Euler scheme. The solver proposed can also handle the diffusive term for $\bv$ with a Crank-Nicolson scheme. This is done with an ADI method in order to only solve tri-diagonal systems. However, this implicit method was not implemented for the temperature field, and is not assured to be second order at the boundaries.
 
 First, we compute the convective terms $\bH = (H_x, H_y)$ that discretize $(\boldsymbol\nabla \bv) \cdot (\bv - \bv_{mesh})$, and $H_T$ discretizing $(\boldsymbol \nabla T) \cdot (\bv - \bv_{mesh})$. Second, we perform a predictor step to obtain an intermediate field denoted $\mathbf{v}^*$. Third, we solve the Poisson equation for $\Phi$, using the PETSc library \cite{petsc-efficient}. 
 Finally, we obtain the next iterates once the corrector step is completed. This procedure is detailed in equations \eqref{eq:predictor} - \eqref{eq:corrector}.
@@ -274,7 +276,7 @@ Here, we are only interested about their maximum value over the domain $\Omega$ 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{../figures/vorticity_case_1.png}
-    \caption{Level sets of the vorticity $\omega$ in \textit{case 1} at different dimensionless times $t$. These levels sets are slightly more concentrated around zero for a better visualization.}
+    \caption{Level sets of the vorticity $\omega^* = \frac{\omega H_{box}}{U_{\infty}}$ in \textit{case 1} at different dimensionless times $t$. These levels sets are slightly more concentrated around zero for a better visualization.}
     \label{fig:vorticity_1}
 \end{figure}
 
@@ -288,14 +290,14 @@ A few remarks:
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{../figures/streamlines_case_1.png}
-    \caption{Snapshot of the streamlines of \textit{case 1}. The color is proportional to the velocity norm. The width of the lines is proportional to $\left|1 - \|\mathbf{v}\|\right|$ in order to highlight the regions where $\mathbf{v}$ is very different than the mean-flow.}
+    \caption{Snapshot of the streamlines of \textit{case 1}. The color is proportional to the norm of the dimensionless velocity. The width of the lines is proportional to $\left|1 - \|\mathbf{v}\|\right|$ in order to highlight the regions where $\mathbf{v}$ is very different than the mean-flow.}
     \label{fig:streamlines_1}
 \end{figure}
 As show in figure \ref{fig:streamlines_1}, the recirculation region grows with time. The stagnation point moves from $x-x_{wall} \approx 3$ at $t=12.5$ to $x - x_{wall} \approx 4.5$ at $t=25.$. The flow recirculation even becomes too large for the computational domain since the stagnation point grows beyond $x=15$ at $t \approx 40$.
 
 The mesh Reynolds numbers are represented in figure \ref{fig:mesh_re_case1}. Their value quickly decrease before stabilizing around $25$. This is probably due to the fact that the flow is initially nonphysical with discontinuities of $u$ near the walls that degrade the quality of the numerical simulation.
 
-In figure \ref{fig:drag_case1}, the lift is zero (or almost due to numerical rounding errors) since the flow is symmetrical. On the other hand, the drag coefficient is non-zero, and $C_d \approx 1.25$ before the stagnation point leaves the domain.
+In figure \ref{fig:drag_case1}, the lift is zero (or almost due to numerical rounding errors) since the flow is symmetrical. On the other hand, the drag coefficient is non-zero, and $C_d \approx 1.5$ before the stagnation point leaves the domain.
 
 \begin{figure}[H]
     \centering
@@ -320,7 +322,7 @@ In figure \ref{fig:drag_case1}, the lift is zero (or almost due to numerical rou
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{../figures/vorticity_case_2.png}
-    \caption{Level sets of the vorticity $\omega$ in \textit{case 2} at different dimensionless times $t$.}
+    \caption{Level sets of the vorticity $\omega^*$ in \textit{case 2} at different dimensionless times $t$.}
     \label{fig:vorticity_2}
 \end{figure}
 
@@ -341,7 +343,7 @@ If we move away a little bit more from the upper and lower walls of the rectangl
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{../figures/avg_flow_case_2.png}
-    \caption{Streamlines and vorticity of the flow of \textit{case 2} averaged from $t=20$ to $t=60$.}
+    \caption{Streamlines and vorticity of the flow of \textit{case 2} averaged from $t=20$ to $t=60$. The streamlines are the level sets the streamfunction $\psi / (U_{\infty} H_{box})$.}
     \label{fig:averaging_2}
 \end{figure}
 
@@ -374,7 +376,7 @@ Remark: the time axis of the aerodynamic coefficients stops at $t=50$ and not $t
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{../figures/vorticity_case_3.png}
-    \caption{Level sets of the vorticity $\omega$ in \textit{case 3} at different dimensionless times $t$.}
+    \caption{Level sets of the vorticity $\omega^*$ in \textit{case 3} at different dimensionless times $t$.}
     \label{fig:vorticity_3}
 \end{figure}
 %Now, the rectangle oscillates horizontally with a period $\Delta t = 1/S_t = 3$.
@@ -416,7 +418,7 @@ Two remarks about figure \ref{fig:drag_case3}:
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{../figures/vorticity_case_4_part1.png}
-    \caption{Level sets of the vorticity $\omega$ in \textit{case 4} at different dimensionless times $t$.}
+    \caption{Level sets of the vorticity $\omega^*$ in \textit{case 4} at different dimensionless times $t$.}
     \label{fig:vorticity_4a}
 \end{figure}
 
@@ -425,7 +427,7 @@ Now, thanks to the vertical perturbation, we obtain a non-symmetrical vortex she
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{../figures/vorticity_case_4_part2.png}
-    \caption{Level sets of the vorticity $\omega$ in \textit{case 4} at different dimensionless times $t$ - continued.}
+    \caption{Level sets of the vorticity $\omega^*$ in \textit{case 4} at different dimensionless times $t$ - continued.}
     \label{fig:vorticity_4b}
 \end{figure}
 
@@ -547,7 +549,7 @@ In this situation, the external walls become real walls, with a no-slip conditio
 
 With the no-slip boundary condition, we must be careful concerning the outflow boundary condition for higher values of $Gr$. In fact, when $Gr > 5 \cdot 10^{5}$, the flow becomes more complex and vortices become strong enough that the horizontal velocity $u$ sometimes is negative near the outflow. When these strong vortices reach the right boundary of $\Omega$, they are \textit{stuck} inside the domain. An example is given in the video \texttt{anim/no\_slip\_crash.mp4}.
 
-Therefore, I imposed a zero mass flow, and set $u_c$ with a Poiseuille profile. But these corrections do not improve the situation as much as expected.
+Therefore, I imposed a zero mass flow, and set $u_c$ with a Poiseuille profile. But these corrections do not seem to improve the situation. The bug can be observed in another video: \texttt{anim/no\_slip\_problem.mp4}.
 
 \begin{figure}[H]
     \centering

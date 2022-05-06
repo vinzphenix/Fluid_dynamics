@@ -10,6 +10,7 @@ from time import perf_counter
 from matplotlib.animation import FuncAnimation, PillowWriter, FFMpegWriter
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib import checkdep_usetex
 
 
 class Simulation:
@@ -315,9 +316,8 @@ def create_html():
 
 ftSz1, ftSz2, ftSz3 = 20, 17, 15  # time text, parameters, labels
 plt.rcParams['font.family'] = 'monospace'
-plt.rcParams["text.usetex"] = True
+plt.rcParams["text.usetex"] = checkdep_usetex(True)
 fix_title = True
-
 
 if __name__ == "__main__":
 
@@ -448,10 +448,11 @@ if __name__ == "__main__":
 
     # Time text
     position_text = (0.03,0.85) if n_plots == 3 else (0.855, 0.9)
-    # fontsize = ftSz2 * 0.90 if n_plots == 3 else ftSz2
+    fontsize = ftSz1 if plt.rcParams["text.usetex"] else ftSz2
     time_str = r"$t^*$ = {:5.2f}"
     bbox_dic = dict(boxstyle="round", fc="wheat", ec="none", alpha=0.85)
-    time_text = axs[0].text(*position_text, time_str.format(0), fontsize=ftSz1, transform=axs[0].transAxes, bbox=bbox_dic)
+    time_text = axs[0].text(*position_text, time_str.format(0), fontsize=fontsize,
+                             transform=axs[0].transAxes, bbox=bbox_dic)
 
 
     ##############################################################################################

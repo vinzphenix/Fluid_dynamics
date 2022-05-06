@@ -4,7 +4,7 @@ Project/lib_petsc
 deps
 
 Project/data
-Project/results
+Project/results/**/simu_*.txt
 
 # Exclude animations (too heavy)
 Project/anim/**/*.txt
@@ -88,4 +88,3 @@ build/
 # Hidden files
 __pycache__/
 .vscode
-

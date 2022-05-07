@@ -40,7 +40,7 @@
 #endif
 
 // Code parameters
-#define ADAPTATIVE_DT   1    // 0: classic increment, 1: check reh and rew to adapt time step (enabled from t=1.)
+#define ADAPTIVE_DT     1    // 0: classic increment, 1: check reh and rew to adapt time step (enabled from t=1.)
 #define USE_ADI         0    // 0: classic scheme, 1: solve using ADI method  // *boundary conditions ?
 #define CONVECTION_MODE 2    // 0: advective form, 1: divergence form, 2: average of both
 #define START_AVG       20.  // when to start averaging the fields u and v

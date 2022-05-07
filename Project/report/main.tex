@@ -245,19 +245,19 @@ The streamfunction is defined by
 \end{equation}
 The value $\psi(x,y)$ can therefore be computed over the whole domain $\Omega$ by integrating the differential form $d\psi = u \diff y - v \diff x = \mathbf{v} \cdot \mathbf{\hat n} \diff s$ along some path $\Gamma$ from the reference point $(0,0)$ to $(x,y)$. We should note that the result is path-independent since the flow is divergence-free. In fact, if one choses another path $\Gamma'$ from $(0,0)$ to $(x,y)$, we can obtain a closed curve $C$ by concatenating both curves:
 \begin{equation}
-    \int_{\Gamma} \mathbf{v} \cdot \mathbf{\hat n} \diff s + \int_{-\Gamma'} \mathbf{v} \cdot \mathbf{\hat n} \diff s = \oint_{C} \mathbf{v} \cdot \mathbf{\hat n} \diff s = \iint_{S} \nabla \cdot \mathbf{v} \diff a = 0
+    \int_{\Gamma} \mathbf{v} \cdot \mathbf{\hat n} \diff \ell + \int_{-\Gamma'} \mathbf{v} \cdot \mathbf{\hat n} \diff \ell = \oint_{C} \mathbf{v} \cdot \mathbf{\hat n} \diff \ell = \iint_{S} \nabla \cdot \mathbf{v} \diff a = 0
 \end{equation}
 
-The drag force $D$ and the lift force $L$ can be computed by integrating the stress tensor $\boldsymbol \sigma$ on the boundary $\partial \bar \Omega$ of the rectangular body $\bar \Omega$. With dimensional variables, we have
+The drag $D$ and the lift $L$ (forces per unit of depth) can be computed by integrating the stress tensor $\boldsymbol \sigma$ on the boundary $\partial \bar \Omega$ of the rectangular body $\bar \Omega$. With dimensional variables, we have
 
 \begin{equation}
-    \mathbf{F} = D \,\mathbf{\hat{e}}_x + L \,\mathbf{\hat{e}}_y = \int_{\partial \bar \Omega} \mathbf{n} \cdot \boldsymbol \sigma = \int_{\partial \bar \Omega} \mathbf{n} \cdot (-p \boldsymbol \delta + 2 \mu \mathbf{d})
+    \mathbf{F} = D \,\mathbf{\hat{e}}_x + L \,\mathbf{\hat{e}}_y = \int_{\partial \bar \Omega} \mathbf{n} \cdot \boldsymbol \sigma \diff \ell = \int_{\partial \bar \Omega} \mathbf{n} \cdot (-p \boldsymbol \delta + 2 \mu \mathbf{d}) \diff \ell
 \end{equation}
 
 After some simplifications, and a nondimensionalization, we obtain
 \begin{align}
-    C_d = \frac{D}{\frac{1}{2} \rho U_{\infty}^2} &= \bigintss_{y^-}^{y^+} \Big[p(x^-, y) - p(x^+, y)\Big] \diff y + \frac{1}{Re} \bigintss_{x^-}^{x^+} \left[ \left.\pdv{u}{y}\right|_{(x, y^+)} - \left.\pdv{u}{y}\right|_{(x, y^-)} \right] \diff x\\
-    C_l = \frac{L}{\frac{1}{2} \rho U_{\infty}^2} &= \bigintss_{x^-}^{x^+} \Big[p(x, y^-) - p(x, y^+)\Big] \diff x + \frac{1}{Re} \bigintss_{y^-}^{y^+} \left[ \left.\pdv{v}{x}\right|_{(x^+, y)} - \left.\pdv{v}{x}\right|_{(x^-, y)} \right] \diff y
+    C_d = \frac{D}{\frac{1}{2} \rho U_{\infty}^2 H_{box}} &= \bigintss_{y^-}^{y^+} \Big[p(x^-, y) - p(x^+, y)\Big] \diff y + \frac{1}{Re} \bigintss_{x^-}^{x^+} \left[ \left.\pdv{u}{y}\right|_{(x, y^+)} - \left.\pdv{u}{y}\right|_{(x, y^-)} \right] \diff x\\
+    C_l = \frac{L}{\frac{1}{2} \rho U_{\infty}^2 H_{box}} &= \bigintss_{x^-}^{x^+} \Big[p(x, y^-) - p(x, y^+)\Big] \diff x + \frac{1}{Re} \bigintss_{y^-}^{y^+} \left[ \left.\pdv{v}{x}\right|_{(x^+, y)} - \left.\pdv{v}{x}\right|_{(x^-, y)} \right] \diff y
 \end{align}
 where $x^-$ and $x^+$ respectively refer to the $x$ value on the left and right sides of the rectangle, and $y^-$ and $y^+$ respectively refer to the $y$ value underneath and above the rectangle.
 

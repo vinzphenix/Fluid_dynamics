@@ -205,7 +205,7 @@ int decrease_dt = 0;
 double dt_change;
 double dt_init;
 void adapt_dt(Sim_data *sim, double speed) {
-#if ADAPTATIVE_DT
+#if ADAPTIVE_DT
     // Handle adaptative timestep
     if (sim->tnow < 1.) {
         dt_init = sim->dt;

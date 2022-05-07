@@ -3,7 +3,7 @@
 #include "project.h"
 
 // Fix: implement adi for temperature // bof bof
-// Improvement: implement streched grid, adaptative time
+// Improvement: implement streched grid, adaptive time
 // Improvement: use input file instead of defines
 
 void display_info(Sim_data *sim, char *mode) {
@@ -22,7 +22,7 @@ void display_info(Sim_data *sim, char *mode) {
     printf(
         "\n ==================================== \e[1mLMECA2660 project in CFD\e[0m "
         "====================================\n");
-    const char *dt_status = (ADAPTATIVE_DT == 1) ? "adaptative" : "fixed";
+    const char *dt_status = (ADAPTIVE_DT == 1) ? "adaptive" : "fixed";
     const char *adi_status = (USE_ADI == 1) ? "enabled" : "disabled";
     const char *tmp_status = (TEMP_MODE > 0) ? "enabled" : "disabled";
     printf("\e[1m       Re = %.0lf    dx = %.3lf    T_simu = %.2lf   dt %s    Temp %s   ADI %s \e[0m \n\n", RE, sim->h,

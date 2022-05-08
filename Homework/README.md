@@ -29,3 +29,12 @@ The scripts in __Python__ can be run as follows:
 ```
 python3 script.py
 ```
+
+## Example without stretching
+![Example 1 gif](figures/anim_uniform.gif)
+
+### Example with stretching
+![Example 2 gif](figures/anim_uniform.gif)
+
+## Upstream pulse error
+![Example 3 gif](figures/anim_pulse.gif)

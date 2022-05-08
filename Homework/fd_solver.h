@@ -10,11 +10,11 @@
 #define SAVE 1  // 0:no save, 1:classic, 2:uniform, 3:nonuniform
 
 // Simulation parameters
-#define SCHEME_A 'E'
-#define SCHEME_B '6'
+#define SCHEME_A 'I'
+#define SCHEME_B '4'
 
 #define N     128        // nb of points
-#define TEND  2.         // final time [s]
+#define TEND  3.         // final time [s]
 #define L     1.         // length [m]
 #define C     1.         // wave speed [m/s]
 #define SIGMA (L / 16.)  // std deviation

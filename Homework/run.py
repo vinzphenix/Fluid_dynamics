@@ -1,9 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-
-ftSz1, ftSz2, ftSz3 = 20, 17, 15
-plt.rcParams['font.family'] = 'monospace'
+from matplotlib.animation import FuncAnimation, PillowWriter, FFMpegWriter
+from tqdm import tqdm
 
 
 def read_file(filename):
@@ -291,7 +289,7 @@ def order_convergence(save=False):
         plt.show()
 
 
-def animation_soluce(blit=False):
+def animation_soluce(blit=False, save=""):
     def init():
         exact.set_data(x_plot, f(x_plot, 0))
         time_text.set_text(time_template.format(0))
@@ -300,9 +298,12 @@ def animation_soluce(blit=False):
         return tuple([line, exact, time_text])
 
     def animate(t_idx):
+        # t_idx = *= 1
         exact.set_data(x_plot, f(x_plot, t[t_idx]))
         time_text.set_text(time_template.format(t[t_idx]))
         line.set_data(x, u[t_idx, :])
+
+        pbar.update(1)
 
         return tuple([line, exact, time_text])
 
@@ -321,7 +322,8 @@ def animation_soluce(blit=False):
     n_plot = 200
     x_plot = np.linspace(-L / 2., L / 2., n_plot)
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6), constrained_layout=True, num='Animation of the solution')
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6), num='Animation of the solution')
+    fig.tight_layout()
 
     time_template = r'$t = {:.2f} \;[s]$'
     time_text = ax.text(0.03, 0.82, '', fontsize=17, transform=ax.transAxes)
@@ -333,23 +335,37 @@ def animation_soluce(blit=False):
     ax.legend(fontsize=ftSz2, loc='upper right')
 
     ax.grid(ls=':')
-    ax.set_xlabel("x", fontsize=ftSz2)
-    ax.set_ylabel("u(x,t)", fontsize=ftSz2)
+    ax.set_xlabel(r"$x \:/\: L$", fontsize=ftSz2)
+    ax.set_ylabel(r"$u(x,t) \:/\: U$", fontsize=ftSz2)
+    fig.subplots_adjust(left=0.06, right=0.995, bottom=0.085, top=0.995)
 
     # to animate
-    _ = FuncAnimation(fig, animate, M, interval=20, blit=blit, init_func=init, repeat_delay=3000)
+    anim = FuncAnimation(fig, animate, M, interval=20, blit=blit, init_func=init, repeat_delay=3000)
+    pbar = tqdm(total=M)
 
-    # to get only one frame at t = i
-    # i = M-1 ; init() ; animate(i)
-    plt.show()
+    if save == "gif":
+        writerGIF = PillowWriter(fps=24)
+        anim.save(f"./figures/anim.gif", writer=writerGIF)
+    elif save == "mp4":
+        writerMP4 = FFMpegWriter(fps=24)  # 30
+        anim.save(f"./figures/anim.mp4", writer=writerMP4)
+    else:
+        # to get only one frame at t = i
+        # i = M-1 ; init() ; animate(i)
+        plt.show()
+    
+    pbar.close()
+    return
 
 
 if __name__ == "__main__":
     
     save_global = False
-    plt.rcParams["text.usetex"] = save_global
+    ftSz1, ftSz2, ftSz3 = 20, 17, 15
+    plt.rcParams['font.family'] = 'serif'
+    plt.rcParams["text.usetex"] = True
 
-    animation_soluce(blit=False)
+    animation_soluce(blit=True, save="mp4")
     
     # print("{:15s}".format("Plot 1 / 6"), end="\r")
     # plot_soluce(save_global)
@@ -364,4 +380,3 @@ if __name__ == "__main__":
     # print("{:15s}".format("Plot 6 / 6"), end="\r")
     # plot_problem(save_global)
     # print("{:15s}".format("Job done"))
-

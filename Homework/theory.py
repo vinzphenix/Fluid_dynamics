@@ -20,7 +20,7 @@ def fourier(save=False):
     for i, (ax, N, ratio) in enumerate(zip(axs, N_list, ratio)):
         h = L / N
         s = L / ratio
-        j = np.linspace(-N // 2, (N - 1) // 2, N)
+        j = np.linspace(-(N // 2), (N - 1) // 2, N)
         x = np.linspace(-L / 2, L / 2 - h, N)
         k = 2 * pi * j / L
 
@@ -50,7 +50,7 @@ def fourier_packet(save=False):
     h = L / N
     s = L / 16.
 
-    j = np.linspace(-N // 2, (N - 1) // 2, N)
+    j = np.linspace(-(N // 2), (N - 1) // 2, N)
     x = np.linspace(-L / 2, L / 2 - h, N)
     k = 2 * pi * j / L
     kp = 2 * pi / L * 16
@@ -202,7 +202,7 @@ def stability():
     A[-1, 0] = 1
     A *= -c / (2 * h)
 
-    j = np.linspace(-N//2, N//2 - 1, N)
+    j = np.linspace(-(N // 2), (N - 1) // 2, N)
     lambda_num = eig(A, left=False, right=False)
 
     k = 2 * pi * j / L

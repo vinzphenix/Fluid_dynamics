@@ -193,7 +193,7 @@ def dispersion_mosaic(save=False):
 
 
 def stability():
-    c, L, N = 1., 1., 16
+    c, L, N = 1., 1., 21
     h = L / N
     A = np.zeros((N, N))
     A += np.diag(np.ones(N - 1), 1)
@@ -205,7 +205,7 @@ def stability():
     j = np.linspace(-(N // 2), (N - 1) // 2, N)
     lambda_num = eig(A, left=False, right=False)
 
-    k = 2 * pi * j / L
+    # k = 2 * pi * j / L
     kh = 2 * pi * j / N
     lambda_E2 = -1j * c / h * sin(kh)
     lambda_E4 = -1j * c / h * (4. / 3. * sin(kh) - 1. / 6. * sin(2 * kh))
@@ -215,13 +215,16 @@ def stability():
 
     print(np.imag(lambda_I6 * h / c))
 
-    s, w = np.meshgrid(np.linspace(-3.1, 1.1, 1000), np.linspace(-3.1, 3.1, 1000))
+    sigma_out, sigma_in  = np.linspace(-3.1, 1.1, 300), np.linspace(-0.01, 0.01, 501)
+    omega_out, omega_in  = np.linspace(-3.1, 3.1, 300), np.linspace(-0.1, 0.1, 501)
+    sigma, omega = np.sort(np.r_[sigma_out, sigma_in]), np.sort(np.r_[omega_out, omega_in])
+    s, w = np.meshgrid(sigma, omega)
     z = s + 1j * w
-    G = abs(1 + z + z ** 2 / 2 + z ** 3 / 6 + z ** 4 / 24)
+    G = np.abs(1. + z + np.power(z, 2) / 2. + np.power(z, 3) / 6. + np.power(z, 4) / 24.)
 
     fig, axs = plt.subplots(1, 2, figsize=(10, 6), constrained_layout=True)
     for ax in axs:
-        # ax.plot(h / c * np.real(lambda_num), h / c * np.imag(lambda_num), 'o', label='Numerical')
+        ax.plot(h / c * np.real(lambda_num), h / c * np.imag(lambda_num), 'o', label='Numerical')
         ax.plot(h / c * np.real(lambda_E2), h / c * np.imag(lambda_E2), '.', label='E2')
         ax.plot(h / c * np.real(lambda_E4), h / c * np.imag(lambda_E4), '.', label='E4')
         ax.plot(h / c * np.real(lambda_E6), h / c * np.imag(lambda_E6), '.', label='E6')
@@ -229,7 +232,7 @@ def stability():
         ax.plot(h / c * np.real(lambda_I6), h / c * np.imag(lambda_I6), '.', label='I6')
 
         # ax.contourf(z.real, z.imag, G, np.array([0., 1.]), cmap=plt.get_cmap('jet'))
-        ax.contour(z.real, z.imag, G, np.array([0., 1.+1e-5]), colors='black', linewidths=1)
+        ax.contour(z.real, z.imag, G, np.array([0., 1.]), colors='black', linewidths=1)
         ax.grid(ls=':')
 
     axs[0].set_aspect('equal', 'datalim')
@@ -244,13 +247,13 @@ if __name__ == "__main__":
     save_global = False
     plt.rcParams["text.usetex"] = save_global
 
-    print("{:10s}".format("Plot 1 / 3"), end="\r")
-    fourier(save_global)
-    print("{:10s}".format("Plot 2 / 3"), end="\r")
-    fourier_packet(save_global)
-    print("{:10s}".format("Plot 3 / 3"), end="\r")
-    dispersion_mosaic(save_global)
-    print("{:10s}".format("Job done"))
+    # print("{:10s}".format("Plot 1 / 3"), end="\r")
+    # fourier(save_global)
+    # print("{:10s}".format("Plot 2 / 3"), end="\r")
+    # fourier_packet(save_global)
+    # print("{:10s}".format("Plot 3 / 3"), end="\r")
+    # dispersion_mosaic(save_global)
+    # print("{:10s}".format("Job done"))
 
     # dispersion(save_global)
-    # stability()
+    stability()

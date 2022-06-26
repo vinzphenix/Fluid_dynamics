@@ -1,8 +1,8 @@
 # Template from https://stackoverflow.com/questions/30573481/
 # "How to write a Makefile with separate source and header directories ?"
 
-INC_DIR := -Ilib_petsc/include
-LIB_DIR := -L/lib_petsc/lib -Wl,-rpath=/lib_petsc/lib
+INC_DIR := -I./lib_petsc/include
+LIB_DIR := -L./lib_petsc/lib -Wl,-rpath=./lib_petsc/lib
 LIB := -lpetsc
 
 SRC_DIR := src

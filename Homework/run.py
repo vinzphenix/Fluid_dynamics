@@ -293,51 +293,50 @@ def order_convergence(save=False):
 
 def animation_soluce(blit=False, save="", which="u"):
 
-    def compute_analytic(x_dense):
-        u_init = lambda s: U_max * exp(-np.power((np.fmod(np.abs(s + L / 2), L) - L / 2) / sigma, 2)) * cos(kp * s)
-        sol_ana = np.empty((M, np.size(x_dense)))
+    def compute_u(x_dense, t_now):
+        sol_ana = np.empty_like(x_dense)
         if which == "u":  # plot u(x, t)
-            for j, tj in enumerate(t):
-                sol_ana[j] = u_init(x_dense - c * tj)
+            sol_ana[:] = u_init(x_dense - c * t_now)
         else:  # plot v(xi, t)
-            f = lambda s, xl, tl: (xl - s) - a * L / (2. * pi) * (sin(2. * pi * xl / L) - sin(2. * pi * s / L)) - c * tl
-            df = lambda s, xl, tl: -1. + a * cos(2. * pi * s / L)
-            for j, t_j in enumerate(t):
-                for i, xi_i in enumerate(x_dense):
-                    bracket = [-0.75 * L - c * t_j, 0.75 * L - c * t_j]
-                    root_res = root_scalar(f, args=(xi_i, t_j), method="brentq", bracket=bracket)
-                    # root_res = root_scalar(f, args=(xi_i, t_j), method="newton", x0=x_i-c*t_j, fprime=df)
-                    if not root_res.converged:
-                        print(f"Not converged for (xi, t) = ({xi_i:.3f}, {t_j:.3f})")
-                        print(f"{root_res.iterations:d} iterations and {root_res.function_calls:d} f calls")
-                        raise ValueError
-                    s = np.fmod(root_res.root - 3. * L / 2., L) + L / 2.
-                    sol_ana[j, i] = (dg_map(s) * u_init(g_map(s))) * dg_map(xi_i)/(dg_map(s))
+            for i, xi_i in enumerate(x_dense):
+                bracket = [-0.75 * L - c * t_now, 0.75 * L - c * t_now]
+                root_res = root_scalar(f, args=(xi_i, t_now), method="brentq", bracket=bracket)
+                # root_res = root_scalar(f, args=(xi_i, t_now), method="newton", x0=x_i-c*t_now, fprime=df)
+                if not root_res.converged:
+                    print(f"Not converged for (xi, t) = ({xi_i:.3f}, {t_now:.3f})")
+                    print(f"{root_res.iterations:d} iterations and {root_res.function_calls:d} f calls")
+                    raise ValueError
+                s = np.fmod(root_res.root - 3. * L / 2., L) + L / 2.
+                sol_ana[i] = (dg_map(s) * u_init(g_map(s))) * dg_map(xi_i)/(dg_map(s))
         return sol_ana
 
     def init():
-        exact.set_data(x_plot, u_exact[0])
+        exact.set_data(x_plot, compute_u(x_plot, t[0]))
         time_text.set_text(time_template.format(0))
         line.set_data(x, u[0, :])
-
         return tuple([line, exact, time_text])
 
     def animate(t_idx):
-        exact.set_data(x_plot, u_exact[t_idx])
+        t_idx *= skip
+        exact.set_data(x_plot, compute_u(x_plot, t[t_idx]))
         time_text.set_text(time_template.format(t[t_idx]))
         line.set_data(x, u[t_idx, :])
-
         pbar.update(1)
-
         return tuple([line, exact, time_text])
 
+    skip = 5
     scheme, c, sigma, U_max, L, dt, a, kp, t, u, M, N, h = read_file("./data/solution.txt")
     g_map = lambda xi_: xi_ - a * L / (2. * np.pi) * np.sin(2. * np.pi * xi_ / L)
     dg_map = lambda xi_: 1. - a * np.cos(2. * np.pi * xi_ / L)
+    u_init = lambda s: U_max * exp(-np.power((np.fmod(np.abs(s + L / 2), L) - L / 2) / sigma, 2)) * cos(kp * s)
+
+    # Needed to find s(xi, t) when using streched coordinates
+    f = lambda s, xl, tl: (xl - s) - a * L / (2. * pi) * (sin(2. * pi * xl / L) - sin(2. * pi * s / L)) - c * tl
+    df = lambda s, xl, tl: -1. + a * cos(2. * pi * s / L)
 
     n_plot = 200
     x_plot = np.linspace(-L / 2., L / 2., n_plot)
-    u_exact = compute_analytic(x_plot)
+    # u_exact = compute_analytic(x_plot)
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), num='Animation of the solution')
     
@@ -348,7 +347,7 @@ def animation_soluce(blit=False, save="", which="u"):
         str_xlabel, str_ylabel = r"$x \:/\: L$", r"$u(x,t) \:/\: U$"
     else:  # we plot v --> goes higher than U_max
         x = xi
-        ymin, ymax = np.amin(u_exact), np.amax(u_exact)
+        ymin, ymax = np.amin(u), np.amax(u)
         delta_y = ymax - ymin
         ax.set_ylim(ymin - delta_y * 0.05, ymax + delta_y * 0.05)
         str_xlabel, str_ylabel = r"$\xi \:/\: L$", r"$v(\xi,t) \:/\: U$"
@@ -362,16 +361,16 @@ def animation_soluce(blit=False, save="", which="u"):
     ax.text(0.03, 0.88, 'Param a = {:.2f}'.format(a), fontsize=17, transform=ax.transAxes)
 
     line, = ax.plot(x, u[0, :], ls='-', marker='.', color='C0', label='Numerical solution')
-    exact, = ax.plot(x_plot, u_exact[0], color='C1', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
+    exact, = ax.plot(x_plot, compute_u(x_plot, 0.), color='C1', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
     ax.legend(fontsize=ftSz2, loc='upper right')
 
     ax.grid(ls=':')
     fig.tight_layout()
-    fig.subplots_adjust(left=0.06, right=0.995, bottom=0.085, top=0.995)
+    fig.subplots_adjust(left=0.07, right=0.995, bottom=0.085, top=0.995)
 
     # to animate
-    anim = FuncAnimation(fig, animate, M, interval=20, blit=blit, init_func=init, repeat_delay=3000)
-    pbar = tqdm(total=M)
+    anim = FuncAnimation(fig, animate, M // skip, interval=20, blit=blit, init_func=init, repeat_delay=3000)
+    pbar = tqdm(total=M//skip)
 
     if save == "gif":
         writerGIF = PillowWriter(fps=24)
@@ -395,7 +394,7 @@ if __name__ == "__main__":
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams["text.usetex"] = True
 
-    animation_soluce(blit=True, save="gif", which="v")
+    animation_soluce(blit=True, save="mp4", which="v")
     
     # print("{:15s}".format("Plot 1 / 6"), end="\r")
     # plot_soluce(save_global)

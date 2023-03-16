@@ -33,7 +33,7 @@ python3 script.py
 ## Example without stretching
 ![Example 1 gif](figures/anim_uniform.gif)
 
-## Example with stretching
+## Example with stretching, in $x$ domain
 ![Example 2 gif](figures/anim_nonuniform.gif)
 
 ## Example with stretching, in $\xi$ domain

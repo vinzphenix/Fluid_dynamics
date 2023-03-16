@@ -36,5 +36,8 @@ python3 script.py
 ## Example with stretching
 ![Example 2 gif](figures/anim_nonuniform.gif)
 
+## Example with stretching, in $\xi$ domain
+![Example 3 gif](figures/anim_xi_domain.gif)
+
 ## Upstream pulse error
-![Example 3 gif](figures/anim_pulse.gif)
+![Example 4 gif](figures/anim_pulse.gif)

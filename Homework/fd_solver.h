@@ -7,22 +7,23 @@
 #include <string.h>
 #include <time.h>
 
-#define SAVE 1  // 0:no save, 1:classic, 2:uniform, 3:nonuniform
+#define SAVE 1  // 0:no save, 1:general for anim, 2:specific file for plots
 
 // Simulation parameters
 #define SCHEME_A 'I'
 #define SCHEME_B '4'
 
 #define N     128        // nb of points
-#define TEND  3.         // final time [s]
+#define TEND  2.         // final time [s]
 #define L     1.         // length [m]
 #define C     1.         // wave speed [m/s]
-#define SIGMA (L / 16.)  // std deviation
+#define SIGMA (L / 8.)  // std deviation
 #define UMAX  1.         // height of the gaussian function
 
-#define WAVEPACKET 0    // activate wavepacket mode (0: disabled, 1:enabled)
-#define A          0.1  // parameter of the mapping x(xi) : 0. <= xi < 1.
-#define CFL        1.   // Courant–Friedrichs–Lewy condition
+#define KP         2. * M_PI / (L / 8.)    // enable wavepacket mode
+// #define KP         0.                     // disable wavepacket mode
+#define A          0.6                    // parameter of the mapping x(xi) : 0. <= xi < 1.
+#define CFL        1.                     // Courant–Friedrichs–Lewy condition
 // CFL = (E2: 2.828) (E4: 2.061) (E6: 1.783)
 //       (I4: 1.632) (I6: 1.421)
 

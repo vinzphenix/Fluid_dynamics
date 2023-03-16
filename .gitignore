@@ -3,6 +3,7 @@ cfd
 Project/lib_petsc
 deps
 
+Project_2020
 Project/data
 Project/results/**/simu_*.txt
 

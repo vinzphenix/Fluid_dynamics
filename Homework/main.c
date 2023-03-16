@@ -6,16 +6,16 @@ int init_data_sim(data_Sim *sim) {
 
 #   if SAVE == 1
         sprintf(filename, "%ssolution.txt", path);
-#   elif (SAVE == 2) && (WAVEPACKET == 0)
+#   elif (SAVE == 2) && (fabs(KP * L) < 1.e-6) && (A < 1.e-6)
         sprintf(filename, "%ssolution_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
-#   elif (SAVE == 2) && (WAVEPACKET == 1)
-        sprintf(filename, "%swavepacket_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
-#   elif (SAVE == 3) && (WAVEPACKET == 0)
+#   elif (SAVE == 2) && (A > 1.e-6)
         sprintf(filename, "%snonuniform_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
+#   elif (SAVE == 2) && (fabs(KP * L) > 1.e-6)
+        sprintf(filename, "%swavepacket_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
 #   endif
 
     sim->h = L / N;
-    sim->dt = CFL * sim->h * (1 - A) / fabs(C);
+    sim->dt = CFL * sim->h * (1. - A) / fabs(C);
     sim->M = ceil(TEND / sim->dt);
 
 #   if (SCHEME_A == 'I')
@@ -53,7 +53,7 @@ void save_array(data_Sim *sim, int t) {
     if (t == 0) {
         ptr = fopen(filename, "w");
         fprintf(ptr, "%c%c\n", SCHEME_A, SCHEME_B);
-        fprintf(ptr, "%lf %lf %lf %lf %lf %lf\n", C, SIGMA, UMAX, L, sim->dt, A);
+        fprintf(ptr, "%lf %lf %lf %lf %lf %lf %lf\n", C, SIGMA, UMAX, L, sim->dt, A, KP);
     } else {
         ptr = fopen(filename, "a");
     }
@@ -73,9 +73,9 @@ void set_u_initial(data_Sim *sim) {
         x = -L / 2. + i * sim->h;
         x = x - A * L / (2 * M_PI) * sin(2 * M_PI * x / L);
         sim->u[i] = UMAX * exp(-x * x / (SIGMA * SIGMA)) * sim->dg[i];
-#       if WAVEPACKET > 0
-        sim->u[i] *= cos(2 * M_PI * 16 * x / L);
-#       endif
+// #       if WAVEPACKET > 0
+        sim->u[i] *= cos(KP * x);
+// #       endif
     }
 
 #   if SAVE
@@ -96,9 +96,9 @@ void display_diagnostic(data_Sim *sim, int t_idx) {
         arg = fmod(x - C * t - L / 2., L) + L / 2.;  // working for C > 0
         u_exact = UMAX * exp(-pow(arg / SIGMA, 2.)) * sim->dg[i];
 
-#       if WAVEPACKET > 0
-        u_exact *= cos(2 * M_PI * 16 * (x - C * t) / L);
-#       endif
+// #       if WAVEPACKET > 0
+        u_exact *= cos(KP * (x - C * t));
+// #       endif
 
         I += sim->u[i];
         E += pow(sim->u[i], 2.);

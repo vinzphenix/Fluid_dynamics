@@ -2,63 +2,62 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 ftSz1, ftSz2, ftSz3 = 20, 15, 12
-plt.rcParams["text.usetex"] = False
 plt.rcParams['font.family'] = 'monospace'
 
 
 def stability_region(h):
-    t1 = np.linspace(-5, 3, 1000)
-    t2 = np.linspace(-4, 4, 1000)
+    sigma = np.linspace(-4.5, 1.5, 400)
+    omega = np.linspace(-4.05, 4.05, 600)
     col = plt.get_cmap('jet')
-    x, y = np.meshgrid(t1, t2)
+    x, y = np.meshgrid(sigma, omega)
     z = x + 1j * y
     z2 = z * z
-    # gain = array([1 + z, z2 / 2, z2 * z / 6, z2 * z2 / 24, z2 * z2 * z / 120, z2 * z2 * z2 / 720])
+    z4 = z2 * z2
 
     fig, axs = plt.subplots(2, 3, figsize=(12, 8), constrained_layout=True, sharex='all', sharey='all')
     fig.canvas.manager.set_window_title('Taylor of different orders')
 
-    G = abs(1 + z)
-    axs[0, 0].contourf(x, y, G, np.arange(0, 1 + h, h), cmap=col)
-    axs[0, 0].contour(x, y, G, np.arange(0, 1 + h, h), colors='black', linewidths=1)
+    G = 1. + z
+    axs[0, 0].contourf(x, y, np.abs(G), np.arange(0., 1. + h, h), cmap=col)
+    axs[0, 0].contour(x, y, np.abs(G), np.arange(0., 1. + h, h), colors='black', linewidths=1)
     axs[0, 0].set_title('order 1')
 
-    G = abs(1 + z + z2 / 2)
-    axs[0, 1].contourf(x, y, G, np.arange(0, 1 + h, h), cmap=col)
-    axs[0, 1].contour(x, y, G, np.arange(0, 1 + h, h), colors='black', linewidths=1)
+    G += z2 / 2.
+    axs[0, 1].contourf(x, y, np.abs(G), np.arange(0., 1. + h, h), cmap=col)
+    axs[0, 1].contour(x, y, np.abs(G), np.arange(0., 1. + h, h), colors='black', linewidths=1)
     axs[0, 1].set_title('order 2')
 
-    G = abs(1 + z + z2 / 2 + z2 * z / 6)
-    axs[0, 2].contourf(x, y, G, np.arange(0, 1 + h, h), cmap=col)
-    axs[0, 2].contour(x, y, G, np.arange(0, 1 + h, h), colors='black', linewidths=1)
+    G += z2 * z / 6.
+    axs[0, 2].contourf(x, y, np.abs(G), np.arange(0., 1. + h, h), cmap=col)
+    axs[0, 2].contour(x, y, np.abs(G), np.arange(0., 1. + h, h), colors='black', linewidths=1)
     axs[0, 2].set_title('order 3')
 
-    G = abs(1 + z + z2 / 2 + z2 * z / 6 + z2 * z2 / 24)
-    axs[1, 0].contourf(x, y, G, np.arange(0, 1 + h, h), cmap=col)
-    axs[1, 0].contour(x, y, G, np.arange(0, 1 + h, h), colors='black', linewidths=1)
+    G += z4 / 24.
+    axs[1, 0].contourf(x, y, np.abs(G), np.arange(0., 1. + h, h), cmap=col)
+    axs[1, 0].contour(x, y, np.abs(G), np.arange(0., 1. + h, h), colors='black', linewidths=1)
     axs[1, 0].set_title('order 4')
 
-    # G = abs(1+z+z2/2+z2*z/6+z2*z2/24+z2*z2*z/120)
-    G = abs(1 + z + z ** 2 / 2 + z ** 3 / 6 + z ** 4 / 24 + z ** 5 / 120 + z ** 6 / 720 +
-            0 * z ** 7 / (720 * 7) + 0 * z2 ** 4 / (720 * 7 * 8))
-    axs[1, 1].contourf(x, y, G, np.arange(0, 1 + h, h), cmap=col)
-    axs[1, 1].contour(x, y, G, np.arange(0, 1 + h, h), colors='black', linewidths=1)
+    G += z4 * z / 120. + z4 * z2 / 720
+    axs[1, 1].contourf(x, y, np.abs(G), np.arange(0., 1. + h, h), cmap=col)
+    axs[1, 1].contour(x, y, np.abs(G), np.arange(0., 1. + h, h), colors='black', linewidths=1)
     axs[1, 1].set_title('order 6')
 
-    G = abs(1 + z + z ** 2 / 2 + z ** 3 / 6 + z ** 4 / 24 + z ** 5 / 120 + z ** 6 / 720 +
-            z ** 7 / (720 * 7) + z2 ** 4 / (720 * 7 * 8))
-    c = axs[1, 2].contourf(x, y, G, np.arange(0, 1 + h, h), cmap=col)
-    axs[1, 2].contour(x, y, G, np.arange(0, 1 + h, h), colors='black', linewidths=1)
+    G += z4 * z2 * z / (720. * 7.) + z4 * z4 / (720. * 7. * 8.)
+    c = axs[1, 2].contourf(x, y, np.abs(G), np.arange(0, 1 + h, h), cmap=col)
+    axs[1, 2].contour(x, y, np.abs(G), np.arange(0, 1 + h, h), colors='black', linewidths=1)
     axs[1, 2].set_title('order 8')
 
-    # fig.colorbar(c)
     cbar = fig.colorbar(c, ax=axs.ravel().tolist())
-    cbar.ax.set_ylabel(r'module of Amplification factor')
+    cbar.ax.set_ylabel(r'Module of amplification factor G')
     for ax in axs.flatten():
         ax.grid(ls=':')
-        # ax.set_aspect('equal', 'datalim')
-
+        ax.axvline(0., color='grey', lw=3, alpha=0.5, zorder=0)
+        ax.axhline(0., color='grey', lw=3, alpha=0.5, zorder=0)
+        ax.set_xlim(-5.25, 2.25)
+        ax.set_ylim(-4.05, 4.05)
+        ax.set_aspect('equal')
     plt.show()
+    return
 
 
 def compare_RK43():
@@ -105,46 +104,23 @@ def compare_RK43():
         ax.set_aspect('equal', 'datalim')
 
     plt.show()
-
     return
 
 
-def rk44(u, dt, n, A):
+def rk(u, dt, n, f, beta, gamma):  # Runge-kutta scheme for any number of stages
+    gamma = np.array(gamma)  # 1d array
+    beta = [np.array([])] + [np.array(beta_row) for beta_row in beta]  # list of 1d arrays
+    alpha = np.array([np.sum(beta_row) for beta_row in beta])  # 1d array
+    n_stages = np.size(gamma)
+
     for i in range(n):
-        k1 = dt * np.dot(A, u[i])
-        k2 = dt * np.dot(A, u[i] + 1 / 2 * k1)
-        k3 = dt * np.dot(A, u[i] + 1 / 2 * k2)
-        k4 = dt * np.dot(A, u[i] + k3)
-        u[i + 1] = u[i] + 1 / 6 * k1 + 1 / 3 * k2 + 1 / 3 * k3 + 1 / 6 * k4
-    return
+        ti = i * dt
+        k_list = np.empty(n_stages)
+        for stage, (beta_row, alpha_k) in enumerate(zip(beta, alpha)):
+            u_input = u[i] + np.dot(beta_row, k_list[:stage])
+            k_list[stage] = dt * f(u_input, ti + alpha_k * dt)
+        u[i + 1] = u[i] + np.dot(gamma, k_list)
 
-
-def rk43_bad(u, dt, n, A):
-    for i in range(n):
-        k1 = dt * np.dot(A, u[i])
-        k2 = dt * np.dot(A, u[i] + 1 / 2 * k1)
-        k3 = dt * np.dot(A, u[i] - 1 / 6 * k1 + 2 / 3 * k2)
-        k4 = dt * np.dot(A, u[i] + 1 / 3 * k1 - 1 / 3 * k2 + k3)
-        u[i + 1] = u[i] + 1 / 6 * k1 + 1 / 3 * k2 + 1 / 3 * k3 + 1 / 6 * k4
-    return
-
-
-def rk43(u, dt, n, A):
-    for i in range(n):
-        k1 = dt * np.dot(A, u[i])
-        k2 = dt * np.dot(A, u[i] + 1 / 2 * k1)
-        k3 = dt * np.dot(A, u[i] + 1 / 2 * k2)
-        k4 = dt * np.dot(A, u[i] + 7 / 12 * k2 + 5 / 12 * k3)
-        u[i + 1] = u[i] + 1 / 6 * k1 + 1 / 3 * k2 + 1 / 3 * k3 + 1 / 6 * k4
-    return
-
-
-def rk33(u, dt, n, A):
-    for i in range(n):
-        k1 = dt * np.dot(A, u[i])
-        k2 = dt * np.dot(A, u[i] + 1 / 3 * k1)
-        k3 = dt * np.dot(A, u[i] + 2 / 3 * k2)
-        u[i + 1] = u[i] + 1 / 4 * k1 + 3 / 4 * k3
     return
 
 
@@ -152,46 +128,49 @@ def mesure_error():
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), constrained_layout=True, sharex='all', sharey='all')
     fig.canvas.manager.set_window_title('RK error measure')
 
-    # T_final = 1.
-    N = np.array([5, 10, 50, 100, 200, 500, 1000])
-    # E = []  # np.zeros_like(N)
-    E = np.zeros(len(N))
+    test_f = lambda u, t: -u * np.tanh(t)  # Nonlinear
+    u_exact = lambda u0, t: u0 / np.cosh(t)
+    # test_f = lambda u, t: -u  # Linear
+    # u_exact = lambda u0, t: u0 * np.exp(-t)
+    T_final, u_init = 2. * np.pi, 2.  # in [-pi, pi]
 
-    for i, n in enumerate(N):
-        U = np.zeros((n + 1, 2))
-        U[0] = np.array([1, 0])
-        rk43(U, 1 / n, n, np.array([[0, 1], [-1, 0]]))
-        this_error = U[-1] - np.array([np.cos(1), -np.sin(1)])
-        E[i] = np.linalg.norm(this_error, ord=np.inf)
+    N = np.array([20, 50, 100, 200, 500, 1000])
+    DT = T_final / N
 
-    ax.loglog(N, E, '-o')
-    ax.loglog(N, np.power(1 / N, 3.), ls='--')
+    phi = -1e-3
+    schemes_params = [
+        ([[1.]], [1. / 2., 1. / 2.], "RK2 heun"),
+        ([[1. / 3.], [0., 2. / 3.]], [1. / 4., 0., 3. / 4.], "RK3 heun"),
+        ([[1. / 2.], [0., 1. / 2.], [0., 0., 1.]], [1. / 6., 1. / 3., 1. / 3., 1. / 6.], "RK4C"),
+        ([[2. / 3.], [-phi, phi]], [(phi - 1.) / (4. * phi), 3. / 4., 1. / (4 * phi)], "RK3 special 1"),
+        ([[2. / 3.], [2. / 3. - phi, phi]], [1. / 4., (3. * phi - 1) / (4. * phi), 1. / (4 * phi)], "RK3 special 2"),
+        ([[1. / 2.], [-1. / 6., 2. / 3.], [1. / 3., -1. / 3., 1.]], [1. / 6., 1. / 3., 1. / 3., 1. / 6.], "RK43"),
+    ]
+    E = np.zeros((len(schemes_params), np.size(N)))
+
+    for i, (beta, gamma, label) in enumerate(schemes_params):
+        for j, (n, dt) in enumerate(zip(N, DT)):
+            U = np.zeros((n + 1))
+            U[0] = u_init
+            rk(U, dt, n, test_f, beta, gamma)
+            E[i, j] = np.abs(U[-1] - u_exact(U[0], T_final))
+            # ax.plot(np.linspace(0., T_final, n + 1), U, label=r'$\Delta t = {{:.3f}}$'.format(T_final / n))
+        ax.loglog(DT, E[i], '-o', label=label)
+
+    for i, (Ei, ls) in enumerate(zip(E, ["--", "-.", ":"])):
+        order = i + 2
+        label = r"$\propto \Delta t^{:d}$".format(order)
+        ax.loglog(DT, np.power(DT / DT[-1], order) * Ei[-1], ls=ls, color='k', label=label)
+
+    ax.legend(fontsize=ftSz2)
+    ax.set_ylabel(r"$|\:u^h(T) - u(T)\:|$", fontsize=ftSz2)
+    ax.set_xlabel(r"$\Delta t$", fontsize=ftSz2)
     ax.grid(ls=':')
     plt.show()
 
 
-def call_rk():
-    N = 100
-    DT = 0.01
-    U = np.zeros((N + 1, 2))
-    U[0] = np.array([1, 0])
-    U1 = np.copy(U)
-    U2 = np.copy(U)
-    rk44(U, DT, N, np.array([[0, 10], [-10, 0]]))
-    rk43(U1, DT, N, np.array([[0, 10], [-10, 0]]))
-    rk33(U2, DT, N, np.array([[0, 10], [-10, 0]]))
-
-    fig, ax = plt.subplots(1, 1, figsize=(10, 6), constrained_layout=True, sharex='all', sharey='all')
-    fig.canvas.manager.set_window_title('RK comparison linear')
-    ax.plot(np.linspace(0, N * DT, N + 1), U[:, 0], label='rk44')
-    ax.plot(np.linspace(0, N * DT, N + 1), U1[:, 0], label='rk43')
-    ax.plot(np.linspace(0, N * DT, N + 1), U2[:, 0], label='rk33')
-    ax.legend(fontsize=ftSz2)
-    plt.show()
-
-
 if __name__ == "__main__":
+    plt.rcParams["text.usetex"] = False
     # stability_region(0.1)
     # compare_RK43()
-    # call_rk()
     mesure_error()

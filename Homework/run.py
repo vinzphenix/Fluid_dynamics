@@ -207,7 +207,7 @@ def plot_soluce_nonuniform(save=False):
 
 def plot_diagnostic(save=False):
     fig, axs = plt.subplots(3, 3, figsize=(10, 8), constrained_layout=True, sharex='all', sharey='row')
-    scheme_list = ["E2", "E4", "I4"]  # , "E6", "I6"]
+    scheme_list = ["E2", "E4", "I4"]  # D3 , "E6", "I6"]
     
     # fig, axs = plt.subplots(3, 2, figsize=(9, 8), constrained_layout=True, sharex='all', sharey='row')
     # scheme_list = ["E6", "I6"]
@@ -254,13 +254,13 @@ def plot_diagnostic(save=False):
 
 def order_convergence(save=False):
     fig, ax = plt.subplots(1, 1, figsize=(9., 5.), constrained_layout=True)
-    scheme_list = ["E2", "E4", "I4"]  # , "E6", "I6"]
-    alpha_list = [1., 1., 1., 0.5, 0.5]
+    scheme_list = ["E2", "E4", "I4", "D3"]  # , "E6", "I6"]
+    alpha_list = [1., 1., 1., 1., 1.]
     N_list = [32, 64, 128]
     t_wanted = 0.5
     h_list = []  # but overwritten
 
-    for i, scheme in enumerate(scheme_list):
+    for i, (scheme, ls) in enumerate(zip(scheme_list, ["--", "-.", ":", "-"])):
         
         R_list = np.zeros(3)
         h_list = np.zeros(3)
@@ -273,13 +273,12 @@ def order_convergence(save=False):
             
             T_idx = np.argmin(np.abs(t - t_wanted))
             h_list[j] = h / sigma
-            R_list[j] = h / (sigma * U_max * U_max) * np.sum(np.power((u[T_idx] - f(x, t[T_idx])), 2))
+            R_list[j] = np.sqrt(h / (sigma * U_max * U_max) * np.sum(np.power((u[T_idx] - f(x, t[T_idx])), 2)))
 
+        deg = float(scheme[1])
         ax.loglog(h_list, R_list, ls='-', marker='o', color=f'C{i}', label=f'{scheme}', alpha=alpha_list[i])
+        ax.loglog(h_list, (h_list / h_list[-1]) ** deg * R_list[-1], ls=ls, color='k', label=f'order $h^{deg:.0f}$', alpha=0.5)
     
-    ax.loglog(h_list, h_list ** 2, ls='--', color='black', label='order $h^2$')
-    ax.loglog(h_list, h_list ** 4, ls='-.', color='black', label='order $h^4$')
-
     ax.grid(ls=':', which="both")
     ax.set_xlabel(r"$h\:/\:\sigma$", fontsize=ftSz2)
     ax.set_ylabel(r"Global error at $ct\:/\:L \:=\: {:.1f}$".format(t_wanted), fontsize=ftSz2)
@@ -291,7 +290,7 @@ def order_convergence(save=False):
         plt.show()
 
 
-def animation_soluce(blit=False, save="", which="u"):
+def animation_soluce(blit=False, skip=1, save="", which="u"):
 
     def compute_u(x_dense, t_now):
         sol_ana = np.empty_like(x_dense)
@@ -324,7 +323,6 @@ def animation_soluce(blit=False, save="", which="u"):
         pbar.update(1)
         return tuple([line, exact, time_text])
 
-    skip = 5
     scheme, c, sigma, U_max, L, dt, a, kp, t, u, M, N, h = read_file("./data/solution.txt")
     g_map = lambda xi_: xi_ - a * L / (2. * np.pi) * np.sin(2. * np.pi * xi_ / L)
     dg_map = lambda xi_: 1. - a * np.cos(2. * np.pi * xi_ / L)
@@ -336,7 +334,6 @@ def animation_soluce(blit=False, save="", which="u"):
 
     n_plot = 200
     x_plot = np.linspace(-L / 2., L / 2., n_plot)
-    # u_exact = compute_analytic(x_plot)
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), num='Animation of the solution')
     
@@ -369,8 +366,10 @@ def animation_soluce(blit=False, save="", which="u"):
     fig.subplots_adjust(left=0.07, right=0.995, bottom=0.085, top=0.995)
 
     # to animate
-    anim = FuncAnimation(fig, animate, M // skip, interval=20, blit=blit, init_func=init, repeat_delay=3000)
-    pbar = tqdm(total=M//skip)
+    # new_M = M // skip  # if want make gif (cyclic)
+    new_M = np.size(t[::skip])  # here it would show u(x,T) and then back again u(x,0) when animation restarts
+    anim = FuncAnimation(fig, animate, new_M, interval=20, blit=blit, init_func=init, repeat_delay=3000)
+    pbar = tqdm(total=new_M)
 
     if save == "gif":
         writerGIF = PillowWriter(fps=24)
@@ -394,7 +393,7 @@ if __name__ == "__main__":
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams["text.usetex"] = True
 
-    animation_soluce(blit=True, save="mp4", which="v")
+    animation_soluce(blit=True, skip=2, save="", which="v")
     
     # print("{:15s}".format("Plot 1 / 6"), end="\r")
     # plot_soluce(save_global)

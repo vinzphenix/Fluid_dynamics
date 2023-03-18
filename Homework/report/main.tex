@@ -33,7 +33,7 @@ Hence, the eigenvalues of the schemes are given by:
     \lambda_j \Delta t = \imath \frac{c\Delta t}{h} (k^* h) = \imath \cdot CFL \cdot (k^*h)
 \end{align*}
 
-We want all the eigenvalues to be inside the marginal stability curve of RK4C. Since they are all purely imaginary, the condition is $|\lambda_j|<2\sqrt{2}$ for $0\leq k_j h \leq \pi$. We can then determine the $CFL$ condition as: $CFL \; \max{(k^* h)} \leq 2\sqrt{2}$. Based on the results presented in table (\ref{tab:CFL}), I chose $CFL=1.0$.
+We want all the eigenvalues to be inside the marginal stability curve of RK4C. Since they are all purely imaginary, the condition is $|\lambda_j|<2\sqrt{2}$ for $0\leq k_j h \leq \pi$. We can then determine the $CFL$ condition as: $CFL \; \max{(k^* h)} \leq 2\sqrt{2}$. Based on the results presented in \autoref{tab:CFL}, I chose $CFL=1.0$.
 
 \begin{table}[H]
     \centering
@@ -72,9 +72,9 @@ The initial condition is a Gaussian with standard deviation $\sigma$. We also re
 %First, we recognize that the shape of the Fourier transform of $u(x,0)$ is a parabola with this log diagram.
 In both of the diagrams, the step size $h$ is proportional to the width of the Gaussian: $h/\sigma=1/8$. Hence, when $L/\sigma=4$, we have $N=32$ points, and when $L/\sigma=16$, we have $N=128$ points.
 
-On one hand, in the left diagram of figure (\ref{fig:fourier}) ($L / \sigma = 4$), the amplitude of the coefficients of the FFT and the Fourier transform in an infinite domain only coincide at low wavenumbers when $|j| \leq 3$. This represents approximately one fourth of the spectrum. At higher wavenumbers, they do not coincide while also being not negligible: $\approx 10^{-4}$.
+On one hand, in the left diagram of \autoref{fig:fourier} ($L / \sigma = 4$), the amplitude of the coefficients of the FFT and the Fourier transform in an infinite domain only coincide at low wavenumbers when $|j| \leq 3$. This represents approximately one fourth of the spectrum. At higher wavenumbers, they do not coincide while also being not negligible: $\approx 10^{-4}$.
 
-On the other hand, in the right diagram of figure (\ref{fig:fourier}) ($L/\sigma = 16$), the coefficients of the FFT have the right amplitude until they reach machine precision $\epsilon \approx 10^{-16}$. They coincide for $|j| \leq 31$: approximately half of the spectrum.
+On the other hand, in the right diagram of \autoref{fig:fourier} ($L/\sigma = 16$), the coefficients of the FFT have the right amplitude until they reach machine precision $\epsilon \approx 10^{-16}$. They coincide for $|j| \leq 31$: approximately half of the spectrum.
 
 In view of this, it is clear that in our further analysis we will take a large domain compared to the width of the Gaussian: $L / \sigma = 16$.
 
@@ -83,7 +83,7 @@ In view of this, it is clear that in our further analysis we will take a large d
 In this section, we will consider a grid with a constant $\Delta x$ from $-L/2$ to $L/2$. In the following simulations, if $U$ is not explicitly mentioned, it is supposed to be set to $1$.
 
 \subsection{Comparison of analytical and numerical solutions}
-
+\vspace{-12pt}
 \begin{figure}[H]
     \centering
     \includesvg[width=\textwidth]{../figures/overview.svg}
@@ -91,7 +91,9 @@ In this section, we will consider a grid with a constant $\Delta x$ from $-L/2$ 
     \label{fig:overview}
 \end{figure}
 
-As expected, in figure (\ref{fig:overview}), the scheme E2 gives the worst results, followed by E4 and then I4 provides the best approximation. This follows from the leading term of the truncation error $T$ of each of these schemes \cite[p. 5]{slides}:
+\vspace{-6pt}
+As expected, in \autoref{fig:overview}, the scheme E2 gives the worst results, followed by E4 and then I4 provides the best approximation. This follows from the leading term of the truncation error $T$ of each of these schemes \cite[p. 5]{slides}:
+
 \[T_{E2}=-\frac{1}{6}(kh)^2 \qquad T_{E4} = -\frac{1}{30}(kh)^4 \qquad T_{I4}=-\frac{1}{180}(kh)^4\]
 
 For all the schemes, the large step size $h=\sigma/2$ ($N=32$) gives bad results, particularly at the left of the peak of the Gaussian. In the case of the E2 scheme, still with $N=32$, the signal appears "destroyed" already at $ct/L=0.5$.
@@ -100,28 +102,31 @@ More generally, the larger the step size (the lower the $N$), the bigger is the 
 
 \subsection{Evolution of the diagnostics with time}
 
+\vspace{-8pt}
 \begin{figure}[H]
     \centering
     \includesvg[width=\textwidth]{../figures/diagnostic.svg}
     \caption{Presentation of the three diagnostic $I_h$, $E_h$ and $R_h$ as functions of a dimensionless time $ct/L$. The tree schemes are arranged in column and the three diagnostic in rows.}
     \label{fig:diagnostic}
 \end{figure}
+\vspace{-6pt}
 
 We recall the diagnostics: $I$ for the integral, $E$ for the energy, and $R$ for the error. In the following, $u_i^n$ indicates the discrete approximation of $u(x,t)$ at position $x_i=ih$ and time $t=n\Delta t$:
+
 \begin{align*}
     I_h^n = \frac{h}{\sigma U} \sum_{i=0}^{N-1} u_i^n \qquad 
     E_h^n = \frac{h}{\sigma U^2} \sum_{i=0}^{N-1} (u_i^n)^2 \qquad
     R_h^n = \frac{h}{\sigma U^2} \sum_{i=0}^{N-1} \left[u_i^n - u\left(x_i, t^n\right) \right]^2
 \end{align*}
 
-The first global diagnostic is the discrete version of the integral of the function $u(x, t)$ from $x=-b=-L/2$ to $x=b=L/2$. We see in figure (\ref{fig:diagnostic}) that it is constant. We can also show that it is constant and find its value in the continuous case:
+The first global diagnostic is the discrete version of the integral of the function $u(x, t)$ from $x=-b=-L/2$ to $x=b=L/2$. We see in \autoref{fig:diagnostic} that it is constant. We can also show that it is constant and find its value in the continuous case:
 \begin{align*}
     \dv{}{t} \int_{-b}^b u \dd{x} &= \int_{-b}^b \pdv{u}{t} \dd{x} = -c \int_{-b}^b \pdv{u}{x} \dd{x} = -c \left[u\left(\frac{L}{2}\right) - u\left(-\frac{L}{2}\right)\right] = 0\\
     %-Uc \exp\left(-\frac{L}{2}\frac{16}{L}\right) \approx 0
     \frac{1}{\sigma U} \int_{-b}^{b} u \dd{x} &= 2\int_0^{\frac{L}{2}\frac{16}{L}} \exp(-x^2) \dd{x} = \sqrt{\pi} \erf(8) \approx 1.772
 \end{align*}
 
-The second diagnostic concerns the energy contained in $u$. For all schemes, the worse the quality of the grid (the smaller the $N$), the faster is the decrease of energy. Even if it may appear counter-intuitive, the order of the scheme has the opposite effect. For all $N$, the lower the truncation error (the better the scheme), the faster is the decrease of energy.
+The second diagnostic concerns the energy contained in $u$. For all schemes, the worse the quality of the grid (the smaller the $N$), the faster is the decrease of energy. Even if it may appear counter-intuitive, the order of the scheme has the opposite effect. For all $N$, the lower the truncation error (the better the scheme), the faster is the decrease of energy. \textcolor{red}{[1 year later] This is because the higher order schemes curves extend higher on the imaginary axis of the $\lambda \Delta t$ plane (cf. \autoref{tab:CFL}), which means that they are more dissipated by RK4C (look at \autoref{fig:D3_scheme} for the marginal stability curve).}
 
 Finally, the third diagnostic measures the global squared error. This time, the results are not surprising. The error (1) increases over time, (2) decreases as the truncation error of the scheme decreases, and (3) decreases as we refine the grid ($N$ increasing).
 
@@ -135,7 +140,7 @@ Finally, the third diagnostic measures the global squared error. This time, the 
     \label{fig:order}
 \end{figure}
 
-The global error shown in figure (\ref{fig:order}) is decreasing slightly faster than $\mathcal{O}(h^2)$ using the E2 scheme, and slightly faster than $\mathcal{O}(h^4)$ using the E4 and I4 schemes. As mentioned a few times before, the error made using I4 is smaller than the error made with E4, since their truncation errors differ by a factor of 6.
+The global error shown in \autoref{fig:order} is decreasing slightly faster than $\mathcal{O}(h^2)$ using the E2 scheme, and slightly faster than $\mathcal{O}(h^4)$ using the E4 and I4 schemes. As mentioned a few times before, the error made using I4 is smaller than the error made with E4, since their truncation errors differ by a factor of 6.
 
 \section{Results obtained with a non-uniform grid}
 We now consider a mapping, constant in time, from the "numerical space" $-\frac{L}{2} \leq \xi \leq \frac{L}{2}$ with a uniform grid to the "physical space" $-\frac{L}{2} \leq x \leq \frac{L}{2}$ with a non-uniform grid:
@@ -159,7 +164,7 @@ We can use the chain rule to modify the transport equation \eqref{eq:pde}.
     \label{fig:nonuniform}
 \end{figure}
 
-When the peak of the Gaussian is located where the density of points $\xi_i$ is high, it makes $v(\xi, t)$ more distributed and gives it a lower peak. This is what we observe in the right part of figure (\ref{fig:nonuniform}) at $ct/L=1$ when the Gaussian is located at $x=0 \mod L$. The peak is enlarged since there are more points $\xi$ under it, and it is flattened since $g'(\xi)<1$ around $\xi = 0$.
+When the peak of the Gaussian is located where the density of points $\xi_i$ is high, it makes $v(\xi, t)$ more distributed and gives it a lower peak. This is what we observe in the right part of \autoref{fig:nonuniform} at $ct/L=1$ when the Gaussian is located at $x=0 \mod L$. The peak is enlarged since there are more points $\xi$ under it, and it is flattened since $g'(\xi)<1$ around $\xi = 0$.
 
 The opposite happens at $ct/L=0.5$, when the Gaussian is located at $L/2 \mod L$.
 
@@ -185,7 +190,7 @@ Using the properties of the Fourier Transform, we know that a product in the tim
     \label{fig:fourier_wave_packet}
 \end{figure}
 
-As a result of the convolution, the Gaussian in the Fourier space is divided in two, as shown in figure (\ref{fig:fourier_wave_packet}). Its maximum located at the wavenumber $k_p$ of the cosine function. The signal is shifted towards higher wavenumbers compared to the first initial condition $u(x,0)$ we considered.
+As a result of the convolution, the Gaussian in the Fourier space is divided in two, as shown in \autoref{fig:fourier_wave_packet}. Its maximum located at the wavenumber $k_p$ of the cosine function. The signal is shifted towards higher wavenumbers compared to the first initial condition $u(x,0)$ we considered.
 
 %As we have seen previously, the coefficients of the FFT do not match the analytical Fourier transform when they become smaller than epsilon machine.
 
@@ -225,7 +230,7 @@ Therefore, the modes with wavelengths exceeding $k_m$ have a negative group velo
     \label{fig:wave_packet}
 \end{figure}
 
-In the case of the E2 scheme, the principal mode with $j=16$ has a group velocity of only $71\%$ of the velocity $c$ since $\cos{(2 \pi \frac{16}{128})} = 1/\sqrt{2} \approx 0.71$. This is the reason why it has only traveled until $x/L \approx 0.71$ after $ct/L=1$ in the upper right diagram of figure (\ref{fig:wave_packet}) while the true wave packet has traveled until $x=L$.
+In the case of the E2 scheme, the principal mode with $j=16$ has a group velocity of only $71\%$ of the velocity $c$ since $\cos{(2 \pi \frac{16}{128})} = 1/\sqrt{2} \approx 0.71$. This is the reason why it has only traveled until $x/L \approx 0.71$ after $ct/L=1$ in the upper right diagram of \autoref{fig:wave_packet} while the true wave packet has traveled until $x=L$.
 
 This effect is of course smaller for the other schemes, since they behave much better at this wavelength: $v_g^* = 94 \%$ of $c$ for E4 and $v_g^* = 98.8 \% $ of $c$ for I4.
 
@@ -240,7 +245,7 @@ This effect is of course smaller for the other schemes, since they behave much b
 \end{figure}
 
 \vspace{-3mm}
-In figure (\ref{fig:problem}), we observe that the solution contains a noise at the \textit{flip-flop} mode. Since its wavenumber is maximal, its group velocity is minimal: $v_g^* = -2.2$ is given in table (\ref{tab:group}) and in figure (\ref{fig:dispersion}) for the E6 scheme.
+In \autoref{fig:problem}, we observe that the solution contains a noise at the \textit{flip-flop} mode. Since its wavenumber is maximal, its group velocity is minimal: $v_g^* = -2.2$ is given in \autoref{tab:group} and in \autoref{fig:dispersion} for the E6 scheme.
 
 On one hand, the noise (indicated by the green line) travels a distance $\Delta x / L \approx -0.1 = 0.05 - 0.15$. On the other hand, the Gaussian has only traveled a distance $\Delta x / L \approx 0.047 = -0.202 - (-0.249)$. The ratio between both distances is $\approx 2.13$ which is close to the $2.2$ expected.
 
@@ -251,5 +256,28 @@ Without full certainty, we can safely assume that this phenomenon appears with t
 \nocite{*}
 \bibliography{main.bib}
 
+\section{Addendum 2023}
+The characteristics of the D3 scheme are enumerated below, with the $CFL= \frac{c\Delta t}{h} $:
+\begin{align*}
+    \left . \pdv{u}{x}\right\vert_{i} &= \frac{u_{i-2}-6u_{i-1}+3u_i+2u_{i+1}}{6h} +2h^3\pdv[4]{u}{x} + \mathcal{O}(h^4)\\[6 pt]
+    k^*h &= \big[8\sin{(kh)} - \sin{(2kh)}\big]/6 + \imath \big[-3+4\cos(kh)-\cos(2kh)\big]/6\\[6 pt]
+    \lambda_j \Delta t &= CFL \left[\frac{-3+4\cos(kh)-\cos(2kh)}{6} + \imath\: \frac{8\sin{(kh)} - \sin{(2kh)}}{6}\right]
+\end{align*}
+
+The real part of the wavenumber $k^*h$ is the same as the one of the E4 scheme. Waves will therefore be dispersed identically by both schemes. However, since it is a decentered scheme, waves will also be dissipated according to the nonzero imaginary part of $k^*h$. This phenomenon was not very visible with centered schemes since the only dissipation occurs due to the temporal discretization.
+
+\begin{figure}[H]
+    \centering
+    \includesvg[width=\textwidth]{../figures/info_D3_scheme.svg}
+    \caption{Information about the D3 scheme}
+    \label{fig:D3_scheme}
+\end{figure}
+
+Concerning \autoref{fig:fourier} and \autoref{fig:fourier_wave_packet}, we want all the waves with nonzero amplitude to be \textit{well treated}: the waves whose Fourier coefficients are larger than $\epsilon_{\text{machine}}$ should have wavenumbers $(kh)^*$ reasonably close to $kh$.
+\begin{equation*}
+    \frac{2\pi j_{\max}}{L} = kh \leq \frac{\pi}{2} \implies N \geq 4j_{\max}
+\end{equation*}
+
+This is why the wavepacket is not well enough resolved: $N=128 < 200$.
 
 \end{document}

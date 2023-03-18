@@ -91,12 +91,14 @@ def dispersion(save=False):
     E6 = (45. * sin(x) - 9. * sin(2 * x) + sin(3 * x)) / 30.
     I4 = (3. * sin(x)) / (2. + cos(x))
     I6 = (28. * sin(x) + sin(2. * x)) / (18. + 12 * cos(x))
-    axs[0].plot(x / pi, np.divide(E2, x, out=np.ones_like(x), where=x != 0), label='E2', color='C0')
-    axs[0].plot(x / pi, np.divide(E4, x, out=np.ones_like(x), where=x != 0), label='E4', color='C1')
-    axs[0].plot(x / pi, np.divide(E6, x, out=np.ones_like(x), where=x != 0), label='E6', color='C2')
-    axs[0].plot(x / pi, np.divide(I4, x, out=np.ones_like(x), where=x != 0), label='I4', color='C1', ls='--')
-    axs[0].plot(x / pi, np.divide(I6, x, out=np.ones_like(x), where=x != 0), label='I6', color='C2', ls='--')
+    values, label_list = [E2, E4, E6, I4, I6], ["E2", "E4", "E6", "I4", "I6"]
+    color_list, ls_list = ['C0', 'C1', 'C2', 'C1', 'C2'], ["-", "-", "-", "--", "--"]
+    xs_max = [pi/2., np.arccos(1.-sqrt(1.5)), 1.93607415679, 2.*pi/3., 2.267182789]
+    ys_max = [1., sqrt(0.25 + sqrt(8./3.)), 1.585978396, sqrt(3), 1.989441485]
     axs[0].plot(x / pi, np.ones_like(x), label='Exact', color='grey')
+    for value, label, color, ls, xmax, ymax in zip(values, label_list, color_list, ls_list, xs_max, ys_max):
+        axs[0].plot(x / pi, np.divide(value, x, out=np.ones_like(x), where=x != 0), label=label, color=color, ls=ls)
+        # axs[0].plot(xmax / pi, ymax, color=color, marker='o')
 
     E2 = cos(x)
     E4 = (4. * cos(x) - cos(2 * x)) / 3.
@@ -141,12 +143,14 @@ def dispersion_mosaic(save=False):
     I4 = (3. * sin(x)) / (2. + cos(x))
     I6 = (28. * sin(x) + sin(2. * x)) / (18. + 12 * cos(x))
 
-    axs['frq'].plot(x / pi, E2 / pi, label='E2', color='C0')
-    axs['frq'].plot(x / pi, E4 / pi, label='E4', color='C1')
-    axs['frq'].plot(x / pi, E6 / pi, label='E6', color='C2')
-    axs['frq'].plot(x / pi, I4 / pi, label='I4', color='C1', ls='--')
-    axs['frq'].plot(x / pi, I6 / pi, label='I6', color='C2', ls='--')
+    values, label_list = [E2, E4, E6, I4, I6], ["E2", "E4", "E6", "I4", "I6"]
+    color_list, ls_list = ['C0', 'C1', 'C2', 'C1', 'C2'], ["-", "-", "-", "--", "--"]
+    xs_max = [pi/2., np.arccos(1.-sqrt(1.5)), 1.93607415679, 2.*pi/3., 2.267182789]
+    ys_max = [1., sqrt(0.25 + sqrt(8./3.)), 1.585978396, sqrt(3), 1.989441485]
     axs['frq'].plot(x / pi, x / pi, label='Exact', color='grey')
+    for value, label, color, ls, xmax, ymax in zip(values, label_list, color_list, ls_list, xs_max, ys_max):
+        axs['frq'].plot(x / pi, value / pi, label=label, color=color, ls=ls)
+        axs['frq'].plot(xmax / pi, ymax / pi, color=color, marker='o')
 
     axs['pha'].plot(x / pi, np.divide(E2, x, out=np.ones_like(x), where=x != 0), label='E2', color='C0')
     axs['pha'].plot(x / pi, np.divide(E4, x, out=np.ones_like(x), where=x != 0), label='E4', color='C1')
@@ -243,6 +247,47 @@ def stability():
     plt.show()
 
 
+def info_D3_scheme(save=False):
+    CFL = [1., 4./3., 1.7452685]
+    
+    sigma, omega  = np.linspace(-3., 0.5, 301), np.linspace(-3., 3., 501)
+    s, w = np.meshgrid(sigma, omega)
+    z = s + 1j * w
+    G = np.abs(1. + z + np.power(z, 2) / 2. + np.power(z, 3) / 6. + np.power(z, 4) / 24.)
+
+    nt = 201
+    t = np.linspace(0., 2*pi, nt)
+    lmb_dt_real = (-3. + 4.*cos(t) - cos(2.*t))/ 6.
+    lmb_dt_imag = (-8.*sin(t) + sin(2.*t))/ 6.
+
+    fig, axs = plt.subplots(1, 2, figsize=(10, 6), constrained_layout=True)
+    
+    axs[0].contour(z.real, z.imag, G, np.array([0., 1.]), colors='black', linewidths=1)
+    axs[0].set_aspect('equal', 'datalim')
+    axs[0].set_title('Stability region', fontsize=ftSz2)
+    axs[0].set_xlabel(r"$\Re(\lambda \Delta t)$", fontsize=ftSz2)
+    axs[0].set_ylabel(r"$\Im(\lambda \Delta t)$", fontsize=ftSz2)
+    axs[0].contour(z.real, z.imag, G, np.array([0., 1.]), colors='black', linewidths=1)
+    axs[0].contourf(z.real, z.imag, G, np.array([0., 1.]), cmap=plt.get_cmap('Blues'), alpha=0.25)
+    for i, cfl in enumerate(CFL):
+        axs[0].plot(cfl*lmb_dt_real, cfl*lmb_dt_imag, color=f'C{i:d}', label=r'$\textrm{{CFL}}={:.3f}$'.format(cfl))
+
+    axs[1].plot(t[:nt//2+1] / pi, -lmb_dt_imag[:nt//2+1] / pi, color='C0', label=r'$\Re(k^*h)$')
+    axs[1].plot(t[:nt//2+1] / pi, lmb_dt_real[:nt//2+1] / pi, color='C1', label=r'$\Im(k^*h)$')
+    axs[1].set_title('Wavenumber', fontsize=ftSz2)
+    axs[1].set_xlabel(r"$kh / \pi$", fontsize=ftSz2)
+    axs[1].set_ylabel(r"$(kh)^* / \pi$", fontsize=ftSz2)
+
+    for ax in axs:
+        ax.legend(fontsize=ftSz3, loc='lower left')
+        ax.grid(ls=':')
+
+    if save:
+        fig.savefig("./figures/info_D3_scheme.svg", format="svg", bbox_inches='tight')
+    else:
+        plt.show()
+
+
 if __name__ == "__main__":
     save_global = False
     plt.rcParams["text.usetex"] = save_global
@@ -256,4 +301,5 @@ if __name__ == "__main__":
     # print("{:10s}".format("Job done"))
 
     # dispersion(save_global)
-    stability()
+    # stability()
+    info_D3_scheme(save_global)

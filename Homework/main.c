@@ -6,12 +6,13 @@ int init_data_sim(data_Sim *sim) {
 
 #   if SAVE == 1
         sprintf(filename, "%ssolution.txt", path);
-#   elif (SAVE == 2) && (fabs(KP * L) < 1.e-6) && (A < 1.e-6)
-        sprintf(filename, "%ssolution_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
-#   elif (SAVE == 2) && (A > 1.e-6)
+#   elif (SAVE == 2)
+    if (A > 1.e-6)  // nonuniform
         sprintf(filename, "%snonuniform_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
-#   elif (SAVE == 2) && (fabs(KP * L) > 1.e-6)
+    else if (fabs(KP * L) > 1.e-6)  // wavepacket
         sprintf(filename, "%swavepacket_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
+    else  // neither  -->  classic
+        sprintf(filename, "%ssolution_%c%c_%d.txt", path, SCHEME_A, SCHEME_B, N);
 #   endif
 
     sim->h = L / N;
@@ -93,7 +94,10 @@ void display_diagnostic(data_Sim *sim, int t_idx) {
     for (int i = 0; i < N; i++) {
         x = -L / 2. + i * sim->h;  // uniform
         x = x - A * L / (2 * M_PI) * sin(2 * M_PI * x / L);  // scaling
-        arg = fmod(x - C * t - L / 2., L) + L / 2.;  // working for C > 0
+        if (C > 0.)
+            arg = fmod(x - C * t - L / 2., L) + L / 2.;  // working for C > 0
+        else
+            arg = fmod(x - C * t + L / 2., L) - L / 2.;  // working for C > 0
         u_exact = UMAX * exp(-pow(arg / SIGMA, 2.)) * sim->dg[i];
 
 // #       if WAVEPACKET > 0

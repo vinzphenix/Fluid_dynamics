@@ -18,6 +18,7 @@ int init_data_sim(data_Sim *sim) {
     sim->h = L / N;
     sim->dt = CFL * sim->h * (1. - A) / fabs(C);
     sim->M = ceil(TEND / sim->dt);
+    sim->dt = TEND / sim->M;
 
 #   if (SCHEME_A == 'I')
         sim->u = (double *)calloc(8 * N, sizeof(double));
@@ -50,6 +51,7 @@ void free_data_sim(data_Sim *sim) {
 }
 
 void save_array(data_Sim *sim, int t) {
+    // int t is the index of the current time = t * dt
     FILE *ptr;
     if (t == 0) {
         ptr = fopen(filename, "w");

@@ -259,7 +259,7 @@ Without full certainty, we can safely assume that this phenomenon appears with t
 \section{Addendum 2023}
 The characteristics of the D3 scheme are enumerated below, with the $CFL= \frac{c\Delta t}{h} $:
 \begin{align*}
-    \left . \pdv{u}{x}\right\vert_{i} &= \frac{u_{i-2}-6u_{i-1}+3u_i+2u_{i+1}}{6h} +2h^3\pdv[4]{u}{x} + \mathcal{O}(h^4)\\[6 pt]
+    \left . \pdv{u}{x}\right\vert_{i} &= \frac{u_{i-2}-6u_{i-1}+3u_i+2u_{i+1}}{6h} +\frac{h^3}{12}\left .\pdv[4]{u}{x}\right\vert_{i} + \mathcal{O}(h^4)\\[6 pt]
     k^*h &= \big[8\sin{(kh)} - \sin{(2kh)}\big]/6 + \imath \big[-3+4\cos(kh)-\cos(2kh)\big]/6\\[6 pt]
     \lambda_j \Delta t &= CFL \left[\frac{-3+4\cos(kh)-\cos(2kh)}{6} + \imath\: \frac{8\sin{(kh)} - \sin{(2kh)}}{6}\right]
 \end{align*}

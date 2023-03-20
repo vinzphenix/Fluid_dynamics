@@ -248,17 +248,21 @@ def stability():
 
 
 def info_D3_scheme(save=False):
+    plt.rcParams["text.usetex"] = True
     CFL = [1., 4./3., 1.7452685]
     
-    sigma, omega  = np.linspace(-3., 0.5, 301), np.linspace(-3., 3., 501)
+    sigma, omega  = np.linspace(-3.5, 0.35, 301), np.linspace(-3.1, 3.1, 501)
     s, w = np.meshgrid(sigma, omega)
     z = s + 1j * w
     G = np.abs(1. + z + np.power(z, 2) / 2. + np.power(z, 3) / 6. + np.power(z, 4) / 24.)
 
     nt = 201
-    t = np.linspace(0., 2*pi, nt)
-    lmb_dt_real = (-3. + 4.*cos(t) - cos(2.*t))/ 6.
-    lmb_dt_imag = (-8.*sin(t) + sin(2.*t))/ 6.
+    kh = np.linspace(0., 2*pi, nt)
+    real_part = lambda t: (-3. + 4.*cos(t) - cos(2.*t))/ 6.
+    imag_part = lambda t: (-8.*sin(t) + sin(2.*t))/ 6.
+    tgt_pt_kh_pi = 0.6815
+    real_tgt_pt, imag_tgt_pt = CFL[-1] * real_part(tgt_pt_kh_pi * pi), CFL[-1] * imag_part(tgt_pt_kh_pi * pi)
+    lmb_dt_real, lmb_dt_imag = real_part(kh), imag_part(kh)
 
     fig, axs = plt.subplots(1, 2, figsize=(10, 6), constrained_layout=True)
     
@@ -271,15 +275,17 @@ def info_D3_scheme(save=False):
     axs[0].contourf(z.real, z.imag, G, np.array([0., 1.]), cmap=plt.get_cmap('Blues'), alpha=0.25)
     for i, cfl in enumerate(CFL):
         axs[0].plot(cfl*lmb_dt_real, cfl*lmb_dt_imag, color=f'C{i:d}', label=r'$\textrm{{CFL}}={:.3f}$'.format(cfl))
+    axs[0].plot(real_tgt_pt, imag_tgt_pt, 'o', color='C2', ms=10, label=r'$kh={:.4f}\:\pi$'.format(tgt_pt_kh_pi))
+    axs[0].legend(fontsize=ftSz3, loc='upper left')
 
-    axs[1].plot(t[:nt//2+1] / pi, -lmb_dt_imag[:nt//2+1] / pi, color='C0', label=r'$\Re(k^*h)$')
-    axs[1].plot(t[:nt//2+1] / pi, lmb_dt_real[:nt//2+1] / pi, color='C1', label=r'$\Im(k^*h)$')
+    axs[1].plot(kh[:nt//2+1] / pi, -lmb_dt_imag[:nt//2+1] / pi, color='C0', label=r'$\Re(k^*h)$')
+    axs[1].plot(kh[:nt//2+1] / pi, lmb_dt_real[:nt//2+1] / pi, color='C1', label=r'$\Im(k^*h)$')
     axs[1].set_title('Wavenumber', fontsize=ftSz2)
     axs[1].set_xlabel(r"$kh / \pi$", fontsize=ftSz2)
     axs[1].set_ylabel(r"$(kh)^* / \pi$", fontsize=ftSz2)
+    axs[1].legend(fontsize=ftSz3, loc='lower left')
 
     for ax in axs:
-        ax.legend(fontsize=ftSz3, loc='lower left')
         ax.grid(ls=':')
 
     if save:

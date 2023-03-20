@@ -393,7 +393,7 @@ if __name__ == "__main__":
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams["text.usetex"] = True
 
-    animation_soluce(blit=True, skip=2, save="", which="v")
+    animation_soluce(blit=True, skip=1, save="mp4", which="u")
     
     # print("{:15s}".format("Plot 1 / 6"), end="\r")
     # plot_soluce(save_global)

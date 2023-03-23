@@ -290,7 +290,7 @@ def order_convergence(save=False):
         plt.show()
 
 
-def animation_soluce(blit=False, skip=1, save="", which="u"):
+def animation_soluce(blit=False, step_per_frame=1, save="", which="u"):
 
     def compute_u(x_dense, t_now):
         sol_ana = np.empty_like(x_dense)
@@ -316,9 +316,9 @@ def animation_soluce(blit=False, skip=1, save="", which="u"):
         return tuple([line, exact, time_text])
 
     def animate(t_idx):
-        t_idx *= skip
+        t_idx *= step_per_frame
         exact.set_data(x_plot, compute_u(x_plot, t[t_idx]))
-        time_text.set_text(time_template.format(t[t_idx]))
+        time_text.set_text(time_template.format(c*t[t_idx]/L))
         line.set_data(x, u[t_idx, :])
         pbar.update(1)
         return tuple([line, exact, time_text])
@@ -352,11 +352,24 @@ def animation_soluce(blit=False, skip=1, save="", which="u"):
     ax.set_xlabel(str_xlabel, fontsize=ftSz2)
     ax.set_ylabel(str_ylabel, fontsize=ftSz2)
 
-    time_template = r'$t = {:.2f} \;[s]$'
-    time_text = ax.text(0.03, 0.82, '', fontsize=17, transform=ax.transAxes)
-    ax.text(0.03, 0.94, 'FD scheme: {:s}'.format(scheme), fontsize=17, transform=ax.transAxes)
-    ax.text(0.03, 0.88, 'Param a = {:.2f}'.format(a), fontsize=17, transform=ax.transAxes)
+    # Parameters display
+    text_xs, text_ys, pad = np.array([0.05, 0.15]), np.array([0.94, 0.86, 0.80, 0.74]), 0.016
+    ax.text(0.06, text_ys[0], 'FD scheme {:s}'.format(scheme), fontsize=ftSz2, transform=ax.transAxes)
+    
+    time_template = r'$\frac{{ct}}{{L}} = {:.2f}$'
+    time_text = ax.text(text_xs[1], text_ys[1], '', fontsize=ftSz3, transform=ax.transAxes)
+    text_cfl = r'$\frac{{c \Delta t}}{{h}} = {:.2f}$'.format(c*dt/h)
+    ax.text(text_xs[0]-pad, text_ys[1], text_cfl, fontsize=ftSz3, transform=ax.transAxes)
 
+    ax.text(text_xs[0], text_ys[2], r'$h = \frac{{L}}{{{:d}}}$'.format(N), fontsize=ftSz3, transform=ax.transAxes)
+    ax.text(text_xs[1], text_ys[2], r'$a \,= {:.2g}$'.format(a), fontsize=ftSz3, transform=ax.transAxes)
+
+    text_sigma = r'$\sigma=\frac{{L}}{{{:.2g}}}$'.format(L/sigma)
+    text_kp = r'$\lambda \,= \frac{{L}}{{{:.2g}}}$'.format(kp*L/(2*pi)) if np.abs(kp) > 0. else r'$k \, = 0$'
+    ax.text(text_xs[0], text_ys[3], text_sigma, fontsize=ftSz3, transform=ax.transAxes)
+    ax.text(text_xs[1], text_ys[3], text_kp, fontsize=ftSz3, transform=ax.transAxes)
+
+    # Curves to be updated
     line, = ax.plot(x, u[0, :], ls='-', marker='.', color='C0', label='Numerical solution')
     exact, = ax.plot(x_plot, compute_u(x_plot, 0.), color='C1', alpha=0.5, lw=5, zorder=0, label='Analytic solution')
     ax.legend(fontsize=ftSz2, loc='upper right')
@@ -367,7 +380,7 @@ def animation_soluce(blit=False, skip=1, save="", which="u"):
 
     # to animate
     # new_M = M // skip  # if want make gif (cyclic)
-    new_M = np.size(t[::skip])  # here it would show u(x,T) and then back again u(x,0) when animation restarts
+    new_M = np.size(t[::step_per_frame])  # here it would show u(x,T) and then back again u(x,0) when animation restarts
     anim = FuncAnimation(fig, animate, new_M, interval=20, blit=blit, init_func=init, repeat_delay=3000)
     pbar = tqdm(total=new_M)
 
@@ -392,8 +405,15 @@ if __name__ == "__main__":
     ftSz1, ftSz2, ftSz3 = 20, 17, 15
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams["text.usetex"] = True
+    custom_preamble = {
+    "text.usetex": True,
+    "text.latex.preamble": [
+        r"\usepackage{amsmath}", # for the align enivironment
+        ],
+    }
+    plt.rcParams.update(custom_preamble)
 
-    animation_soluce(blit=True, skip=1, save="", which="u")
+    animation_soluce(blit=True, step_per_frame=6, save="", which="v")
     
     # print("{:15s}".format("Plot 1 / 6"), end="\r")
     # plot_soluce(save_global)

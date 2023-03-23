@@ -18,6 +18,7 @@ int init_data_sim(data_Sim *sim) {
     sim->h = L / N;
     sim->dt = CFL * sim->h * (1. - A) / fabs(C);
     sim->M = ceil(TEND / sim->dt);
+    printf("dt = %.10f\n", sim->dt);
     sim->dt = TEND / sim->M;
 
 #   if (SCHEME_A == 'I')

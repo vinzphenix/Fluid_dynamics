@@ -280,4 +280,27 @@ Concerning \autoref{fig:fourier} and \autoref{fig:fourier_wave_packet}, we want 
 
 This is why the wavepacket is not well enough resolved: $N=128 < 200$.
 
+The integral of any power of $u$ over the domain $\Omega=[-\frac{L}{2}, \frac{L}{2}]$ is constant
+\begin{align*}
+    \dv{}{t} \int_{\Omega} u^n \dd{x} &= \int_{\Omega} n u^{n-1}\pdv{u}{t} \dd{x} = -c \int_{\Omega} n u^{n-1}\pdv{u}{x} \dd{x} = -c \left[ u^n\left(\frac{L}{2}\right) - u^n\left(-\frac{L}{2}\right)\right] = 0
+\end{align*}
+
+The value of that integral for any $n \geq 1$ is given below
+\begin{align*}
+    \frac{1}{\sigma U^n}\int_{\Omega} \left[U \exp\left(\frac{-x^2}{\sigma^2}\right)\right]^n \dd x &= \sqrt{\frac{\pi}{n}} \:\erf{\left(\frac{\sqrt{n}L}{2\sigma}\right)}
+\end{align*}
+
+In the wavepacket case $u(x,0) = U \exp\left(-x^2/\sigma^2\right) \cos\big(k_p x\big)$, analytical solutions are quite involved as they use complex arguments in the $\erf$ function.
+\begin{align*}
+    %\left[U \exp\left(\frac{-x^2}{\sigma^2}\right) \cos\big(k_p x\big)\right]^1
+    \frac{1}{\sigma U}\int_{\Omega} u \dd x &= \sqrt{\pi} \exp\left(-\frac{k_p^2\sigma^2}{4}\right)\Re\left[\erf\left(\frac{L}{2\sigma}+\imath\frac{k_p\sigma}{2}\right)\right]\\
+     &\xrightarrow{{k_p\to\infty}} 0\\[12pt]
+    \frac{1}{\sigma U^2}\int_{\Omega} u^2 \dd x &= \sqrt{\frac{\pi}{8}}
+    \left\{
+        \erf\left(\frac{L}{\sigma\sqrt{2}}\right) + 
+        \exp\left(-\frac{k_p^2\sigma^2}{2}\right) \Re\left[\erf\left(\frac{L}{\sigma\sqrt{2}} + \imath\frac{k_p\sigma}{\sqrt{2}}\right)\right]
+    \right\} \\
+    &\xrightarrow{{k_p\to\infty}} \frac{1}{2}\sqrt{\frac{\pi}{2}} \erf\left(\frac{L}{\sigma\sqrt{2}}\right)\\
+\end{align*}
+
 \end{document}

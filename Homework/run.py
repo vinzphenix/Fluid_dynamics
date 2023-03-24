@@ -405,15 +405,8 @@ if __name__ == "__main__":
     ftSz1, ftSz2, ftSz3 = 20, 17, 15
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams["text.usetex"] = True
-    custom_preamble = {
-    "text.usetex": True,
-    "text.latex.preamble": [
-        r"\usepackage{amsmath}", # for the align enivironment
-        ],
-    }
-    plt.rcParams.update(custom_preamble)
 
-    animation_soluce(blit=True, step_per_frame=6, save="", which="v")
+    animation_soluce(blit=True, step_per_frame=5, save="", which="v")
     
     # print("{:15s}".format("Plot 1 / 6"), end="\r")
     # plot_soluce(save_global)

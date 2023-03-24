@@ -18,7 +18,6 @@ int init_data_sim(data_Sim *sim) {
     sim->h = L / N;
     sim->dt = CFL * sim->h * (1. - A) / fabs(C);
     sim->M = ceil(TEND / sim->dt);
-    printf("dt = %.10f\n", sim->dt);
     sim->dt = TEND / sim->M;
 
 #   if (SCHEME_A == 'I')
@@ -88,9 +87,9 @@ void set_u_initial(data_Sim *sim) {
 }
 
 void display_diagnostic(data_Sim *sim, int t_idx) {
-    double I = 0.;
-    double E = 0.;
-    double R = 0.;
+    double Ih = 0.;
+    double Eh = 0.;
+    double Rh = 0.;
     double x, u_exact, arg;
     double t = sim->dt * t_idx;
 
@@ -107,15 +106,26 @@ void display_diagnostic(data_Sim *sim, int t_idx) {
         u_exact *= cos(KP * (x - C * t));
 // #       endif
 
-        I += sim->u[i];
-        E += pow(sim->u[i], 2.);
-        R += pow(sim->u[i] - u_exact, 2.);
+        Ih += sim->u[i];
+        Eh += pow(sim->u[i], 2.);
+        Rh += pow(sim->u[i] - u_exact, 2.);
     }
 
-    I *= sim->h / (SIGMA * UMAX);
-    E *= sim->h / (SIGMA * UMAX * UMAX);
-    R *= sim->h / (SIGMA * UMAX * UMAX);
-    printf("iteration %3d   t = %.3f  : \t  I = %-7.3lf  E = %-7.3lf  R = %-7.3f \n", t_idx, t, I, E, R);
+    Ih *= sim->h / (SIGMA * UMAX);
+    Eh *= sim->h / (SIGMA * UMAX * UMAX);
+    Rh *= sim->h / (SIGMA * UMAX * UMAX);
+    printf("iteration %3d   t = %.3f  : \t  I = %-7.3lf  E = %-7.3lf  R = %-7.3f \n", t_idx, t, Ih, Eh, Rh);
+}
+
+void display_analytic_diagnostic(data_Sim *sim) {
+    if (A > 0.) return;
+    double Ih = sqrt(M_PI / 1.) * erf(sqrt(1.) * L / (2. * SIGMA));
+    double Eh = sqrt(M_PI / 2.) * erf(sqrt(2.) * L / (2. * SIGMA));
+    if (fabs(KP) == 0.) {
+        printf("predicted    by    theory  : \t  I = %-7.3lf  E = %-7.3lf\n", Ih, Eh);
+    } else {
+        printf("predicted    by    theory  : \t  I = %-7.3lf  E = %-7.3lf\n", 0., Eh/2.);
+    }
 }
 
 void RK4C(data_Sim *sim) {
@@ -146,6 +156,7 @@ void RK4C(data_Sim *sim) {
         
     }
 
+    display_analytic_diagnostic(sim);
     return;
 }
 

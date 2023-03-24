@@ -14,7 +14,7 @@
 #define SCHEME_B '4'
 
 #define N     256        // nb of points
-#define TEND  2.         // final time [s]
+#define TEND  1.5         // final time [s]
 #define L     1.         // length [m]
 #define C     1.         // wave speed [m/s]
 #define SIGMA (L / 16.) 
@@ -23,7 +23,7 @@
 
 #define KP         2. * M_PI / (L / 16.)    // enable wavepacket mode
 // #define KP         0.                     // disable wavepacket mode
-#define A          0.7                    // parameter of the mapping x(xi) : 0. <= xi < 1.
+#define A          0.6                    // parameter of the mapping x(xi) : 0. <= xi < 1.
 #define CFL        1.                     // Courant–Friedrichs–Lewy condition
 // CFL = (E2: 2.828) (E4: 2.061) (E6: 1.783)
 //       (I4: 1.632) (I6: 1.421)

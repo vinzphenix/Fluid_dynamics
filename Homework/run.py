@@ -353,12 +353,12 @@ def animation_soluce(blit=False, step_per_frame=1, save="", which="u"):
     ax.set_ylabel(str_ylabel, fontsize=ftSz2)
 
     # Parameters display
-    text_xs, text_ys, pad = np.array([0.05, 0.15]), np.array([0.94, 0.86, 0.80, 0.74]), 0.016
+    text_xs, text_ys, pad = np.array([0.05, 0.15]), np.array([0.94, 0.86, 0.80, 0.74]), 0.042
     ax.text(0.06, text_ys[0], 'FD scheme {:s}'.format(scheme), fontsize=ftSz2, transform=ax.transAxes)
     
     time_template = r'$\frac{{ct}}{{L}} = {:.2f}$'
     time_text = ax.text(text_xs[1], text_ys[1], '', fontsize=ftSz3, transform=ax.transAxes)
-    text_cfl = r'$\frac{{c \Delta t}}{{h}} = {:.2f}$'.format(c*dt/h)
+    text_cfl = r'$\frac{{c \Delta t}}{{h (1-a)}} = {:.2f}$'.format(c*dt/(h*(1-a)))
     ax.text(text_xs[0]-pad, text_ys[1], text_cfl, fontsize=ftSz3, transform=ax.transAxes)
 
     ax.text(text_xs[0], text_ys[2], r'$h = \frac{{L}}{{{:d}}}$'.format(N), fontsize=ftSz3, transform=ax.transAxes)
@@ -379,8 +379,8 @@ def animation_soluce(blit=False, step_per_frame=1, save="", which="u"):
     fig.subplots_adjust(left=0.07, right=0.995, bottom=0.085, top=0.995)
 
     # to animate
-    # new_M = M // skip  # if want make gif (cyclic)
-    new_M = np.size(t[::step_per_frame])  # here it would show u(x,T) and then back again u(x,0) when animation restarts
+    new_M = M // step_per_frame  # if want make gif (cyclic)
+    # new_M = np.size(t[::step_per_frame])  # here it would show u(x,T) and then back again u(x,0) when animation restarts
     anim = FuncAnimation(fig, animate, new_M, interval=20, blit=blit, init_func=init, repeat_delay=3000)
     pbar = tqdm(total=new_M)
 
@@ -406,7 +406,7 @@ if __name__ == "__main__":
     plt.rcParams['font.family'] = 'serif'
     plt.rcParams["text.usetex"] = True
 
-    animation_soluce(blit=True, step_per_frame=5, save="", which="v")
+    animation_soluce(blit=True, step_per_frame=3, save="", which="v")
     
     # print("{:15s}".format("Plot 1 / 6"), end="\r")
     # plot_soluce(save_global)

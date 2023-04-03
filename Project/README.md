@@ -58,7 +58,6 @@ ffmpeg -ss 0.0 -t 9.5 -i input.mp4 -f gif output.gif
 The solver uses the PETSc library in order to solve the poisson equation of the projection method. Instructions for installing are available in the `./doc/` directory. More details about an optimized compilation are given on the website https://petsc.org/release/install/install/#compilers.
 
 ## Example 1
-
 ![Example 1 gif](anim/example_1.gif)
 
 ## Example 2

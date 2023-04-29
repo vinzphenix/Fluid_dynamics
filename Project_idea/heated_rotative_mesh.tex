@@ -1,0 +1,195 @@
+\documentclass[12pt]{article}
+
+\title{Idea project LMECA2660}
+\author{Vincent Degrooff}
+
+
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{tikz}
+\usetikzlibrary{calc,patterns,decorations.pathmorphing,decorations.markings, decorations.text}
+\usetikzlibrary{shapes.multipart, angles, calc, quotes}
+% \usepackage{showframe}% added to show that the figure is being centered
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{physics}
+\geometry{left=25mm, right=25mm,top=25mm, bottom=25mm}
+\usepackage{titling}
+\setlength{\droptitle}{-1.5cm}
+
+
+\setlength{\parindent}{6 pt}
+\setlength{\parskip}{4 pt}
+
+\begin{document}
+
+\maketitle
+
+
+\begin{figure}
+    \centering
+    \subfigure {
+        \begin{tikzpicture}[
+            every text node part/.style={
+                align=center
+            },
+            my angle/.style = {
+                draw, ->, >=stealth, very thick,
+                angle radius = #1,
+                angle eccentricity=1.,
+                anchor=center,
+            },
+            every pic quotes/.style = {
+                inner sep=4pt,
+                fill=white
+            }
+            ]
+                        
+            \pgfmathsetmacro{\th}{45}
+            \pgfmathsetmacro{\L}{3.75}
+            \pgfmathsetmacro{\li}{1*\L/6}
+            \pgfmathsetmacro{\lii}{2*\L/3}
+            \pgfmathsetmacro{\ngrid}{12}
+
+            \coordinate (O) at (0, 0);
+            \coordinate (A) at (\th - 20:1.25*\L);
+            \coordinate (B) at (\th + 20:1.25*\L);
+            \coordinate (C) at (180 + \th - 20:1.25*\L);
+            \coordinate (D) at (180 + \th + 20:1.25*\L);
+
+            \draw (-\L, \L) node[anchor=south]{\large $t=0$\\ \large $\theta_0=\th^{\circ}$};
+
+            \filldraw[black] (0,0) circle (1pt) node[anchor=west]{\Large $O$};
+            \pic [my angle=1.25*\L cm, "{\large Torque}"]     {angle = A--O--B};
+            \pic [my angle=1.25*\L cm, "{\large $\Omega_0=0$}"]     {angle = C--O--D};
+
+            \foreach \i in {0,...,\ngrid} {
+                \draw [very thin,gray,rotate around={\th:(0.,0.)}, opacity=0.5] (-\L, {\L * (-1. + 2*\i / \ngrid)}) -- (\L, {\L * (-1. + 2*\i / \ngrid)});
+                \draw [very thin,gray,rotate around={\th:(0.,0.)}, opacity=0.5] ({\L * (-1. + 2*\i / \ngrid)}, -\L) -- ({\L * (-1. + 2*\i / \ngrid)}, \L);
+                }
+
+
+            \draw[rotate around={\th:(0.,0.)}] (-\L, -\L) rectangle (+\L, +\L);
+
+            \foreach \c/\sx/\sy in {red/1/-1, gray/1./1., blue/-1/+1, gray/-1/-1} {
+                \draw[rotate around={\th:(0.,0.)}, fill=\c!50, fill opacity=1.] (\sx*\li, \sy*\li) rectangle (\sx*\lii, \sy*\lii);
+            }
+
+            \foreach \angle/\label in {45/$-\sin{\omega t}$, 135/$-\cos{\omega t}$, 225/$\sin{\omega t}$, 315/$\cos{\omega t}$} {
+                \node at ({\th+\angle}:{sqrt(2)*(\li+\lii)/2.}) { \small $T(t) =$ \\ \small \label};
+            }
+
+            \draw[rotate around={\th:(0.,0.)}, -stealth] (-0.9*\L, -0.9*\L) -- (-0.6*\L, -0.9*\L) node[rotate=0,left]{$x$};
+            \draw[rotate around={\th:(0.,0.)}, -stealth] (-0.9*\L, -0.9*\L) -- (-0.9*\L, -0.6*\L) node[rotate=0,right]{$y$};
+
+        \end{tikzpicture}
+    }
+    \subfigure {
+        \centering
+        \begin{tikzpicture}[
+            every text node part/.style={
+                align=center
+            },
+            my angle/.style = {
+                draw, ->, >=stealth, very thick,
+                angle radius = #1,
+                angle eccentricity=1.,
+                anchor=center,
+            },
+            every pic quotes/.style = {
+                inner sep=4pt,
+                fill=white
+            }
+            ]
+
+            \pgfmathsetmacro{\thzero}{45}
+            \pgfmathsetmacro{\th}{65}
+            \pgfmathsetmacro{\L}{3.75}
+            \pgfmathsetmacro{\li}{1*\L/6}
+            \pgfmathsetmacro{\lii}{2*\L/3}
+            \pgfmathsetmacro{\ngrid}{12}
+
+            \coordinate (O) at (0, 0);
+            \coordinate (A) at (\th - 20:1.25*\L);
+            \coordinate (B) at (\th + 20:1.25*\L);
+            \coordinate (C) at (180 + \th - 20:1.25*\L);
+            \coordinate (D) at (180 + \th + 20:1.25*\L);
+
+            \draw (-\L, \L) node[anchor=south]{\large $t=\dd t$\\ \large $\theta_0 + \dd \theta$};
+
+            \filldraw[black] (0,0) circle (1pt) node[anchor=west]{\Large $O$};
+            \pic [my angle=1.25*\L cm, "{\large Torque}"]     {angle = A--O--B};
+            \pic [my angle=1.25*\L cm, "{\large $\Omega_0 + \dd \Omega$}"]     {angle = C--O--D};
+
+            \foreach \i in {0,...,\ngrid} {
+                \draw [very thin,gray,rotate around={\th:(0.,0.)}, opacity=0.5] (-\L, {\L * (-1. + 2*\i / \ngrid)}) -- (\L, {\L * (-1. + 2*\i / \ngrid)});
+                \draw [very thin,gray,rotate around={\th:(0.,0.)}, opacity=0.5] ({\L * (-1. + 2*\i / \ngrid)}, -\L) -- ({\L * (-1. + 2*\i / \ngrid)}, \L);
+                }
+
+
+            \draw[rotate around={\th:(0.,0.)}] (-\L, -\L) rectangle (+\L, +\L);
+            \draw[rotate around={\thzero:(0.,0.)}, dotted] (-\L, -\L) rectangle (+\L, +\L);
+
+
+            \foreach \c/\sx/\sy in {red!35/1/-1, blue!20!gray!40!/1./1., blue!35/-1/+1, red!20!gray!40!/-1/-1} {
+                \draw[rotate around={\th:(0.,0.)}, fill=\c, fill opacity=1.] (\sx*\li, \sy*\li) rectangle (\sx*\lii, \sy*\lii);
+            }
+
+            \foreach \angle/\label in {45/$-\sin{\omega t}$, 135/$-\cos{\omega t}$, 225/$\sin{\omega t}$, 315/$\cos{\omega t}$} {
+                \node at ({\th+\angle}:{sqrt(2)*(\li+\lii)/2.}) { \small $T(t) =$ \\ \small \label};
+            }
+
+        \end{tikzpicture}
+    }
+\end{figure}
+
+
+Navier-stokes bulk equations on domain $\mathcal{S}$
+\begin{align}
+    \nabla \cdot \mathbf{v} &= 0  && \text{Mass cons.}\label{eq:nsMass}\\[5pt]
+    \pdv{\mathbf{v}}{t} + \nabla(\mathbf{v} - \mathbf{v}_{\text{mesh}}) \cdot (\mathbf{v} - \mathbf{v}_{\text{mesh}}) &= -\nabla p + \frac{1}{Re} \nabla^2 (\mathbf{v} - \mathbf{v}_{\text{mesh}}) -\mathbf{g} \frac{Gr}{Re^2} T && \text{Momentum}\label{eq:nsMom}\\[5pt]
+    \pdv{T}{t} + (\mathbf{v} - \mathbf{v}_{\text{mesh}}) \cdot \nabla T &= \frac{1}{Re \, Pr} \nabla^2 T + \frac{Ec}{Re} (2 \mu \; \mathbf{d}):\mathbf{d} && \text{Energy} \label{eq:nsEnergy}\\[5pt]
+    \mathbf{d} &= \frac{1}{2} \Big(\nabla(\mathbf{v} - \mathbf{v}_{\text{mesh}}) + \nabla^\top(\mathbf{v} - \mathbf{v}_{\text{mesh}})\Big)
+\end{align}
+
+We should note that
+\begin{align}
+    \nabla \mathbf{v}_{\text{mesh}} &\neq \mathbf{0}\\
+    \nabla \cdot \mathbf{v}_{\text{mesh}} &= 0
+\end{align}
+
+Boundary conditions on $\partial \mathcal{S}$
+\begin{align}
+    \mathbf{v} &= \mathbf{v}_{\text{mesh}}\\
+    T &= T_{\text{box}, i}(t)
+\end{align}
+
+Domain rotation
+\begin{align}
+    \mathbf{v}_{\text{mesh}} &= \Omega r \;\mathbf{e_{\theta}}\\
+    M\mathbf{e_z} &= \int_{\partial \mathcal{S}} \mathbf{x} \times (\mathbf{\hat n} \cdot \boldsymbol{\sigma})\\
+    \boldsymbol{\sigma} &= -p\mathbf{I} + \frac{1}{Re} 2 \mathbf{d}\\
+    I_{33} \dv{\Omega}{t} &= M\\
+    \dv{\theta}{t} &= \Omega
+\end{align}
+where $\mathbf{x}$ is the position vector. The inertia tensor is also assumed constant and uniform, and with only $I_{33}\neq0$. Is it ok to neglect density variations in $I_{33}$ ?
+
+Which frequency $\omega$ provides the best rotation $\Omega$ ?
+
+\end{document}
+
+
+% \draw [
+%     ->,thick,
+%     postaction={
+%         decorate,
+%         decoration={
+%             % text effects along path,text={\ {\large $\Omega$}\ }, 
+%             % text align=center,
+%             % text effects/.cd, 
+%             % text along path, 
+%             % every character/.style={fill=white, yshift=-0.5ex}
+%         }
+%     }
+% ] (-20:7) arc [start angle=-20, end angle=20, radius=7];

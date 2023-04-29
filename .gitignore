@@ -79,6 +79,8 @@ dkms.conf
 *.log
 *.out
 *.xml
+*.fdb_latexmk
+*.fls
 svg-inkscape/
 
 
